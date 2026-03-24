@@ -5,15 +5,16 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import type { ContentPost } from "@/types/domain";
 import { getContentPostFormat, postCoverImageUrl } from "@/lib/content-post-route";
-import { RouteMapPreview } from "@/components/maps/route-map-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { MapPin } from "lucide-react";
 
 export function RoutePostCard({ post, regionLabel, className }: { post: ContentPost; regionLabel: string; className?: string }) {
   const t = useTranslations("RoutePosts");
   const tPosts = useTranslations("Posts");
   const journey = post.route_journey!;
+  const meta = journey.metadata;
   const format = getContentPostFormat(post);
   const cover = postCoverImageUrl(post);
 
@@ -26,6 +27,9 @@ export function RoutePostCard({ post, regionLabel, className }: { post: ContentP
           ? t("formatSpot")
           : t("formatArticle");
 
+  const showRouteIncludedBadge = format === "hybrid" || format === "route";
+  const transportLabel = t(`transport.${meta.transport_mode}` as "transport.walk");
+
   return (
     <div
       className={cn(
@@ -34,7 +38,7 @@ export function RoutePostCard({ post, regionLabel, className }: { post: ContentP
       )}
     >
       <Link href={`/posts/${post.id}`} className="group block">
-        <div className="relative aspect-[16/10] overflow-hidden">
+        <div className="relative aspect-[16/10] overflow-hidden bg-muted">
           {cover ? (
             <Image
               src={cover}
@@ -46,17 +50,23 @@ export function RoutePostCard({ post, regionLabel, className }: { post: ContentP
           ) : (
             <div className="bg-muted absolute inset-0" />
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0e1b3d]/55 via-transparent to-transparent" />
-          <div className="absolute top-3 left-3 z-10 flex flex-wrap gap-1.5">
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0e1b3d]/60 via-transparent to-transparent" />
+          <div className="absolute top-3 left-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-1.5">
             <Badge className="rounded-full bg-white/95 text-[10px] font-bold text-[var(--brand-primary)] shadow-sm">{formatLabel}</Badge>
+            {showRouteIncludedBadge ? (
+              <Badge variant="secondary" className="rounded-full border-0 bg-black/55 text-[10px] font-semibold text-white shadow-sm backdrop-blur-sm">
+                {t("cardBadgeRouteIncluded")}
+              </Badge>
+            ) : null}
             {post.featured ? (
               <Badge className="rounded-full bg-white/95 text-[10px] font-semibold text-foreground shadow-sm">{tPosts("featured")}</Badge>
             ) : null}
           </div>
-          <div className="border-background/80 absolute right-3 bottom-3 left-3 z-10 overflow-hidden rounded-xl border bg-white/95 p-1 shadow-md">
-            <div className="relative aspect-[2.4/1] w-full overflow-hidden rounded-lg bg-muted">
-              <RouteMapPreview spots={journey.spots} path={journey.path} className="opacity-95" />
-            </div>
+          <div className="absolute right-3 bottom-3 left-3 z-10">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm backdrop-blur-sm">
+              <MapPin className="size-3.5 shrink-0 opacity-95" aria-hidden />
+              {t("cardRoutePill")}
+            </span>
           </div>
         </div>
         <div className="p-5 pb-2">
@@ -66,12 +76,17 @@ export function RoutePostCard({ post, regionLabel, className }: { post: ContentP
         </div>
       </Link>
       <div className="flex flex-1 flex-col px-5 pb-5">
-        <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
+        <p className="text-muted-foreground text-xs leading-relaxed">
+          <span className="text-foreground font-medium">{t("cardSpots", { count: journey.spots.length })}</span>
+          <span aria-hidden> · </span>
+          <span>{t("chipDistance", { km: meta.estimated_total_distance_km.toFixed(1) })}</span>
+          <span aria-hidden> · </span>
+          <span>{transportLabel}</span>
+        </p>
+        <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-2 text-xs">
           <span>{post.author_display_name}</span>
           <span aria-hidden>·</span>
           <span className="capitalize">{regionLabel}</span>
-          <span aria-hidden>·</span>
-          <span>{t("cardSpots", { count: journey.spots.length })}</span>
         </div>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
           <Button asChild size="sm" className="flex-1 rounded-xl">

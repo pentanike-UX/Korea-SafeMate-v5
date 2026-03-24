@@ -35,6 +35,7 @@ export function ExploreJourneyClient() {
   const [step, setStep] = useState(0);
   const [region, setRegion] = useState<LaunchAreaSlug | "">("");
   const [theme, setTheme] = useState<string>("");
+  const [enteredExploreViaPreset, setEnteredExploreViaPreset] = useState(false);
   const [days, setDays] = useState<string>("1");
   const [langPref, setLangPref] = useState<LangPref>("any");
   const [pace, setPace] = useState<Pace>("balanced");
@@ -42,10 +43,20 @@ export function ExploreJourneyClient() {
   const [resultsSpin, setResultsSpin] = useState(0);
 
   useEffect(() => {
-    const a = searchParams.get("area") as LaunchAreaSlug | null;
+    const a = searchParams.get("area");
     const th = searchParams.get("theme");
-    if (a && mockLaunchAreas.some((x) => x.slug === a)) setRegion(a);
-    if (th && mockExperienceThemes.some((x) => x.slug === th)) setTheme(th);
+    const validArea = Boolean(a && mockLaunchAreas.some((x) => x.slug === a && x.active));
+    const validTheme = Boolean(th && mockExperienceThemes.some((x) => x.slug === th));
+
+    if (validArea && a) setRegion(a as LaunchAreaSlug);
+    if (validTheme && th) setTheme(th);
+
+    if (validArea && validTheme) {
+      setStep((prev) => (prev <= 1 ? 2 : prev));
+      setEnteredExploreViaPreset(true);
+    } else if (validArea) {
+      setStep((prev) => (prev === 0 ? 1 : prev));
+    }
   }, [searchParams]);
 
   const comingSoonArea = region === "busan" || region === "jeju";
@@ -136,7 +147,15 @@ export function ExploreJourneyClient() {
           <Button asChild variant="outline" size="sm" className="rounded-full">
             <Link href="/guardians">{t("btnGuardiansFirst")}</Link>
           </Button>
-          <Button type="button" size="sm" className="rounded-full" onClick={() => setStep(0)}>
+          <Button
+            type="button"
+            size="sm"
+            className="rounded-full"
+            onClick={() => {
+              setEnteredExploreViaPreset(false);
+              setStep(0);
+            }}
+          >
             {t("btnStart")}
           </Button>
         </div>
@@ -145,7 +164,10 @@ export function ExploreJourneyClient() {
             <button
               key={i}
               type="button"
-              onClick={() => i < step && setStep(i)}
+              onClick={() => {
+                if (i === 4 && step !== 4) return;
+                if (i < 4) setStep(i);
+              }}
               className={cn(
                 "flex size-9 items-center justify-center rounded-full text-xs font-semibold transition-colors",
                 i === step
@@ -159,6 +181,25 @@ export function ExploreJourneyClient() {
             </button>
           ))}
         </div>
+
+        {step >= 2 && region && theme ? (
+          <div className="border-primary/20 bg-primary/5 mb-8 rounded-2xl border px-4 py-3 sm:px-5">
+            <p className="text-muted-foreground text-[11px] font-medium sm:text-xs">
+              {enteredExploreViaPreset ? t("presetFromHome") : t("summaryLabel")}
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="rounded-full px-3 py-1 font-medium">
+                {(tLaunch.raw(region) as { name: string }).name}
+              </Badge>
+              <Badge variant="secondary" className="rounded-full px-3 py-1 font-medium">
+                {(tThemes.raw(theme) as { title: string }).title}
+              </Badge>
+              <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => setStep(0)}>
+                {t("editAreaTheme")}
+              </Button>
+            </div>
+          </div>
+        ) : null}
 
         {step === 0 && (
           <div className="space-y-6">
@@ -430,7 +471,15 @@ export function ExploreJourneyClient() {
                 {t("skipStep")}
               </Button>
             ) : null}
-            <Button type="button" variant="outline" className="rounded-xl" onClick={() => setStep(0)}>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-xl"
+              onClick={() => {
+                setEnteredExploreViaPreset(false);
+                setStep(0);
+              }}
+            >
               {t("reset")}
             </Button>
             {step < 3 ? (

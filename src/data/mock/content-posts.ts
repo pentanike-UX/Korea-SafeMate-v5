@@ -1,6 +1,8 @@
 import type { ContentPost } from "@/types/domain";
 import { mockRouteContentPosts } from "./route-content-posts";
 
+const cover = (id: string, w = 1200) => `https://images.unsplash.com/${id}?w=${w}&q=80`;
+
 const legacyMockContentPosts: ContentPost[] = [
   {
     id: "p1",
@@ -20,6 +22,7 @@ const legacyMockContentPosts: ContentPost[] = [
     popular_score: 92,
     recommended_score: 88,
     featured: true,
+    cover_image_url: cover("photo-1604719314756-9048b615390b"),
   },
   {
     id: "p2",
@@ -39,6 +42,7 @@ const legacyMockContentPosts: ContentPost[] = [
     popular_score: 98,
     recommended_score: 90,
     featured: true,
+    cover_image_url: cover("photo-1555939594-58d7cb561ad1"),
   },
   {
     id: "p3",
@@ -58,6 +62,7 @@ const legacyMockContentPosts: ContentPost[] = [
     popular_score: 85,
     recommended_score: 84,
     featured: false,
+    cover_image_url: cover("photo-1519692938861-5d0bc062f546"),
   },
   {
     id: "p4",
@@ -77,6 +82,7 @@ const legacyMockContentPosts: ContentPost[] = [
     popular_score: 72,
     recommended_score: 70,
     featured: false,
+    cover_image_url: cover("photo-1565680018434-b723cf961d3e"),
   },
   {
     id: "p5",
@@ -88,14 +94,15 @@ const legacyMockContentPosts: ContentPost[] = [
     title: "Beach buses in summer — which lines skip the crawl",
     summary: "1003 vs 139 when BEXCO has events — check city detours first.",
     body: "Line 1003 from Haeundae station vs 139 — 139 tends to stall at BEXCO on event days; check city app detours first.",
-    status: "pending",
+    status: "approved",
     created_at: "2026-03-23T10:00:00.000Z",
-    tags: ["Haeundae", "Summer"],
-    usefulness_votes: 0,
-    helpful_rating: null,
-    popular_score: 40,
-    recommended_score: 35,
+    tags: ["Haeundae", "Summer", "Busan"],
+    usefulness_votes: 198,
+    helpful_rating: 4.5,
+    popular_score: 62,
+    recommended_score: 58,
     featured: false,
+    cover_image_url: cover("photo-1507525428034-b723cf961d3e"),
   },
   {
     id: "p6",
@@ -104,17 +111,18 @@ const legacyMockContentPosts: ContentPost[] = [
     region_slug: "seoul",
     category_slug: "hot-places",
     kind: "hot_place",
-    title: "Itaewon alley coffee — draft",
-    summary: "Draft — hours and photos pending.",
-    body: "TODO: finish with photos and hours.",
-    status: "draft",
+    title: "광화문·세종대로 — 아침 사진 슬롯과 통행 리듬",
+    summary: "버스 라인이 들어오기 전, 광장 측면에서 프레이밍 잡는 법.",
+    body: "평일 08:30–09:30은 단체 관광 전에 조용한 창이 열립니다. 세종대로 쪽 보도는 그림자가 길어 인물 컷에 유리하고, 광장 중앙은 와이드 샷용으로 남겨 두세요. 행사일엔 통제가 바뀌므로 현장 안내를 우선합니다.",
+    status: "approved",
     created_at: "2026-03-22T16:00:00.000Z",
-    tags: ["Itaewon"],
-    usefulness_votes: 0,
-    helpful_rating: null,
-    popular_score: 10,
-    recommended_score: 12,
-    featured: false,
+    tags: ["Gwanghwamun", "Photo", "Morning", "Palace"],
+    usefulness_votes: 312,
+    helpful_rating: 4.7,
+    popular_score: 84,
+    recommended_score: 88,
+    featured: true,
+    cover_image_url: cover("photo-1589871749729-1e2abc49b8f4"),
   },
   {
     id: "p7",
@@ -134,6 +142,7 @@ const legacyMockContentPosts: ContentPost[] = [
     popular_score: 96,
     recommended_score: 94,
     featured: true,
+    cover_image_url: cover("photo-1614680376579-d9e0f7a729bd"),
   },
   {
     id: "p8",
@@ -153,6 +162,7 @@ const legacyMockContentPosts: ContentPost[] = [
     popular_score: 78,
     recommended_score: 80,
     featured: false,
+    cover_image_url: cover("photo-1441986300917-64674bd600d8"),
   },
   {
     id: "p9",
@@ -172,6 +182,7 @@ const legacyMockContentPosts: ContentPost[] = [
     popular_score: 70,
     recommended_score: 86,
     featured: false,
+    cover_image_url: cover("photo-1566988102596-43bb7b84db8f"),
   },
   {
     id: "p10",
@@ -191,6 +202,7 @@ const legacyMockContentPosts: ContentPost[] = [
     popular_score: 68,
     recommended_score: 75,
     featured: false,
+    cover_image_url: cover("photo-1596422840783-7124f7369a1f"),
   },
   {
     id: "p11",
@@ -210,6 +222,7 @@ const legacyMockContentPosts: ContentPost[] = [
     popular_score: 55,
     recommended_score: 62,
     featured: false,
+    cover_image_url: cover("photo-1519046904887-71707b70f783"),
   },
   {
     id: "p12",
@@ -229,6 +242,7 @@ const legacyMockContentPosts: ContentPost[] = [
     popular_score: 88,
     recommended_score: 82,
     featured: true,
+    cover_image_url: cover("photo-1551218808-94e3e5618947"),
   },
   {
     id: "p13",
@@ -248,6 +262,47 @@ const legacyMockContentPosts: ContentPost[] = [
     popular_score: 48,
     recommended_score: 78,
     featured: false,
+    cover_image_url: cover("photo-1506905925346-21bda4d32df4"),
+  },
+  {
+    id: "p14",
+    author_user_id: "g2",
+    author_display_name: "Daniel R.",
+    region_slug: "seoul",
+    category_slug: "hot-places",
+    kind: "hot_place",
+    title: "강남 테헤란로 — 야경 네온과 퇴근 리듬 사이에서 걷기",
+    summary: "19시 이후 테헤란로는 보행 동선이 넓어지고 네온 반사가 살아납니다.",
+    body: "역삼·선릉 구간은 횡단 보도 간격이 짧아 리듬 있게 걷기 좋습니다. 지하 연결 통로는 지도 앱이 헷갈릴 때 대안이 됩니다. 클럽가로 빠질 생각이 없다면 논현 쪽 골목은 상대적으로 조용합니다.",
+    status: "approved",
+    created_at: "2026-03-24T07:00:00.000Z",
+    tags: ["Gangnam", "Night", "Tehran-ro", "Walk"],
+    usefulness_votes: 276,
+    helpful_rating: 4.6,
+    popular_score: 81,
+    recommended_score: 85,
+    featured: true,
+    cover_image_url: cover("photo-1548115184-bc6547d06a58"),
+  },
+  {
+    id: "p15",
+    author_user_id: "g1",
+    author_display_name: "Minseo K.",
+    region_slug: "seoul",
+    category_slug: "k-content",
+    kind: "k_content",
+    title: "경복궁 돌담 산책 — 드라마식 프레이밍 없이도 충분한 동선",
+    summary: "궁궐 정문 전보다 돌담 루프가 사람 밀도 대비 사진 각도가 안정적입니다.",
+    body: "정오 전 돌담 루프는 그림자가 짧아 색감이 또렷합니다. 삼청동 방향으로 이어질 때 계단 구간이 있으니 신발을 가볍게 맞추세요. 단체 관광이 몰리기 전 오전 슬롯을 권장합니다.",
+    status: "approved",
+    created_at: "2026-03-24T07:30:00.000Z",
+    tags: ["Gwanghwamun", "Palace", "K-drama mood", "Walk"],
+    usefulness_votes: 401,
+    helpful_rating: 4.8,
+    popular_score: 89,
+    recommended_score: 92,
+    featured: true,
+    cover_image_url: cover("photo-1517154421773-0529f29ea451"),
   },
 ];
 

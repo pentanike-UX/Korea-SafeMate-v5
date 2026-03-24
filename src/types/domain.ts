@@ -198,6 +198,8 @@ export interface RouteSpot {
   order: number;
   title: string;
   place_name: string;
+  /** From place search / geocoder; optional for legacy posts. */
+  address_line?: string;
   short_description: string;
   body: string;
   image_urls: string[];

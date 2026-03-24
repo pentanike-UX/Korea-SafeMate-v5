@@ -432,6 +432,8 @@
     "reRecommend": "Get new picks",
     "reset": "Start over",
     "summaryLabel": "Your picks",
+    "presetFromHome": "Continuing from Quick Start",
+    "editAreaTheme": "Change area & mood",
     "relatedPosts": "Related posts",
     "comingSoonRegion": "This area opens soon — meet Gwanghwamun & Gangnam guardians first.",
     "tripDays": "Trip length",
@@ -614,15 +616,16 @@
     "formatSpot": "Spot",
     "formatArticle": "Article",
     "cardSpots": "{count} stops",
+    "cardBadgeRouteIncluded": "Route included",
+    "cardRoutePill": "Route",
     "ctaViewRoute": "View route",
     "ctaChooseGuardian": "Choose this guardian",
     "stickyNavAria": "Route local navigation",
     "stickyNavSpotsAria": "Stops on this route",
-    "stickyNavFullMap": "Full map",
+    "stickyNavMapButtonAria": "Go to route map at top",
     "stickyNavExpand": "Expand stop list",
     "stickyNavCollapse": "Collapse stop list",
-    "stickyNavCollapsedHint": "Tap a pin on the mini map to jump to a stop.",
-    "stickyNavOpenMapSheet": "Open route map"
+    "stickyNavCollapsedHint": "Use the map button for the full route map; use chips to jump between stops."
   },
   "TravelerHub": {
     "metaTitle": "My journey",

@@ -90,14 +90,16 @@ const COPY = {
   travelerTypes: "추천 여행자 유형 (쉼표로 구분)",
   night: "야간 친화",
   spotEditorTitle: "스팟별 내용을 채워주세요",
-  addSpotFromMap: "지도에서 스팟 추가",
-  mapAdd: "지도에서 찍기",
-  mapPickBanner: "지도의 빈 곳을 탭하면 새 스팟이 추가됩니다.",
-  spotAddHint: "장소 검색 또는 「지도에서 찍기」로 스팟을 추가하세요.",
-  searchPlaceholder: "장소 검색 (목업)",
+  spotSearchLead:
+    "장소명·주소로 검색해 스팟을 빠르게 추가하세요. 검색이 어려운 지점만 아래 「지도에서 직접 선택」으로 보조 추가할 수 있어요.",
+  searchLabel: "장소·주소 검색",
+  searchPlaceholder: "장소명, 주소, 카페명, 명소명을 입력하세요",
+  mapAddSecondary: "지도에서 직접 선택 (보조)",
+  mapPickBanner: "지도의 빈 곳을 탭하면 새 스팟이 추가됩니다. (검색으로 찾기 어려운 포인트용)",
+  mapAddSectionLabel: "보조 옵션",
   selectedLocation: "선택된 위치",
-  locationPinned: "지도에 핀이 표시되어 있습니다. 검색 또는 지도 탭으로 위치를 바꿀 수 있어요.",
-  locationNeed: "장소 검색 또는 지도에서 위치를 먼저 지정해 주세요.",
+  locationPinned: "지도에 핀이 표시되어 있습니다. 검색으로 다시 고르거나 보조 모드에서 지도를 탭해 바꿀 수 있어요.",
+  locationNeed: "위 검색으로 장소를 선택하거나, 보조 옵션에서 지도를 탭해 주세요.",
   advancedCoords: "고급: 위도·경도 직접 입력",
   advancedCoordsHide: "좌표 입력 접기",
   publish: "게시하기",
@@ -106,7 +108,7 @@ const COPY = {
   savedDraft: "초안으로 저장했습니다.",
   back: "목록으로",
   mapPanelTitle: "이 가디언의 추천 여행경로",
-  mapPanelHint: "핀을 눌러 스팟 선택 · 「지도에서 찍기」일 때 빈 곳을 탭하면 스팟이 추가됩니다.",
+  mapPanelHint: "핀을 눌러 스팟 선택 · 보조 「지도에서 직접 선택」 켠 뒤 빈 곳을 탭하면 스팟이 추가됩니다.",
   routeOsrm: "OSRM으로 경로 계산",
   routeOsrmHint: "도보/차량 기준 실제 도로 형상(데모 서버). 운영 시 OSRM_BASE_URL을 자체 인스턴스로 교체하세요.",
   saving: "저장 중…",
@@ -138,8 +140,11 @@ export function GuardianRoutePostEditor({
 
   const filteredPlaces = useMemo(() => {
     const s = searchQ.trim().toLowerCase();
-    if (!s) return mockSeoulSearchPlaces.slice(0, 6);
-    return mockSeoulSearchPlaces.filter((p) => p.label.toLowerCase().includes(s) || p.district.toLowerCase().includes(s));
+    if (!s) return mockSeoulSearchPlaces.slice(0, 8);
+    return mockSeoulSearchPlaces.filter((p) => {
+      const hay = `${p.label} ${p.label_ko} ${p.district} ${p.address}`.toLowerCase();
+      return hay.includes(s);
+    });
   }, [searchQ]);
 
   const selectedSpot = journey.spots.find((x) => x.id === selectedSpotId) ?? null;
@@ -175,8 +180,15 @@ export function GuardianRoutePostEditor({
     setSelectedSpotId(spot.id);
   }
 
-  function addPlaceFromSearch(place: (typeof mockSeoulSearchPlaces)[0]) {
-    addSpotAt(place.lat, place.lng, place.label);
+  function addPlaceFromSearch(place: (typeof mockSeoulSearchPlaces)[number]) {
+    const spot = newSpot(journey.spots.length, place.lat, place.lng);
+    spot.place_name = place.label_ko;
+    spot.title = place.label_ko;
+    spot.address_line = place.address;
+    commitJourney({ ...journey, spots: [...journey.spots, spot] });
+    setSelectedSpotId(spot.id);
+    setMapPick(false);
+    setSearchQ("");
   }
 
   function removeSpot(id: string) {
@@ -543,48 +555,61 @@ export function GuardianRoutePostEditor({
         </section>
 
         <section className="space-y-4">
-          <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
             <h2 className="text-foreground text-sm font-semibold">{COPY.spotEditorTitle}</h2>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={mapPick ? "default" : "outline"}
-                className="rounded-xl gap-1"
-                onClick={() => setMapPick((v) => !v)}
-              >
-                <MapPin className="size-4" />
-                {COPY.mapAdd}
-              </Button>
-            </div>
-            {mapPick ? (
-              <p className="text-primary text-xs font-medium">{COPY.mapPickBanner}</p>
-            ) : (
-              <p className="text-muted-foreground text-xs">{COPY.spotAddHint}</p>
-            )}
+            <p className="text-muted-foreground mt-1.5 text-xs leading-relaxed">{COPY.spotSearchLead}</p>
           </div>
 
           <div className="space-y-2">
+            <Label htmlFor="guardian-spot-search" className="text-foreground">
+              {COPY.searchLabel}
+            </Label>
             <Input
+              id="guardian-spot-search"
               value={searchQ}
               onChange={(e) => setSearchQ(e.target.value)}
               placeholder={COPY.searchPlaceholder}
               className="rounded-xl"
+              autoComplete="off"
             />
-            <ul className="border-border/60 max-h-40 overflow-auto rounded-xl border bg-white/80 text-sm">
-              {filteredPlaces.map((p) => (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    className="hover:bg-muted/60 flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
-                    onClick={() => addPlaceFromSearch(p)}
-                  >
-                    <span className="font-medium">{p.label}</span>
-                    <span className="text-muted-foreground text-xs">{p.district}</span>
-                  </button>
-                </li>
-              ))}
+            <ul className="border-border/60 max-h-52 overflow-auto rounded-xl border bg-white/80 text-sm shadow-[var(--shadow-sm)]">
+              {filteredPlaces.length === 0 ? (
+                <li className="text-muted-foreground px-3 py-4 text-center text-xs">검색 결과가 없습니다.</li>
+              ) : (
+                filteredPlaces.map((p) => (
+                  <li key={p.id} className="border-border/40 border-b last:border-b-0">
+                    <button
+                      type="button"
+                      className="hover:bg-muted/50 flex w-full flex-col gap-0.5 px-3 py-2.5 text-left transition-colors"
+                      onClick={() => addPlaceFromSearch(p)}
+                    >
+                      <span className="text-foreground font-semibold">{p.label_ko}</span>
+                      <span className="text-muted-foreground text-xs leading-snug">{p.address}</span>
+                      <span className="text-muted-foreground text-[11px]">{p.district}</span>
+                    </button>
+                  </li>
+                ))
+              )}
             </ul>
+          </div>
+
+          <div className="border-border/50 flex flex-col gap-2 border-t pt-3 sm:flex-row sm:items-center sm:gap-3">
+            <span className="text-muted-foreground shrink-0 text-[11px] font-semibold tracking-wide uppercase">
+              {COPY.mapAddSectionLabel}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant={mapPick ? "default" : "outline"}
+              className="w-fit rounded-xl gap-1.5"
+              onClick={() => setMapPick((v) => !v)}
+            >
+              <MapPin className="size-4" />
+              {COPY.mapAddSecondary}
+            </Button>
+            {mapPick ? (
+              <p className="text-primary text-xs font-medium sm:ml-1">{COPY.mapPickBanner}</p>
+            ) : null}
           </div>
 
           <ul className="space-y-2">
@@ -630,6 +655,9 @@ export function GuardianRoutePostEditor({
                 <p className="text-foreground text-sm font-semibold">
                   {selectedSpot.place_name?.trim() || selectedSpot.title?.trim() || "—"}
                 </p>
+                {selectedSpot.address_line ? (
+                  <p className="text-muted-foreground text-xs leading-relaxed">{selectedSpot.address_line}</p>
+                ) : null}
                 <p className="text-muted-foreground text-xs leading-relaxed">
                   {selectedSpot.lat != null && selectedSpot.lng != null ? COPY.locationPinned : COPY.locationNeed}
                 </p>
@@ -645,6 +673,19 @@ export function GuardianRoutePostEditor({
                     value={selectedSpot.place_name}
                     onChange={(e) => updateSpot(selectedSpot.id, { place_name: e.target.value })}
                     className="rounded-xl"
+                  />
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <Label>주소</Label>
+                  <Input
+                    value={selectedSpot.address_line ?? ""}
+                    onChange={(e) =>
+                      updateSpot(selectedSpot.id, {
+                        address_line: e.target.value.trim() ? e.target.value.trim() : undefined,
+                      })
+                    }
+                    className="rounded-xl"
+                    placeholder="장소 검색 시 자동으로 채워집니다"
                   />
                 </div>
                 <div className="space-y-1 sm:col-span-2">

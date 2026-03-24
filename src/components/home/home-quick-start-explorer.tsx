@@ -10,7 +10,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useHomeExplorePreferences } from "@/components/home/home-explore-preferences";
 import { cn } from "@/lib/utils";
-import { ArrowRight, MapPin, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Camera,
+  Clapperboard,
+  Heart,
+  MapPin,
+  Mic2,
+  MoonStar,
+  Music2,
+  ShieldUser,
+  Sparkles,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 type MoodSlug = (typeof mockExperienceThemes)[number]["slug"];
 
@@ -30,6 +42,34 @@ function moodDescI18nKey(slug: string) {
     | "moodDesc_safe_solo"
     | "moodDesc_photo_route";
 }
+
+/** Line-style icons; thin accent border ties to mood without dominating the card */
+const MOOD_ICON: Record<MoodSlug, LucideIcon> = {
+  k_drama_romance: Heart,
+  seoul_night: MoonStar,
+  k_pop_day: Mic2,
+  movie_location: Clapperboard,
+  safe_solo: ShieldUser,
+  photo_route: Camera,
+};
+
+const MOOD_ACCENT_BORDER: Record<MoodSlug, string> = {
+  k_drama_romance: "border-l-rose-400/55",
+  seoul_night: "border-l-indigo-500/45",
+  k_pop_day: "border-l-fuchsia-500/45",
+  movie_location: "border-l-sky-500/50",
+  safe_solo: "border-l-teal-500/45",
+  photo_route: "border-l-emerald-500/45",
+};
+
+const MOOD_ICON_TINT: Record<MoodSlug, string> = {
+  k_drama_romance: "text-rose-600/85 dark:text-rose-400/90",
+  seoul_night: "text-indigo-600/85 dark:text-indigo-400/90",
+  k_pop_day: "text-fuchsia-600/85 dark:text-fuchsia-400/90",
+  movie_location: "text-sky-600/85 dark:text-sky-400/90",
+  safe_solo: "text-teal-600/85 dark:text-teal-400/90",
+  photo_route: "text-emerald-600/85 dark:text-emerald-400/90",
+};
 
 export function HomeQuickStartExplorer() {
   const t = useTranslations("HomeQuickStart");
@@ -76,65 +116,115 @@ export function HomeQuickStartExplorer() {
               const copy = tLaunch.raw(a.slug) as { name: string; blurb: string; landmark: string; imageAlt: string };
               const desc = t(REGION_DESC_KEY[a.slug]);
 
+              const media = (
+                <div className="relative aspect-[16/10]">
+                  <Image
+                    src={a.imageUrl}
+                    alt={copy.imageAlt}
+                    fill
+                    className={cn(
+                      "object-cover",
+                      active && "transition duration-500 group-hover:scale-[1.02]",
+                      !active && "brightness-[0.66] contrast-[0.94] saturate-[0.48]",
+                    )}
+                    sizes="(max-width:640px) 100vw, 25vw"
+                  />
+                  {!active ? (
+                    <div
+                      className="pointer-events-none absolute inset-0 bg-slate-950/52 backdrop-blur-[1px]"
+                      aria-hidden
+                    />
+                  ) : null}
+                  <div
+                    className={cn(
+                      "pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent",
+                      selected && active && "from-black/75",
+                      !active && "from-black/80 via-black/35",
+                    )}
+                  />
+                  <div className="absolute top-2.5 right-2.5 flex flex-wrap justify-end gap-1.5">
+                    {!active ? (
+                      <Badge className="border-0 bg-amber-500 px-2.5 py-1 text-[10px] font-bold tracking-wide text-white uppercase shadow-md">
+                        {tHome("launchBadgeSoon")}
+                      </Badge>
+                    ) : selected ? (
+                      <Badge className="bg-white/95 text-[10px] font-semibold text-[var(--brand-primary)]">
+                        {t("selected")}
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-[var(--success)] text-[10px] font-semibold text-white hover:bg-[var(--success)]">
+                        {tHome("launchBadgeLive")}
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="absolute right-3 bottom-3 left-3">
+                    <p
+                      className={cn(
+                        "line-clamp-2 text-sm font-semibold leading-tight text-balance text-white drop-shadow-md",
+                        !active && "opacity-90",
+                      )}
+                    >
+                      {copy.landmark}
+                    </p>
+                  </div>
+                </div>
+              );
+
+              const body = (
+                <div className={cn("flex flex-1 flex-col p-4", !active && "bg-muted/25")}>
+                  <div className="flex items-center gap-2">
+                    <MapPin
+                      className={cn("size-4 shrink-0", active ? "text-primary" : "text-muted-foreground/70")}
+                      aria-hidden
+                    />
+                    <span className={cn("font-semibold", active ? "text-foreground" : "text-foreground/80")}>
+                      {copy.name}
+                    </span>
+                  </div>
+                  <p
+                    className={cn(
+                      "mt-2 flex-1 text-[13px] leading-relaxed",
+                      active ? "text-muted-foreground" : "text-muted-foreground/75",
+                    )}
+                  >
+                    {desc}
+                  </p>
+                </div>
+              );
+
+              if (!active) {
+                return (
+                  <div
+                    key={a.slug}
+                    role="group"
+                    aria-label={`${copy.name} — ${tHome("launchBadgeSoon")}`}
+                    className={cn(
+                      "border-border/50 bg-card text-left",
+                      "relative flex cursor-default flex-col overflow-hidden rounded-2xl border border-dashed border-muted-foreground/25 shadow-none",
+                    )}
+                  >
+                    {media}
+                    {body}
+                  </div>
+                );
+              }
+
               return (
                 <button
                   key={a.slug}
                   type="button"
-                  disabled={!active}
                   onClick={() => {
-                    if (!active) return;
                     setArea(area === a.slug ? null : a.slug);
                   }}
                   className={cn(
                     "group border-border/70 bg-card text-left transition-all",
                     "relative flex flex-col overflow-hidden rounded-2xl border shadow-[var(--shadow-sm)]",
-                    active && "hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]",
-                    !active && "cursor-not-allowed opacity-[0.58]",
-                    selected && active && "ring-primary ring-[3px] ring-offset-2 ring-offset-[#f7f8fb]",
+                    "hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]",
+                    selected && "ring-primary ring-[3px] ring-offset-2 ring-offset-[#f7f8fb]",
                   )}
                 >
-                  <div className="relative aspect-[16/10]">
-                    <Image
-                      src={a.imageUrl}
-                      alt={copy.imageAlt}
-                      fill
-                      className={cn("object-cover transition duration-500", active && "group-hover:scale-[1.02]")}
-                      sizes="(max-width:640px) 100vw, 25vw"
-                    />
-                    <div
-                      className={cn(
-                        "absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent",
-                        selected && active && "from-black/75",
-                      )}
-                    />
-                    <div className="absolute top-2.5 right-2.5 flex gap-1">
-                      {!active ? (
-                        <Badge variant="secondary" className="bg-white/95 text-[10px] font-semibold text-foreground">
-                          {tHome("launchBadgeSoon")}
-                        </Badge>
-                      ) : selected ? (
-                        <Badge className="bg-white/95 text-[10px] font-semibold text-[var(--brand-primary)]">
-                          {t("selected")}
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-[var(--success)] text-[10px] font-semibold text-white hover:bg-[var(--success)]">
-                          {tHome("launchBadgeLive")}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="absolute right-3 bottom-3 left-3">
-                      <p className="line-clamp-2 text-sm font-semibold leading-tight text-balance text-white drop-shadow-md">
-                        {copy.landmark}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-1 flex-col p-4">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="text-primary size-4 shrink-0" aria-hidden />
-                      <span className="text-foreground font-semibold">{copy.name}</span>
-                    </div>
-                    <p className="text-muted-foreground mt-2 flex-1 text-[13px] leading-relaxed">{desc}</p>
-                  </div>
+                  {media}
+                  {body}
                 </button>
               );
             })}
@@ -146,9 +236,11 @@ export function HomeQuickStartExplorer() {
           <h3 className="text-foreground mb-4 text-sm font-semibold tracking-tight sm:text-base">{t("step2Title")}</h3>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {mockExperienceThemes.map((th) => {
+              const slug = th.slug as MoodSlug;
               const selected = theme === th.slug;
-              const title = themeTitle(th.slug as MoodSlug);
+              const title = themeTitle(slug);
               const desc = t(moodDescI18nKey(th.slug));
+              const Icon = MOOD_ICON[slug];
 
               return (
                 <button
@@ -156,21 +248,39 @@ export function HomeQuickStartExplorer() {
                   type="button"
                   onClick={() => setTheme(theme === th.slug ? null : th.slug)}
                   className={cn(
-                    "border-border/70 bg-card rounded-2xl border p-5 text-left shadow-[var(--shadow-sm)] transition-all",
+                    "border-border/70 bg-card rounded-2xl border border-l-[3px] p-5 text-left shadow-[var(--shadow-sm)] transition-all",
+                    MOOD_ACCENT_BORDER[slug],
                     "hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]",
                     selected && "ring-primary ring-[3px] ring-offset-2 ring-offset-[#f7f8fb]",
                   )}
                 >
-                  <div className="mb-3 h-1.5 w-full rounded-full" style={{ background: th.gradient }} />
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className="text-foreground font-semibold leading-snug">{title}</h4>
-                    {selected ? (
-                      <Badge variant="secondary" className="shrink-0 text-[10px] font-semibold">
-                        {t("selected")}
-                      </Badge>
-                    ) : null}
+                  <div className="flex gap-4">
+                    <span
+                      className={cn(
+                        "flex size-12 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-muted/40",
+                        MOOD_ICON_TINT[slug],
+                      )}
+                      aria-hidden
+                    >
+                      <Icon className="size-[22px]" strokeWidth={1.5} />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="text-foreground font-semibold leading-snug">{title}</h4>
+                        {selected ? (
+                          <Badge variant="secondary" className="shrink-0 text-[10px] font-semibold">
+                            {t("selected")}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="text-muted-foreground mt-2 text-[13px] leading-relaxed">{desc}</p>
+                    </div>
                   </div>
-                  <p className="text-muted-foreground mt-2 text-[13px] leading-relaxed">{desc}</p>
+                  <div
+                    className="mt-4 h-0.5 w-full rounded-full opacity-[0.35]"
+                    style={{ background: th.gradient }}
+                    aria-hidden
+                  />
                 </button>
               );
             })}

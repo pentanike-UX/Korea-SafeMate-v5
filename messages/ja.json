@@ -432,6 +432,8 @@
     "reRecommend": "もう一度おすすめ",
     "reset": "最初から",
     "summaryLabel": "選択サマリー",
+    "presetFromHome": "クイックスタートから続ける",
+    "editAreaTheme": "エリア・ムードを変更",
     "relatedPosts": "関連投稿",
     "comingSoonRegion": "このエリアは近日公開 — 光化門・カンナムを先に。",
     "tripDays": "日程の長さ",
@@ -614,15 +616,16 @@
     "formatSpot": "スポット",
     "formatArticle": "記事",
     "cardSpots": "スポット{count}か所",
+    "cardBadgeRouteIncluded": "ルート付き",
+    "cardRoutePill": "Route",
     "ctaViewRoute": "ルートを見る",
     "ctaChooseGuardian": "このGuardianを選ぶ",
     "stickyNavAria": "ルート内ナビゲーション",
     "stickyNavSpotsAria": "スポット一覧",
-    "stickyNavFullMap": "全体マップ",
+    "stickyNavMapButtonAria": "上部のルートマップへ移動",
     "stickyNavExpand": "スポット一覧を広げる",
     "stickyNavCollapse": "スポット一覧を閉じる",
-    "stickyNavCollapsedHint": "ミニマップのピンでスポットに移動できます。",
-    "stickyNavOpenMapSheet": "ルートマップを開く"
+    "stickyNavCollapsedHint": "地図ボタンで全体ルート、チップでスポットへ移動できます。"
   },
   "TravelerHub": {
     "metaTitle": "マイジャーニー",

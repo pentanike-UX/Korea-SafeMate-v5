@@ -6,11 +6,12 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import type { ContentCategory } from "@/types/domain";
 import type { ContentPost } from "@/types/domain";
-import { postHasRouteJourney } from "@/lib/content-post-route";
+import { postCoverImageUrl, postHasRouteJourney } from "@/lib/content-post-route";
 import { RoutePostCard } from "@/components/route-posts/route-post-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 import { Heart, Search, Sparkles } from "lucide-react";
 
 const REGION_SLUGS = ["all", "seoul", "busan", "jeju"] as const;
@@ -193,7 +194,9 @@ export function PostsListClient({
           <p className="text-muted-foreground py-16 text-center text-sm">{t("empty")}</p>
         ) : (
           <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((p) => (
+            {filtered.map((p) => {
+              const coverUrl = postCoverImageUrl(p);
+              return (
               <li key={p.id}>
                 {postHasRouteJourney(p) ? (
                   <RoutePostCard post={p} regionLabel={t(`region.${p.region_slug}` as "region.seoul")} />
@@ -202,8 +205,19 @@ export function PostsListClient({
                     href={`/posts/${p.id}`}
                     className="border-border/70 bg-card group flex h-full flex-col overflow-hidden rounded-2xl border shadow-[var(--shadow-sm)] transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-[var(--shadow-md)]"
                   >
-                    <div className="relative aspect-[16/10] overflow-hidden">
-                      <div className="absolute inset-0 z-0" style={{ background: postVisualSeed(p.id) }} />
+                    <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+                      {coverUrl ? (
+                        <Image
+                          src={coverUrl}
+                          alt=""
+                          fill
+                          className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                          sizes="(max-width:768px) 100vw, 33vw"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 z-0" style={{ background: postVisualSeed(p.id) }} />
+                      )}
+                      <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-[#0e1b3d]/45 to-transparent" />
                       {p.featured ? (
                         <div className="absolute top-3 left-3 z-10">
                           <Badge className="rounded-full bg-white/95 text-[10px] font-semibold text-[var(--brand-primary)] shadow-sm">
@@ -238,7 +252,8 @@ export function PostsListClient({
                   </Link>
                 )}
               </li>
-            ))}
+            );
+            })}
           </ul>
         )}
       </div>

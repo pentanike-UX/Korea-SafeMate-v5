@@ -432,6 +432,8 @@
     "reRecommend": "다시 추천받기",
     "reset": "처음부터",
     "summaryLabel": "선택 요약",
+    "presetFromHome": "빠른 시작에서 이어온 선택",
+    "editAreaTheme": "지역·무드 바꾸기",
     "relatedPosts": "관련 포스트",
     "comingSoonRegion": "이 지역은 곧 열려요. 광화문·강남 가디언을 먼저 만나보세요.",
     "tripDays": "일정 길이",
@@ -614,15 +616,16 @@
     "formatSpot": "스팟",
     "formatArticle": "아티클",
     "cardSpots": "스팟 {count}곳",
+    "cardBadgeRouteIncluded": "루트 포함",
+    "cardRoutePill": "Route",
     "ctaViewRoute": "루트 보기",
     "ctaChooseGuardian": "이 가디언 선택하기",
     "stickyNavAria": "루트 로컬 내비게이션",
     "stickyNavSpotsAria": "스팟 목록",
-    "stickyNavFullMap": "전체 맵 보기",
+    "stickyNavMapButtonAria": "상단 루트 지도로 이동",
     "stickyNavExpand": "스팟 목록 펼치기",
     "stickyNavCollapse": "스팟 목록 접기",
-    "stickyNavCollapsedHint": "미니맵 핀을 눌러 스팟으로 이동할 수 있어요.",
-    "stickyNavOpenMapSheet": "루트 맵 크게 보기"
+    "stickyNavCollapsedHint": "지도 버튼으로 전체 루트 지도를 보고, 칩으로 스팟을 이동할 수 있어요."
   },
   "TravelerHub": {
     "metaTitle": "내 여정",

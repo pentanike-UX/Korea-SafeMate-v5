@@ -29,6 +29,9 @@ function SpotDetailBody({ spot, isLast, onNext }: { spot: RouteSpot; isLast: boo
       ) : null}
       <div>
         <p className="text-primary text-[10px] font-bold tracking-widest uppercase">{spot.place_name}</p>
+        {spot.address_line ? (
+          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">{spot.address_line}</p>
+        ) : null}
         <h3 className="text-text-strong mt-1 text-lg font-semibold">{spot.title}</h3>
         <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{spot.short_description}</p>
       </div>
@@ -140,7 +143,7 @@ export function RoutePostDetailClient({ post }: { post: ContentPost }) {
       setShowStickyNav((prev) => (prev === stickyOn ? prev : stickyOn));
 
       const headerH = window.innerWidth >= 640 ? 64 : 56;
-      const stickyH = stickyOn ? (isMobile ? 56 : 64) : 0;
+      const stickyH = stickyOn ? (isMobile ? 48 : 56) : 0;
       const probeY = headerH + stickyH + 20;
 
       let nextActive: string | null = spots[0]?.id ?? null;
@@ -181,7 +184,6 @@ export function RoutePostDetailClient({ post }: { post: ContentPost }) {
     <>
       {showStickyNav && spots.length > 0 ? (
         <RouteStickyLocalNav
-          post={post}
           spots={spots}
           activeSpotId={activeSpotId}
           onSpotNavigate={(id) => navigateToSpotSection(id)}
@@ -303,6 +305,9 @@ export function RoutePostDetailClient({ post }: { post: ContentPost }) {
                 <div className="min-w-0 flex-1">
                   <h3 className="text-text-strong text-xl font-semibold">{spot.title}</h3>
                   <p className="text-muted-foreground mt-1 text-sm">{spot.place_name}</p>
+                  {spot.address_line ? (
+                    <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">{spot.address_line}</p>
+                  ) : null}
                   <Button
                     type="button"
                     variant="link"
