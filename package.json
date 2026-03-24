@@ -2,6 +2,15 @@
   "name": "korea-safemate",
   "version": "0.1.0",
   "private": true,
+  "author": "pentanike-UX (https://github.com/pentanike-UX)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pentanike-UX/Korea-SafeMate-v2.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pentanike-UX/Korea-SafeMate-v2/issues"
+  },
+  "homepage": "https://github.com/pentanike-UX/Korea-SafeMate-v2#readme",
   "engines": {
     "node": ">=20.9.0"
   },
