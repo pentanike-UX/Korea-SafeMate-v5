@@ -116,7 +116,12 @@ export async function HomeFortyTwoPage() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {mockLaunchAreas.map((a) => {
-              const copy = tLaunch.raw(a.slug) as { name: string; blurb: string };
+              const copy = tLaunch.raw(a.slug) as {
+                name: string;
+                blurb: string;
+                landmark: string;
+                imageAlt: string;
+              };
               return (
                 <Link
                   key={a.slug}
@@ -124,8 +129,14 @@ export async function HomeFortyTwoPage() {
                   className="group border-border/70 bg-card relative flex flex-col overflow-hidden rounded-2xl border shadow-[var(--shadow-sm)] transition-all hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]"
                 >
                   <div className="relative aspect-[16/11]">
-                    <Image src={a.imageUrl} alt="" fill className="object-cover transition duration-500 group-hover:scale-[1.03]" sizes="(max-width:640px) 100vw, 25vw" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                    <Image
+                      src={a.imageUrl}
+                      alt={copy.imageAlt}
+                      fill
+                      className="object-cover transition duration-500 group-hover:scale-[1.03]"
+                      sizes="(max-width:640px) 100vw, 25vw"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/15 to-transparent" />
                     <div className="absolute top-3 right-3">
                       {a.comingSoon ? (
                         <Badge variant="secondary" className="bg-white/95 text-[10px] font-semibold">
@@ -137,12 +148,18 @@ export async function HomeFortyTwoPage() {
                         </Badge>
                       )}
                     </div>
+                    <div className="absolute right-3 bottom-3 left-3">
+                      <p className="line-clamp-2 text-sm font-semibold leading-tight text-balance text-white drop-shadow-md">
+                        {copy.landmark}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex flex-1 flex-col p-4">
                     <div className="flex items-center gap-2">
                       <MapPin className="text-primary size-4 shrink-0" aria-hidden />
                       <span className="text-foreground font-semibold">{copy.name}</span>
                     </div>
+                    <p className="text-muted-foreground mt-1 text-xs font-medium">{copy.landmark}</p>
                     <p className="text-muted-foreground mt-2 flex-1 text-sm leading-relaxed">{copy.blurb}</p>
                     {a.active ? (
                       <span className="text-primary mt-3 inline-flex items-center gap-1 text-sm font-semibold">

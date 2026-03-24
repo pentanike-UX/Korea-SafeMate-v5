@@ -152,7 +152,12 @@ export function ExploreJourneyClient() {
             <h2 className="text-text-strong text-xl font-semibold">{t("stepRegion")}</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               {mockLaunchAreas.map((a) => {
-                const copy = tLaunch.raw(a.slug) as { name: string; blurb: string };
+                const copy = tLaunch.raw(a.slug) as {
+                  name: string;
+                  blurb: string;
+                  landmark: string;
+                  imageAlt: string;
+                };
                 const selected = region === a.slug;
                 return (
                   <button
@@ -165,7 +170,13 @@ export function ExploreJourneyClient() {
                     )}
                   >
                     <div className="relative aspect-[16/9]">
-                      <Image src={a.imageUrl} alt="" fill className="object-cover" sizes="400px" />
+                      <Image src={a.imageUrl} alt={copy.imageAlt} fill className="object-cover" sizes="400px" />
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+                      <div className="absolute right-2 bottom-2 left-2">
+                        <p className="line-clamp-2 text-left text-xs font-semibold text-white drop-shadow-sm">
+                          {copy.landmark}
+                        </p>
+                      </div>
                       {!a.active ? (
                         <span className="absolute top-2 right-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">
                           Soon
@@ -174,6 +185,7 @@ export function ExploreJourneyClient() {
                     </div>
                     <div className="p-4">
                       <p className="font-semibold">{copy.name}</p>
+                      <p className="text-primary mt-0.5 text-xs font-medium">{copy.landmark}</p>
                       <p className="text-muted-foreground mt-1 text-sm">{copy.blurb}</p>
                     </div>
                   </button>

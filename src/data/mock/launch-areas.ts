@@ -4,37 +4,34 @@ export type { LaunchAreaSlug };
 
 export interface LaunchAreaCard {
   slug: LaunchAreaSlug;
-  /** Unsplash or CDN image */
+  /** Public path — `public/images/regions/{slug}.png` */
   imageUrl: string;
   active: boolean;
   comingSoon?: boolean;
 }
 
+/** File names match slug: `public/images/regions/{slug}.png` */
 export const mockLaunchAreas: LaunchAreaCard[] = [
   {
     slug: "gwanghwamun",
     active: true,
-    imageUrl:
-      "https://images.unsplash.com/photo-1517154421773-0529f29ea451?w=800&q=80",
+    imageUrl: "/images/regions/gwanghwamun.png",
   },
   {
     slug: "gangnam",
     active: true,
-    imageUrl:
-      "https://images.unsplash.com/photo-1583508915901-b5f84c1cdcde?w=800&q=80",
+    imageUrl: "/images/regions/gangnam.png",
   },
   {
     slug: "busan",
     active: false,
     comingSoon: true,
-    imageUrl:
-      "https://images.unsplash.com/photo-1596422846843-79f76391b04a?w=800&q=80",
+    imageUrl: "/images/regions/busan.png",
   },
   {
     slug: "jeju",
     active: false,
     comingSoon: true,
-    imageUrl:
-      "https://images.unsplash.com/photo-1614115508305-7dc4f6b6f6f5?w=800&q=80",
+    imageUrl: "/images/regions/jeju.png",
   },
 ];

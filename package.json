@@ -12,7 +12,7 @@
   },
   "homepage": "https://github.com/pentanike-UX/Korea-SafeMate-v2#readme",
   "engines": {
-    "node": ">=20.9.0"
+    "node": "20.x"
   },
   "scripts": {
     "dev": "next dev",

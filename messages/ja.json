@@ -330,10 +330,30 @@
     "viewGuardians": "公開Guardianの文脈を見る"
   },
   "LaunchAreas": {
-    "gwanghwamun": { "name": "光化門", "blurb": "宮殿エリア・韓屋・ドラマの雰囲気" },
-    "gangnam": { "name": "カンナム", "blurb": "K-POP・夜景・トレンド" },
-    "busan": { "name": "釜山", "blurb": "近日オープン" },
-    "jeju": { "name": "済州", "blurb": "近日オープン" }
+    "gwanghwamun": {
+      "name": "光化門",
+      "landmark": "景福宮・光化門",
+      "blurb": "宮殿エリア・韓屋・ドラマの雰囲気",
+      "imageAlt": "夕暮れの景福宮光化門と韓服の観光客"
+    },
+    "gangnam": {
+      "name": "カンナム",
+      "landmark": "カンナム駅周辺",
+      "blurb": "K-POP・夜景・トレンド",
+      "imageAlt": "カンナム交差点の夕景とビル群"
+    },
+    "busan": {
+      "name": "釜山",
+      "landmark": "海東龍宮寺",
+      "blurb": "近日オープン",
+      "imageAlt": "釜山の海岸断崖にある海東龍宮寺"
+    },
+    "jeju": {
+      "name": "済州",
+      "landmark": "挟才海水浴場・ドルハルバン",
+      "blurb": "近日オープン",
+      "imageAlt": "済州のエメラルドグリーンの海とドルハルバン"
+    }
   },
   "ExperienceThemes": {
     "k_drama_romance": { "title": "K-ドラマロマンス散策", "subtitle": "ロケ地の雰囲気" },

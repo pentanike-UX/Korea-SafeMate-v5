@@ -330,10 +330,30 @@
     "viewGuardians": "View public guardian context"
   },
   "LaunchAreas": {
-    "gwanghwamun": { "name": "Gwanghwamun", "blurb": "Palace line · hanok · drama mood" },
-    "gangnam": { "name": "Gangnam", "blurb": "K-pop · night views · trendy strips" },
-    "busan": { "name": "Busan", "blurb": "Beach & markets — opening soon" },
-    "jeju": { "name": "Jeju", "blurb": "Island journeys — opening soon" }
+    "gwanghwamun": {
+      "name": "Gwanghwamun",
+      "landmark": "Gyeongbokgung · Gwanghwamun Gate",
+      "blurb": "Palace line · hanok · drama mood",
+      "imageAlt": "Gwanghwamun Gate at Gyeongbokgung Palace at golden hour with visitors in hanbok"
+    },
+    "gangnam": {
+      "name": "Gangnam",
+      "landmark": "Gangnam Station area",
+      "blurb": "K-pop · night views · trendy strips",
+      "imageAlt": "Gangnam intersection at dusk with light trails and skyscrapers"
+    },
+    "busan": {
+      "name": "Busan",
+      "landmark": "Haedong Yonggungsa Temple",
+      "blurb": "Beach & markets — opening soon",
+      "imageAlt": "Haedong Yonggungsa Temple on the rocky Busan coast above the sea"
+    },
+    "jeju": {
+      "name": "Jeju",
+      "landmark": "Hyeopjae Beach · Dol Hareubang",
+      "blurb": "Island journeys — opening soon",
+      "imageAlt": "Jeju Dol Hareubang statue with turquoise sea and Biyangdo Island in the distance"
+    }
   },
   "ExperienceThemes": {
     "k_drama_romance": { "title": "K-drama romance walk", "subtitle": "Filming vibes · slow lanes" },

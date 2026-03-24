@@ -330,10 +330,30 @@
     "viewGuardians": "공개 Guardian 맥락 보기"
   },
   "LaunchAreas": {
-    "gwanghwamun": { "name": "광화문", "blurb": "궁궐 라인 · 한옥 · 드라마 무드" },
-    "gangnam": { "name": "강남", "blurb": "K-Pop · 야경 · 트렌디 스트립" },
-    "busan": { "name": "부산", "blurb": "해변과 시장 — 곧 오픈" },
-    "jeju": { "name": "제주", "blurb": "섬 여정 — 곧 오픈" }
+    "gwanghwamun": {
+      "name": "광화문",
+      "landmark": "경복궁 광화문",
+      "blurb": "궁궐 라인 · 한옥 · 드라마 무드",
+      "imageAlt": "해 질 녘 경복궁 광화문과 한복을 입은 방문객"
+    },
+    "gangnam": {
+      "name": "강남",
+      "landmark": "강남역 일대",
+      "blurb": "K-Pop · 야경 · 트렌디 스트립",
+      "imageAlt": "강남역 교차로 야경과 빌딩 숲"
+    },
+    "busan": {
+      "name": "부산",
+      "landmark": "해동용궁사",
+      "blurb": "해변과 시장 — 곧 오픈",
+      "imageAlt": "부산 해동용궁사와 바다가 보이는 절벽 위 사찰"
+    },
+    "jeju": {
+      "name": "제주",
+      "landmark": "협재해변 · 돌하르방",
+      "blurb": "섬 여정 — 곧 오픈",
+      "imageAlt": "제주 협재 바다와 돌하르방"
+    }
   },
   "ExperienceThemes": {
     "k_drama_romance": { "title": "K-드라마 로맨스 산책", "subtitle": "촬영지 감성 · 느린 동선" },

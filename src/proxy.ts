@@ -4,7 +4,8 @@ import { routing } from "./i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
 
-export default function middleware(request: NextRequest) {
+/** Next.js 16+: `middleware` convention renamed to `proxy` (same behavior at the edge). */
+export default function proxy(request: NextRequest) {
   const p = request.nextUrl.pathname;
   if (p.startsWith("/admin") || p.startsWith("/guardian")) {
     return NextResponse.next();
