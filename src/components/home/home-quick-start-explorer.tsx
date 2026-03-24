@@ -1,13 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { mockExperienceThemes, mockLaunchAreas } from "@/data/mock";
 import type { LaunchAreaSlug } from "@/types/launch-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useHomeExplorePreferences } from "@/components/home/home-explore-preferences";
 import { cn } from "@/lib/utils";
 import { ArrowRight, MapPin, Sparkles } from "lucide-react";
 
@@ -35,9 +36,7 @@ export function HomeQuickStartExplorer() {
   const tHome = useTranslations("Home");
   const tLaunch = useTranslations("LaunchAreas");
   const tTheme = useTranslations("ExperienceThemes");
-
-  const [area, setArea] = useState<LaunchAreaSlug | null>(null);
-  const [theme, setTheme] = useState<MoodSlug | null>(null);
+  const { area, theme, setArea, setTheme } = useHomeExplorePreferences();
 
   const exploreHref = useMemo(() => {
     const p = new URLSearchParams();
@@ -84,7 +83,7 @@ export function HomeQuickStartExplorer() {
                   disabled={!active}
                   onClick={() => {
                     if (!active) return;
-                    setArea((prev) => (prev === a.slug ? null : a.slug));
+                    setArea(area === a.slug ? null : a.slug);
                   }}
                   className={cn(
                     "group border-border/70 bg-card text-left transition-all",
@@ -155,7 +154,7 @@ export function HomeQuickStartExplorer() {
                 <button
                   key={th.slug}
                   type="button"
-                  onClick={() => setTheme((prev) => (prev === th.slug ? null : (th.slug as MoodSlug)))}
+                  onClick={() => setTheme(theme === th.slug ? null : th.slug)}
                   className={cn(
                     "border-border/70 bg-card rounded-2xl border p-5 text-left shadow-[var(--shadow-sm)] transition-all",
                     "hover:-translate-y-0.5 hover:shadow-[var(--shadow-md)]",
@@ -204,7 +203,7 @@ export function HomeQuickStartExplorer() {
                         variant="secondary"
                         className="rounded-full border border-border/60 bg-white px-3 py-1.5 text-sm font-medium"
                       >
-                        {themeTitle(theme)}
+                        {themeTitle(theme as MoodSlug)}
                       </Badge>
                     ) : null}
                   </>

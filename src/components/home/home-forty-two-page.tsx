@@ -1,124 +1,31 @@
-import Image from "next/image";
 import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { mockContentPosts, mockFeaturedGuardians, mockTravelerReviews, mockTravelerReviewQuotes } from "@/data/mock";
-import { listLaunchReadyGuardians, type PublicGuardian } from "@/lib/guardian-public";
+import { mockContentPosts, mockTravelerReviews, mockTravelerReviewQuotes } from "@/data/mock";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { TrustBadgesServer } from "@/components/forty-two/trust-badges-server";
 import { HomeHeroCarousel } from "@/components/home/home-hero-carousel";
-import { HomeQuickStartExplorer } from "@/components/home/home-quick-start-explorer";
-import { ChevronRight, Star } from "lucide-react";
-import { guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
-import type { GuardianTier } from "@/types/domain";
-
-function orderedLaunchGuardians(): PublicGuardian[] {
-  const launch = listLaunchReadyGuardians();
-  const featuredOrder = mockFeaturedGuardians.filter((f) => f.active).map((f) => f.guardian_user_id);
-  const picked = featuredOrder
-    .map((id) => launch.find((g) => g.user_id === id))
-    .filter(Boolean) as PublicGuardian[];
-  const rest = launch.filter((g) => !featuredOrder.includes(g.user_id));
-  return [...picked, ...rest];
-}
+import { HomeExploreBundle } from "@/components/home/home-explore-bundle";
+import { Star } from "lucide-react";
 
 export async function HomeFortyTwoPage() {
   const t = await getTranslations("Home");
-  const tTier = await getTranslations("GuardianTier");
-  const tG = await getTranslations("GuardiansDiscover");
   const locale = await getLocale();
   const isKo = locale === "ko";
-
-  function tierLabel(tier: GuardianTier) {
-    return tTier(tier);
-  }
-
-  function pos(g: PublicGuardian) {
-    return isKo ? g.positioning.ko : g.positioning.en;
-  }
 
   const seoulPosts = mockContentPosts
     .filter((p) => p.status === "approved" && p.region_slug === "seoul")
     .sort((a, b) => b.popular_score - a.popular_score)
     .slice(0, 6);
 
-  const guardians = orderedLaunchGuardians();
   const reviews = mockTravelerReviews.slice(0, 3);
 
   return (
     <div className="bg-[var(--bg-page)]">
       <HomeHeroCarousel />
 
-      <HomeQuickStartExplorer />
+      <HomeExploreBundle />
 
-      {/* Recommended guardians */}
-      <section className="bg-white">
-        <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-          <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 className="text-text-strong text-2xl font-semibold tracking-tight sm:text-3xl">{t("featuredGuardiansSectionTitle")}</h2>
-              <p className="text-muted-foreground mt-2 text-sm">{t("featuredGuardiansSectionLead")}</p>
-            </div>
-            <Button asChild variant="ghost" className="text-primary font-semibold">
-              <Link href="/guardians">
-                {t("featuredGuardiansCta")}
-                <ChevronRight className="size-4" />
-              </Link>
-            </Button>
-          </div>
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-            {guardians.slice(0, 6).map((g) => (
-              <Card
-                key={g.user_id}
-                className="border-border/70 flex h-full flex-col overflow-hidden rounded-2xl py-0 shadow-[var(--shadow-sm)] transition-all hover:shadow-[var(--shadow-md)]"
-              >
-                <div className="relative aspect-[16/10]">
-                  <Image src={g.photo_url} alt="" fill className="object-cover" sizes="(max-width:768px) 100vw, 33vw" />
-                </div>
-                <CardContent className="flex flex-1 flex-col gap-3 p-5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="text-foreground font-semibold">{g.display_name}</p>
-                      <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">{pos(g)}</p>
-                    </div>
-                    <Badge variant={guardianTierBadgeVariant(g.guardian_tier)} className="shrink-0 text-[10px]">
-                      {tierLabel(g.guardian_tier)}
-                    </Badge>
-                  </div>
-                  <TrustBadgesServer ids={g.trust_badge_ids} size="xs" />
-                  <div className="mt-auto flex flex-wrap gap-2 pt-2">
-                    {g.expertise_tags.slice(0, 3).map((tag) => (
-                      <span
-                        key={tag}
-                        className="bg-primary/8 text-primary rounded-full px-2.5 py-0.5 text-[11px] font-medium"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  {g.avg_traveler_rating != null ? (
-                    <p className="text-muted-foreground flex items-center gap-1 text-xs font-medium">
-                      <Star className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
-                      {g.avg_traveler_rating.toFixed(1)} · {g.review_count_display}+ reviews
-                    </p>
-                  ) : null}
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <Button asChild className="flex-1 rounded-xl">
-                      <Link href={`/guardians/${g.user_id}`}>{tG("cardCtaPrimary")}</Link>
-                    </Button>
-                    <Button asChild variant="outline" className="flex-1 rounded-xl">
-                      <Link href={`/book?guardian=${g.user_id}`}>{tG("cardCtaSecondary")}</Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Recommended posts */}
+      {/* Recommended posts / routes */}
       <section className="bg-muted/20">
         <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
           <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
