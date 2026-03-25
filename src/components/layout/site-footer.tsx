@@ -1,6 +1,7 @@
 import NextLink from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
+import { FooterPreferences } from "@/components/layout/footer-preferences";
 import { BRAND } from "@/lib/constants";
 import {
   Calendar,
@@ -144,6 +145,13 @@ export async function SiteFooter() {
               </ul>
             </div>
           </nav>
+        </div>
+
+        <div className="border-border/60 mt-12 flex flex-col gap-6 border-t pt-8 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+          <FooterPreferences />
+          <p className="text-muted-foreground text-xs leading-relaxed sm:max-w-md sm:text-right sm:text-sm">
+            {tFooter("copyright", { year: new Date().getFullYear() })}
+          </p>
         </div>
       </div>
     </footer>
