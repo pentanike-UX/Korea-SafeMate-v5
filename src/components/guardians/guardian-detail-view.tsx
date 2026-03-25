@@ -9,7 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrustBadgesServer } from "@/components/forty-two/trust-badges-server";
 import { GuardianStickyCta } from "@/components/guardians/guardian-sticky-cta";
-import { guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
+import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
+import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
+import { cn } from "@/lib/utils";
 import { ArrowLeft, Star } from "lucide-react";
 
 export async function GuardianDetailView({ guardian: g }: { guardian: PublicGuardian }) {
@@ -29,6 +31,7 @@ export async function GuardianDetailView({ guardian: g }: { guardian: PublicGuar
   const areaName = (tLaunch.raw(g.launch_area_slug) as { name: string }).name;
 
   const requestBase = `/book?guardian=${g.user_id}`;
+  const imgs = guardianProfileImageUrls(g);
 
   return (
     <div className="bg-[var(--bg-page)] pb-28 md:pb-12">
@@ -51,20 +54,33 @@ export async function GuardianDetailView({ guardian: g }: { guardian: PublicGuar
 
         <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
           <div className="border-border/60 relative aspect-[21/9] overflow-hidden rounded-[1.75rem] border bg-muted shadow-[var(--shadow-md)] sm:aspect-[3/1]">
-            <Image src={g.photo_url} alt="" fill className="object-cover object-[center_20%]" priority sizes="100vw" />
+            <Image src={imgs.landscape} alt="" fill className="object-cover object-center" priority sizes="100vw" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#0e1b3d]/85 via-[#0e1b3d]/25 to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-3 p-6 sm:flex-row sm:items-end sm:justify-between sm:p-10">
               <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">{g.display_name}</h1>
-                  <Badge variant={guardianTierBadgeVariant(g.guardian_tier)} className="border-white/20 bg-white/15 text-white">
-                    {tTier(g.guardian_tier)}
-                  </Badge>
+                <div className="flex flex-wrap items-end gap-3 sm:gap-4">
+                  <div className="border-background/40 relative size-14 shrink-0 overflow-hidden rounded-full border-2 shadow-md sm:size-[4.25rem]">
+                    <Image src={imgs.avatar} alt="" fill className="object-cover" sizes="72px" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">{g.display_name}</h1>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Badge
+                        variant={guardianTierBadgeVariant(g.guardian_tier)}
+                        className={cn(
+                          GUARDIAN_TIER_ROLE_BADGE_CLASSNAME,
+                          "border-white/25 bg-white/15 text-white backdrop-blur-sm",
+                        )}
+                      >
+                        {tTier(g.guardian_tier)}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
-                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/90 sm:text-base">
+                <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/90 sm:mt-2 sm:text-base">
                   {isKo ? g.positioning.ko : g.positioning.en}
                 </p>
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-medium text-white/75">
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-medium text-white/75 sm:mt-3">
                   <span>{areaName}</span>
                   <span aria-hidden>·</span>
                   <span>{g.languages.map((l) => l.language_code.toUpperCase()).join(" · ")}</span>

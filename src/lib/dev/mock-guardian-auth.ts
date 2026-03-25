@@ -4,6 +4,7 @@ import type { GuardianProfileStatus } from "@/lib/auth/guardian-profile-status";
 import { getGuardianSeedBundle } from "@/data/mock/guardian-seed-bundle";
 import type { GuardianLifecycleStatus, GuardianSeedRow } from "@/data/mock/guardian-seed-types";
 import { GUARDIAN_SEED_ROWS } from "@/data/mock/guardians-seed";
+import { guardianProfileImageUrls, guardianProfileImageUrlsFromIndex } from "@/lib/guardian-profile-images";
 import type { GuardianProfile } from "@/types/domain";
 import type { GuardianMarketingProfile } from "@/types/guardian-marketing";
 import type { LaunchAreaSlug } from "@/types/launch-area";
@@ -39,7 +40,7 @@ export function defaultMarketingFromGuardian(g: GuardianProfile): GuardianMarket
   if (!repIds.length) {
     repIds = bundle.posts.filter((p) => p.author_user_id === g.user_id).map((p) => p.id).slice(0, 4);
   }
-  const photo = g.photo_url ?? "/mock/profiles/profile_01.jpg";
+  const urls = row ? guardianProfileImageUrlsFromIndex(row.profile_image_index) : guardianProfileImageUrls(g);
   const launch = row ? launchAreaFromSeedRow(row) : "gwanghwamun";
   return {
     user_id: g.user_id,
@@ -47,7 +48,7 @@ export function defaultMarketingFromGuardian(g: GuardianProfile): GuardianMarket
     theme_slugs: (g.expertise_tags ?? []).slice(0, 4).map((t) => t.toLowerCase().replace(/\s+/g, "_")),
     companion_style_slugs: ["calm", "planner"],
     trust_badge_ids: g.guardian_tier === "verified_guardian" ? ["verified", "language_checked", "reviewed"] : ["language_checked", "reviewed"],
-    photo_url: photo,
+    photo_url: urls.default,
     positioning: { ko: g.headline, en: g.headline },
     intro: { ko: g.bio, en: g.bio },
     recommended_routes: [
@@ -90,7 +91,7 @@ export function readMockGuardianIdFromDocumentCookie(): string | null {
 export function buildMockSupabaseUser(guardianId: string): User | null {
   const row = getGuardianSeedRow(guardianId);
   if (!row) return null;
-  const photo = `/mock/profiles/profile_${String(row.profile_image_index).padStart(2, "0")}.jpg`;
+  const { avatar } = guardianProfileImageUrlsFromIndex(row.profile_image_index);
   return {
     id: row.id,
     aud: "mock",
@@ -99,7 +100,7 @@ export function buildMockSupabaseUser(guardianId: string): User | null {
     phone: "",
     created_at: new Date().toISOString(),
     app_metadata: { provider: "mock_guardian" },
-    user_metadata: { full_name: row.display_name, name: row.display_name, avatar_url: photo, picture: photo },
+    user_metadata: { full_name: row.display_name, name: row.display_name, avatar_url: avatar, picture: avatar },
     identities: [],
     factors: [],
     is_anonymous: false,
@@ -127,20 +128,20 @@ export function buildMockAccountMePayload(guardianId: string): MockAccountMePayl
   const row = getGuardianSeedRow(guardianId);
   const profile = getMockGuardianProfileForServer(guardianId);
   if (!row || !profile) return null;
-  const photo = profile.photo_url ?? `/mock/profiles/profile_${String(row.profile_image_index).padStart(2, "0")}.jpg`;
+  const { avatar } = guardianProfileImageUrlsFromIndex(row.profile_image_index);
   const status = lifecycleToGuardianProfileStatus(row.lifecycle_status);
   return {
     auth: {
       id: row.id,
       email: row.email,
-      sessionAvatar: photo,
+      sessionAvatar: avatar,
       sessionName: row.display_name,
     },
     user: {
       id: row.id,
       email: row.email,
       app_role: "guardian",
-      avatar_url: photo,
+      avatar_url: avatar,
       legal_name: row.display_name,
       last_login_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
@@ -148,7 +149,7 @@ export function buildMockAccountMePayload(guardianId: string): MockAccountMePayl
     },
     profile: {
       display_name: row.display_name,
-      profile_image_url: photo,
+      profile_image_url: avatar,
       intro: row.headline,
     },
     app_role: "guardian",

@@ -8,7 +8,9 @@ import { mockContentPosts } from "@/data/mock";
 import { postHasRouteJourney } from "@/lib/content-post-route";
 import { pickHomeRecommendedGuardians } from "@/lib/home-recommended-guardians";
 import type { PublicGuardian } from "@/lib/guardian-public";
-import { guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
+import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
+import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TextActionLink } from "@/components/ui/text-action";
@@ -83,6 +85,7 @@ export function HomeRecommendedGuardiansSection() {
         <div className="mx-auto grid max-w-5xl gap-4 sm:gap-5 md:grid-cols-3">
           {picks.map((g) => {
             const rep = repBlock(g, locale);
+            const imgs = guardianProfileImageUrls(g);
             return (
               <article
                 key={g.user_id}
@@ -90,8 +93,8 @@ export function HomeRecommendedGuardiansSection() {
               >
                 <div className="flex gap-4">
                   <div className="border-border/50 relative size-[4.5rem] shrink-0 overflow-hidden rounded-full border bg-muted">
-                    {g.photo_url ? (
-                      <Image src={g.photo_url} alt="" fill className="object-cover" sizes="72px" />
+                    {imgs.avatar ? (
+                      <Image src={imgs.avatar} alt="" fill className="object-cover object-center" sizes="72px" />
                     ) : (
                       <span className="text-muted-foreground flex size-full items-center justify-center text-lg font-semibold">
                         {g.display_name.charAt(0)}
@@ -99,14 +102,17 @@ export function HomeRecommendedGuardiansSection() {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-foreground truncate font-semibold">{g.display_name}</p>
-                        <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs leading-snug">{g.headline}</p>
+                    <div className="min-w-0">
+                      <p className="text-foreground truncate font-semibold">{g.display_name}</p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <Badge
+                          variant={guardianTierBadgeVariant(g.guardian_tier)}
+                          className={cn(GUARDIAN_TIER_ROLE_BADGE_CLASSNAME)}
+                        >
+                          {tierLabel(g.guardian_tier)}
+                        </Badge>
                       </div>
-                      <Badge variant={guardianTierBadgeVariant(g.guardian_tier)} className="shrink-0 text-[10px]">
-                        {tierLabel(g.guardian_tier)}
-                      </Badge>
+                      <p className="text-muted-foreground mt-1.5 line-clamp-2 text-xs leading-snug">{g.headline}</p>
                     </div>
                   </div>
                 </div>

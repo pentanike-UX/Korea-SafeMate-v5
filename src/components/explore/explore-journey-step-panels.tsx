@@ -15,7 +15,8 @@ import { Input } from "@/components/ui/input";
 import { TrustBadgeRow } from "@/components/forty-two/trust-badges";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
+import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
+import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
 import type { LucideIcon } from "lucide-react";
 import {
   CalendarDays,
@@ -747,7 +748,13 @@ export function ExploreResultsDashboard(props: {
                     <CardContent className="p-0">
                       <div className="flex flex-col lg:flex-row">
                         <div className="relative aspect-[5/4] w-full lg:aspect-auto lg:max-w-[280px] lg:min-h-[240px]">
-                          <Image src={featured.photo_url} alt="" fill className="object-cover" sizes="(max-width:1024px) 100vw, 280px" />
+                          <Image
+                            src={guardianProfileImageUrls(featured).landscape}
+                            alt=""
+                            fill
+                            className="object-cover object-center"
+                            sizes="(max-width:1024px) 100vw, 280px"
+                          />
                           <div className="absolute top-3 left-3">
                             <Badge className="rounded-full bg-card/95 text-[10px] font-bold text-[var(--brand-primary)] shadow-sm backdrop-blur-sm">
                               {t("dashMatchBadge")}
@@ -756,20 +763,23 @@ export function ExploreResultsDashboard(props: {
                         </div>
                         <div className="flex flex-1 flex-col justify-center gap-4 p-5 sm:p-6">
                           <div>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-lg font-semibold">{featured.display_name}</span>
-                              <Badge variant={guardianTierBadgeVariant(featured.guardian_tier)} className="text-[10px]">
+                            <span className="text-lg font-semibold">{featured.display_name}</span>
+                            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                              <Badge
+                                variant={guardianTierBadgeVariant(featured.guardian_tier)}
+                                className={cn(GUARDIAN_TIER_ROLE_BADGE_CLASSNAME)}
+                              >
                                 {tTier(featured.guardian_tier)}
                               </Badge>
                             </div>
                             <p className="text-muted-foreground mt-2 line-clamp-3 text-sm leading-relaxed">{onPos(featured)}</p>
                             <TrustBadgeRow ids={featured.trust_badge_ids} className="mt-3" size="sm" />
                           </div>
-                          <div className="flex flex-wrap gap-2">
-                            <Button asChild className="rounded-xl">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                            <Button asChild className="h-11 w-full rounded-xl font-semibold sm:w-auto sm:min-w-[8rem]">
                               <Link href={`/guardians/${featured.user_id}`}>{tG("cardCtaPrimary")}</Link>
                             </Button>
-                            <Button asChild variant="outline" className="rounded-xl">
+                            <Button asChild variant="outline" className="h-11 w-full rounded-xl sm:w-auto sm:min-w-[8rem]">
                               <Link href={`/book?guardian=${featured.user_id}`}>{tG("cardCtaSecondary")}</Link>
                             </Button>
                           </div>
@@ -790,18 +800,27 @@ export function ExploreResultsDashboard(props: {
                         <CardContent className="p-4">
                           <div className="flex gap-4">
                             <div className="relative size-20 shrink-0 overflow-hidden rounded-xl">
-                              <Image src={g.photo_url} alt="" fill className="object-cover" sizes="80px" />
+                              <Image
+                                src={guardianProfileImageUrls(g).avatar}
+                                alt=""
+                                fill
+                                className="object-cover object-center"
+                                sizes="80px"
+                              />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-semibold">{g.display_name}</span>
-                                <Badge variant={guardianTierBadgeVariant(g.guardian_tier)} className="text-[10px]">
+                              <span className="font-semibold leading-snug">{g.display_name}</span>
+                              <div className="mt-1 flex flex-wrap items-center gap-2">
+                                <Badge
+                                  variant={guardianTierBadgeVariant(g.guardian_tier)}
+                                  className={cn(GUARDIAN_TIER_ROLE_BADGE_CLASSNAME)}
+                                >
                                   {tTier(g.guardian_tier)}
                                 </Badge>
                               </div>
                               <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-relaxed">{onPos(g)}</p>
-                              <div className="mt-3 flex flex-wrap gap-2">
-                                <Button asChild size="sm" variant="secondary" className="rounded-lg text-xs">
+                              <div className="mt-3">
+                                <Button asChild size="sm" variant="secondary" className="h-9 w-full rounded-lg text-xs sm:w-auto">
                                   <Link href={`/guardians/${g.user_id}`}>{tG("cardCtaPrimary")}</Link>
                                 </Button>
                               </div>

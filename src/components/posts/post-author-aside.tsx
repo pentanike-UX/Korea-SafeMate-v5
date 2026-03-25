@@ -7,19 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrustBadgesServer } from "@/components/forty-two/trust-badges-server";
-import { guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
+import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
+import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
+import { cn } from "@/lib/utils";
 
 export async function PostAuthorAside({ post }: { post: ContentPost }) {
   const t = await getTranslations("Posts");
   const tTier = await getTranslations("GuardianTier");
   const guardian = getPublicGuardianById(post.author_user_id);
+  const imgs = guardian ? guardianProfileImageUrls(guardian) : null;
 
   return (
     <aside className="space-y-6">
       <Card className="border-border/60 overflow-hidden rounded-2xl py-0 shadow-[var(--shadow-sm)]">
         <div className="relative aspect-[16/10]">
-          {guardian ? (
-            <Image src={guardian.photo_url} alt="" fill className="object-cover" sizes="400px" />
+          {guardian && imgs ? (
+            <Image src={imgs.landscape} alt="" fill className="object-cover object-center" sizes="400px" />
           ) : (
             <div className="flex h-full items-center justify-center bg-gradient-to-br from-[var(--brand-primary-soft)] to-[var(--brand-trust-blue-soft)] text-2xl font-bold text-primary/40">
               42
@@ -28,14 +31,17 @@ export async function PostAuthorAside({ post }: { post: ContentPost }) {
         </div>
         <CardContent className="space-y-3 p-5">
           <p className="text-muted-foreground text-[10px] font-bold tracking-widest uppercase">{t("authorCardEyebrow")}</p>
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-lg font-semibold">{post.author_display_name}</p>
-            {guardian ? (
-              <Badge variant={guardianTierBadgeVariant(guardian.guardian_tier)} className="text-[10px]">
+          <p className="text-lg font-semibold">{post.author_display_name}</p>
+          {guardian ? (
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <Badge
+                variant={guardianTierBadgeVariant(guardian.guardian_tier)}
+                className={cn(GUARDIAN_TIER_ROLE_BADGE_CLASSNAME)}
+              >
                 {tTier(guardian.guardian_tier)}
               </Badge>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
           {guardian ? (
             <>
               <p className="text-muted-foreground text-sm leading-relaxed">{guardian.headline}</p>

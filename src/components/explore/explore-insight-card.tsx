@@ -3,7 +3,8 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import type { ExploreInsight } from "@/lib/explore-utils";
-import { guardianTierBadgeVariant, guardianTierLabel } from "@/lib/guardian-tier-ui";
+import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -17,6 +18,7 @@ type Props = {
 
 export function ExploreInsightCard({ insight, showRegion = true }: Props) {
   const t = useTranslations("ExploreInsightCard");
+  const tTier = useTranslations("GuardianTier");
   const { post, regionName, categoryName, authorTier, authorAvgRating, authorPosts30d, hasGuardianProfile } =
     insight;
 
@@ -50,15 +52,15 @@ export function ExploreInsightCard({ insight, showRegion = true }: Props) {
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-3 pb-2">
         <div className="flex flex-wrap items-center gap-2 border-t pt-3">
-          <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <span className="text-foreground text-sm font-medium">{post.author_display_name}</span>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-foreground text-sm font-medium">{post.author_display_name}</span>
               {hasGuardianProfile && authorTier ? (
-                <Badge variant={guardianTierBadgeVariant(authorTier)} className="text-[10px]">
-                  {guardianTierLabel(authorTier)}
+                <Badge variant={guardianTierBadgeVariant(authorTier)} className={cn(GUARDIAN_TIER_ROLE_BADGE_CLASSNAME)}>
+                  {tTier(authorTier)}
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className={cn(GUARDIAN_TIER_ROLE_BADGE_CLASSNAME)}>
                   {t("contributor")}
                 </Badge>
               )}
@@ -110,8 +112,8 @@ export function ExploreInsightCard({ insight, showRegion = true }: Props) {
           </span>
         </div>
       </CardContent>
-      <CardFooter className="from-[var(--brand-primary-soft)]/25 to-[var(--brand-trust-blue-soft)]/20 mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-border/70 bg-gradient-to-r px-4 py-3">
-        <div className="flex gap-1">
+      <CardFooter className="from-[var(--brand-primary-soft)]/25 to-[var(--brand-trust-blue-soft)]/20 mt-auto flex flex-col gap-3 border-t border-border/70 bg-gradient-to-r px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex shrink-0 gap-1">
           <Button
             type="button"
             variant="ghost"
@@ -135,24 +137,16 @@ export function ExploreInsightCard({ insight, showRegion = true }: Props) {
             <span className="sr-only">{t("share")}</span>
           </Button>
         </div>
-        {hasGuardianProfile ? (
-          <Button asChild size="sm" variant="outline" className="rounded-lg">
-            <Link href={`/guardians#guardian-${post.author_user_id}`}>{t("guardian")}</Link>
+        <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
+          {hasGuardianProfile ? (
+            <Button asChild size="sm" variant="outline" className="h-9 w-full rounded-lg sm:w-auto sm:min-w-[7.5rem]">
+              <Link href={`/guardians#guardian-${post.author_user_id}`}>{t("guardian")}</Link>
+            </Button>
+          ) : null}
+          <Button asChild size="sm" className="h-9 w-full rounded-lg font-semibold sm:w-auto sm:min-w-[7.5rem]">
+            <Link href="/book">{t("bookSupport")}</Link>
           </Button>
-        ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            className="rounded-lg"
-            disabled
-            title={t("contributorHint")}
-          >
-            {t("contributor")}
-          </Button>
-        )}
-        <Button asChild size="sm" className="rounded-lg">
-          <Link href="/book">{t("bookSupport")}</Link>
-        </Button>
+        </div>
       </CardFooter>
     </Card>
   );

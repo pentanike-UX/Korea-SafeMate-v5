@@ -1,7 +1,10 @@
+import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { GuardianProfile } from "@/types/domain";
-import { guardianTierBadgeVariant, guardianTierLabel } from "@/lib/guardian-tier-ui";
+import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
+import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +17,7 @@ type Props = {
 
 export async function ExploreRegionGuardians({ regionSlug, guardians }: Props) {
   const t = await getTranslations("Explore");
+  const tTier = await getTranslations("GuardianTier");
   const local = guardians.filter((g) => g.primary_region_slug === regionSlug);
   if (local.length === 0) return null;
 
@@ -26,13 +30,26 @@ export async function ExploreRegionGuardians({ regionSlug, guardians }: Props) {
           {local.map((g) => (
             <Card key={g.user_id} className="border-primary/10" id={`guardian-${g.user_id}`}>
               <CardHeader className="pb-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <CardTitle className="text-base">{g.display_name}</CardTitle>
-                  <Badge variant={guardianTierBadgeVariant(g.guardian_tier)}>
-                    {guardianTierLabel(g.guardian_tier)}
-                  </Badge>
+                <div className="flex gap-3">
+                  <div className="border-border/60 relative size-12 shrink-0 overflow-hidden rounded-full border bg-muted">
+                    <Image
+                      src={guardianProfileImageUrls(g).avatar}
+                      alt=""
+                      fill
+                      className="object-cover object-center"
+                      sizes="48px"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-base leading-snug">{g.display_name}</CardTitle>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <Badge variant={guardianTierBadgeVariant(g.guardian_tier)} className={cn(GUARDIAN_TIER_ROLE_BADGE_CLASSNAME)}>
+                        {tTier(g.guardian_tier)}
+                      </Badge>
+                    </div>
+                    <p className="text-muted-foreground mt-1.5 text-xs leading-snug">{g.headline}</p>
+                  </div>
                 </div>
-                <p className="text-muted-foreground text-xs">{g.headline}</p>
               </CardHeader>
               <CardContent className="space-y-3 text-xs">
                 <div className="text-muted-foreground flex flex-wrap gap-x-3">

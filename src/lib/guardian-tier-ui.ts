@@ -1,5 +1,9 @@
 import type { GuardianTier } from "@/types/domain";
 
+/** 등급·역할(기여자 포함) 뱃지 — 카드/상세/리스트 동일 규칙 */
+export const GUARDIAN_TIER_ROLE_BADGE_CLASSNAME =
+  "min-h-[1.375rem] shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold leading-tight";
+
 type BadgeVariant =
   | "default"
   | "secondary"

@@ -11,7 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrustBadgeRow } from "@/components/forty-two/trust-badges";
-import { guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
+import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
+import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
+import { TextActionSecondary } from "@/components/ui/text-action";
 import { SaveGuardianButton } from "@/components/guardians/save-guardian-button";
 import { cn } from "@/lib/utils";
 import {
@@ -345,22 +347,23 @@ export function GuardiansDiscoverClient() {
             {filtered.map((g) => {
               const rep = repPostFor(g);
               const areaName = (tLaunch.raw(g.launch_area_slug) as { name: string }).name;
+              const imgs = guardianProfileImageUrls(g);
               return (
                 <li key={g.user_id}>
                   <Card className="border-border/70 h-full overflow-hidden rounded-[var(--radius-md)] py-0 shadow-[var(--shadow-sm)] transition-all hover:shadow-[var(--shadow-md)]">
                     <div className="flex flex-col sm:flex-row">
                       <div className="relative aspect-[5/4] w-full sm:aspect-auto sm:h-auto sm:w-[42%] sm:min-h-[220px]">
-                        <Image src={g.photo_url} alt="" fill className="object-cover" sizes="(max-width:640px) 100vw, 40vw" />
+                        <Image src={imgs.landscape} alt="" fill className="object-cover object-center" sizes="(max-width:640px) 100vw, 40vw" />
                       </div>
                       <CardContent className="flex flex-1 flex-col gap-4 p-6 sm:p-7">
-                        <div className="flex flex-wrap items-start justify-between gap-2">
-                          <div>
-                            <p className="text-foreground text-lg font-semibold">{g.display_name}</p>
-                            <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">{pos(g)}</p>
+                        <div>
+                          <p className="text-foreground text-lg font-semibold">{g.display_name}</p>
+                          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                            <Badge variant={guardianTierBadgeVariant(g.guardian_tier)} className={cn(GUARDIAN_TIER_ROLE_BADGE_CLASSNAME)}>
+                              {tTier(g.guardian_tier)}
+                            </Badge>
                           </div>
-                          <Badge variant={guardianTierBadgeVariant(g.guardian_tier)} className="shrink-0">
-                            {tTier(g.guardian_tier)}
-                          </Badge>
+                          <p className="text-muted-foreground mt-2 line-clamp-2 text-sm">{pos(g)}</p>
                         </div>
                         <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
                           <MapPin className="size-3.5 shrink-0" aria-hidden />
@@ -405,16 +408,25 @@ export function GuardiansDiscoverClient() {
                             <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">{rep.summary}</p>
                           </div>
                         ) : null}
-                        <div className="mt-auto grid gap-3 pt-3 sm:grid-cols-3 sm:gap-3">
-                          <Button asChild className="w-full rounded-[var(--radius-md)] sm:col-span-1">
+                        <div className="border-border/60 mt-auto space-y-3 border-t border-dashed pt-5">
+                          <Button asChild className="h-11 w-full rounded-[var(--radius-md)] font-semibold">
                             <Link href={`/guardians/${g.user_id}`}>{t("cardCtaPrimary")}</Link>
                           </Button>
-                          <div className="sm:col-span-1 [&_button]:w-full">
-                            <SaveGuardianButton guardianUserId={g.user_id} />
+                          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
+                            <div className="[&_button]:h-11 [&_button]:w-full">
+                              <SaveGuardianButton guardianUserId={g.user_id} compact />
+                            </div>
+                            <Button asChild variant="outline" className="h-11 w-full rounded-[var(--radius-md)] font-medium">
+                              <Link href={`/book?guardian=${g.user_id}`}>{t("cardCtaSecondary")}</Link>
+                            </Button>
                           </div>
-                          <Button asChild variant="outline" className="w-full rounded-[var(--radius-md)] sm:col-span-1">
-                            <Link href={`/book?guardian=${g.user_id}`}>{t("cardCtaSecondary")}</Link>
-                          </Button>
+                          <TextActionSecondary
+                            href="/mypage/saved-guardians"
+                            showArrow={false}
+                            className="mx-auto flex w-full justify-center py-1 text-sm"
+                          >
+                            {t("saveViewList")}
+                          </TextActionSecondary>
                         </div>
                       </CardContent>
                     </div>

@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import type { GuardianProfile, GuardianTier } from "@/types/domain";
 import { guardianApprovalLabel, guardianApprovalVariant } from "@/lib/booking-ui";
-import { guardianTierBadgeVariant, guardianTierLabel } from "@/lib/guardian-tier-ui";
+import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant, guardianTierLabel } from "@/lib/guardian-tier-ui";
+import { cn } from "@/lib/utils";
 import { AdminFilterBar, AdminFilterField, AdminSearchInput } from "@/components/admin/admin-filter-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -106,10 +107,7 @@ export function AdminGuardiansTable({ guardians }: { guardians: GuardianProfile[
                   <div className="text-muted-foreground mt-0.5 max-w-xs text-xs leading-snug">{g.headline}</div>
                 </TableCell>
                 <TableCell className="px-4 py-3">
-                  <Badge
-                    variant={guardianTierBadgeVariant(g.guardian_tier)}
-                    className="font-semibold tracking-wide uppercase"
-                  >
+                  <Badge variant={guardianTierBadgeVariant(g.guardian_tier)} className={cn(GUARDIAN_TIER_ROLE_BADGE_CLASSNAME)}>
                     {guardianTierLabel(g.guardian_tier)}
                   </Badge>
                 </TableCell>
