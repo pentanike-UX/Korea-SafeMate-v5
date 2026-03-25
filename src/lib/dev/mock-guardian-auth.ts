@@ -1,0 +1,157 @@
+import type { User } from "@supabase/supabase-js";
+import type { AppAccountRole } from "@/lib/auth/app-role";
+import type { GuardianProfileStatus } from "@/lib/auth/guardian-profile-status";
+import { getGuardianSeedBundle } from "@/data/mock/guardian-seed-bundle";
+import type { GuardianLifecycleStatus, GuardianSeedRow } from "@/data/mock/guardian-seed-types";
+import { GUARDIAN_SEED_ROWS } from "@/data/mock/guardians-seed";
+import type { GuardianProfile } from "@/types/domain";
+import type { GuardianMarketingProfile } from "@/types/guardian-marketing";
+import type { LaunchAreaSlug } from "@/types/launch-area";
+
+/** Dev/demo 전용 — 제거 시 이 모듈·API·쿠키 참조를 함께 삭제하면 됩니다. */
+export const MOCK_GUARDIAN_COOKIE_NAME = "safemate_mock_guardian_id";
+
+const MOCK_ID_RE = /^mg\d{2}$/;
+
+export function isMockGuardianId(id: string | null | undefined): id is string {
+  return !!id && MOCK_ID_RE.test(id);
+}
+
+export function getGuardianSeedRow(id: string): GuardianSeedRow | undefined {
+  return GUARDIAN_SEED_ROWS.find((r) => r.id === id);
+}
+
+export function lifecycleToGuardianProfileStatus(s: GuardianLifecycleStatus): GuardianProfileStatus {
+  return s;
+}
+
+function launchAreaFromSeedRow(row: GuardianSeedRow): LaunchAreaSlug {
+  if (row.primary_region_slug === "busan") return "busan";
+  if (row.primary_region_slug === "jeju") return "jeju";
+  const n = parseInt(row.id.replace(/\D/g, ""), 10) || 0;
+  return n % 2 === 0 ? "gangnam" : "gwanghwamun";
+}
+
+export function defaultMarketingFromGuardian(g: GuardianProfile): GuardianMarketingProfile {
+  const row = getGuardianSeedRow(g.user_id);
+  const bundle = getGuardianSeedBundle();
+  let repIds = bundle.posts.filter((p) => p.author_user_id === g.user_id && p.status === "approved").map((p) => p.id).slice(0, 4);
+  if (!repIds.length) {
+    repIds = bundle.posts.filter((p) => p.author_user_id === g.user_id).map((p) => p.id).slice(0, 4);
+  }
+  const photo = g.photo_url ?? "/mock/profiles/profile_01.jpg";
+  const launch = row ? launchAreaFromSeedRow(row) : "gwanghwamun";
+  return {
+    user_id: g.user_id,
+    launch_area_slug: launch,
+    theme_slugs: (g.expertise_tags ?? []).slice(0, 4).map((t) => t.toLowerCase().replace(/\s+/g, "_")),
+    companion_style_slugs: ["calm", "planner"],
+    trust_badge_ids: g.guardian_tier === "verified_guardian" ? ["verified", "language_checked", "reviewed"] : ["language_checked", "reviewed"],
+    photo_url: photo,
+    positioning: { ko: g.headline, en: g.headline },
+    intro: { ko: g.bio, en: g.bio },
+    recommended_routes: [
+      {
+        title: { ko: `${g.primary_region_slug} 동선`, en: `${g.primary_region_slug} route` },
+        blurb: { ko: g.headline, en: g.headline },
+      },
+    ],
+    trip_type_labels: [
+      { ko: "하루 동행", en: "Day companion" },
+      { ko: "첫날 적응", en: "First-day" },
+    ],
+    representative_post_ids: repIds,
+    response_note: { ko: "시드 데이터 기준", en: "Seed data" },
+    review_count_display: Math.min(120, (g.posts_approved_last_30d ?? 0) * 3 + 12),
+  };
+}
+
+export function getMockGuardianProfileForServer(id: string): GuardianProfile | null {
+  const g = getGuardianSeedBundle().guardians.find((x) => x.user_id === id);
+  return g ?? null;
+}
+
+export function getMockGuardianSeedPoints(userId: string | null): number | null {
+  if (!isMockGuardianId(userId)) return null;
+  const n = getGuardianSeedBundle().pointsByAuthorId[userId!];
+  return typeof n === "number" ? n : null;
+}
+
+/** 브라우저에서만 사용 (쿠키가 httpOnly가 아닐 때). */
+export function readMockGuardianIdFromDocumentCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const parts = `; ${document.cookie}`.split(`; ${MOCK_GUARDIAN_COOKIE_NAME}=`);
+  if (parts.length < 2) return null;
+  const v = parts.pop()?.split(";").shift();
+  const id = v ? decodeURIComponent(v) : "";
+  return isMockGuardianId(id) ? id : null;
+}
+
+export function buildMockSupabaseUser(guardianId: string): User | null {
+  const row = getGuardianSeedRow(guardianId);
+  if (!row) return null;
+  const photo = `/mock/profiles/profile_${String(row.profile_image_index).padStart(2, "0")}.jpg`;
+  return {
+    id: row.id,
+    aud: "mock",
+    role: "authenticated",
+    email: row.email,
+    phone: "",
+    created_at: new Date().toISOString(),
+    app_metadata: { provider: "mock_guardian" },
+    user_metadata: { full_name: row.display_name, name: row.display_name, avatar_url: photo, picture: photo },
+    identities: [],
+    factors: [],
+    is_anonymous: false,
+  } as User;
+}
+
+export type MockAccountMePayload = {
+  auth: { id: string; email: string | undefined; sessionAvatar: string | null; sessionName: string };
+  user: {
+    id: string;
+    email: string;
+    app_role: AppAccountRole;
+    avatar_url: string | null;
+    legal_name: string | null;
+    last_login_at: string | null;
+    created_at: string;
+    auth_provider: string;
+  };
+  profile: { display_name: string | null; profile_image_url: string | null; intro: string | null };
+  app_role: AppAccountRole;
+  guardian_status: GuardianProfileStatus;
+};
+
+export function buildMockAccountMePayload(guardianId: string): MockAccountMePayload | null {
+  const row = getGuardianSeedRow(guardianId);
+  const profile = getMockGuardianProfileForServer(guardianId);
+  if (!row || !profile) return null;
+  const photo = profile.photo_url ?? `/mock/profiles/profile_${String(row.profile_image_index).padStart(2, "0")}.jpg`;
+  const status = lifecycleToGuardianProfileStatus(row.lifecycle_status);
+  return {
+    auth: {
+      id: row.id,
+      email: row.email,
+      sessionAvatar: photo,
+      sessionName: row.display_name,
+    },
+    user: {
+      id: row.id,
+      email: row.email,
+      app_role: "guardian",
+      avatar_url: photo,
+      legal_name: row.display_name,
+      last_login_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      auth_provider: "mock_guardian",
+    },
+    profile: {
+      display_name: row.display_name,
+      profile_image_url: photo,
+      intro: row.headline,
+    },
+    app_role: "guardian",
+    guardian_status: status,
+  };
+}

@@ -1,5 +1,6 @@
 import { createServerClient, type SetAllCookies } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { getMockGuardianIdFromCookies } from "@/lib/dev/mock-guardian-cookies.server";
 
 export async function getServerSupabaseForUser() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -22,6 +23,8 @@ export async function getServerSupabaseForUser() {
 }
 
 export async function getSessionUserId(): Promise<string | null> {
+  const mockId = await getMockGuardianIdFromCookies();
+  if (mockId) return mockId;
   const sb = await getServerSupabaseForUser();
   if (!sb) return null;
   const { data } = await sb.auth.getUser();

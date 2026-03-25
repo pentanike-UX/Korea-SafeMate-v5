@@ -1,16 +1,10 @@
 import type { FeaturedGuardian } from "@/types/domain";
+import { GUARDIAN_SEED_ROWS } from "./guardians-seed";
 
-export const mockFeaturedGuardians: FeaturedGuardian[] = [
-  {
-    guardian_user_id: "g1",
-    tagline: "Seeded local · arrival & first-day calm",
-    priority: 10,
-    active: true,
-  },
-  {
-    guardian_user_id: "g2",
-    tagline: "K-route execution · Gangnam & shops",
-    priority: 5,
-    active: true,
-  },
-];
+/** 시드에서 `featured: true`인 가디언만 홈·추천에 사용합니다. */
+export const mockFeaturedGuardians: FeaturedGuardian[] = GUARDIAN_SEED_ROWS.filter((r) => r.featured).map((r, i) => ({
+  guardian_user_id: r.id,
+  tagline: r.headline,
+  priority: 100 - i,
+  active: true,
+}));

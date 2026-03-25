@@ -1,9 +1,19 @@
 import { NextResponse } from "next/server";
 import type { AppAccountRole } from "@/lib/auth/app-role";
 import { guardianStatusFromRow, type GuardianProfileStatus } from "@/lib/auth/guardian-profile-status";
+import { buildMockAccountMePayload } from "@/lib/dev/mock-guardian-auth";
+import { getMockGuardianIdFromCookies } from "@/lib/dev/mock-guardian-cookies.server";
 import { getServerSupabaseForUser } from "@/lib/supabase/server-user";
 
 export async function GET() {
+  const mockId = await getMockGuardianIdFromCookies();
+  if (mockId) {
+    const mock = buildMockAccountMePayload(mockId);
+    if (mock) {
+      return NextResponse.json(mock);
+    }
+  }
+
   const sb = await getServerSupabaseForUser();
   if (!sb) {
     return NextResponse.json({ error: "Auth not configured" }, { status: 503 });

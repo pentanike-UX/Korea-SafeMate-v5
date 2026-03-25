@@ -3,18 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { FooterPreferences } from "@/components/layout/footer-preferences";
 import { BRAND } from "@/lib/constants";
-import {
-  Calendar,
-  Compass,
-  FileText,
-  Info,
-  LayoutDashboard,
-  LogIn,
-  Plane,
-  Shield,
-  UserPlus,
-  Users,
-} from "lucide-react";
+import { Calendar, Compass, FileText, Info, LogIn, Plane, Shield, UserPlus, Users } from "lucide-react";
 
 export async function SiteFooter() {
   const tFooter = await getTranslations("Footer");
@@ -31,20 +20,13 @@ export async function SiteFooter() {
     { href: "/book" as const, label: tNav("book"), Icon: Calendar },
   ];
 
-  const guardians: {
-    href: string;
-    label: string;
-    Icon: typeof Users;
-    native?: boolean;
-  }[] = [
+  const guardians: { href: string; label: string; Icon: typeof Users }[] = [
     { href: "/guardians", label: tNav("guardians"), Icon: Users },
     { href: "/guardians/apply", label: tFooter("apply"), Icon: UserPlus },
-    { href: "/guardian", label: tFooter("dashboard"), Icon: LayoutDashboard, native: true },
-    { href: "/login/guardian", label: tFooter("guardianLogin"), Icon: LogIn },
   ];
 
   const ops: { href: string; label: string; Icon: typeof Shield; native?: boolean }[] = [
-    { href: "/admin", label: tFooter("admin"), Icon: Shield, native: true },
+    { href: "/admin", label: tFooter("adminConsoleLink"), Icon: Shield, native: true },
     { href: "/login", label: tHeader("logIn"), Icon: LogIn },
   ];
 
@@ -79,35 +61,19 @@ export async function SiteFooter() {
             <div>
               <p className="text-text-strong mb-4 text-xs font-semibold tracking-wider uppercase">{tFooter("guardians")}</p>
               <ul className="flex flex-col gap-1">
-                {guardians.map(({ href, label, Icon, native }) => {
-                  const row = (
-                    <>
+                {guardians.map(({ href, label, Icon }) => (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center gap-3 rounded-[var(--radius-md)] py-1 pr-2 text-sm font-medium transition-colors"
+                    >
                       <span className="text-[var(--brand-trust-blue)] flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-trust-blue-soft)]">
                         <Icon className="size-[1.125rem]" strokeWidth={1.75} aria-hidden />
                       </span>
                       {label}
-                    </>
-                  );
-                  return (
-                    <li key={href}>
-                      {native ? (
-                        <NextLink
-                          href={href}
-                          className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center gap-3 rounded-[var(--radius-md)] py-1 pr-2 text-sm font-medium transition-colors"
-                        >
-                          {row}
-                        </NextLink>
-                      ) : (
-                        <Link
-                          href={href}
-                          className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center gap-3 rounded-[var(--radius-md)] py-1 pr-2 text-sm font-medium transition-colors"
-                        >
-                          {row}
-                        </Link>
-                      )}
-                    </li>
-                  );
-                })}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
             <div className="sm:col-span-2 lg:col-span-1">
@@ -149,9 +115,17 @@ export async function SiteFooter() {
 
         <div className="border-border/60 mt-12 flex flex-col gap-6 border-t pt-8 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
           <FooterPreferences />
-          <p className="text-muted-foreground text-xs leading-relaxed sm:max-w-md sm:text-right sm:text-sm">
-            {tFooter("copyright", { year: new Date().getFullYear() })}
-          </p>
+          <div className="flex flex-col gap-3 sm:items-end">
+            <NextLink
+              href="/admin"
+              className="text-muted-foreground hover:text-foreground order-first min-h-10 text-xs font-medium underline-offset-4 hover:underline sm:order-none sm:text-sm"
+            >
+              {tFooter("adminConsoleLink")}
+            </NextLink>
+            <p className="text-muted-foreground text-xs leading-relaxed sm:max-w-md sm:text-right sm:text-sm">
+              {tFooter("copyright", { year: new Date().getFullYear() })}
+            </p>
+          </div>
         </div>
       </div>
     </footer>

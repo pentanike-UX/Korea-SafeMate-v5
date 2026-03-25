@@ -10,11 +10,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight,
+  Bookmark,
   ChevronLeft,
   ChevronRight,
-  Compass,
   FileText,
-  Shield,
+  Heart,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -25,6 +25,7 @@ export function HomeHeroCarousel() {
   const viewer = useViewerRole();
   const heroGuest = viewer == null;
   const heroGuardian = viewer === "guardian";
+  const heroTraveler = viewer !== null && viewer !== undefined && !heroGuardian;
   const total = HOME_HERO_SLIDES.length;
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -133,21 +134,21 @@ export function HomeHeroCarousel() {
               className="h-auto min-h-12 w-full gap-2.5 rounded-[var(--radius-md)] border-0 bg-white px-8 py-3.5 text-base font-semibold text-zinc-900 shadow-lg shadow-black/25 hover:bg-white/95 sm:w-auto"
             >
               <Link
-                href={heroGuest ? "/guardians" : heroGuardian ? "/guardian" : "/mypage"}
+                href={
+                  heroGuest ? "/guardians" : heroGuardian ? "/guardian/posts" : "/guardians"
+                }
                 className="gap-2.5"
               >
-                {heroGuest ? (
+                {heroGuest || heroTraveler ? (
                   <Users className="size-5 shrink-0" aria-hidden />
-                ) : heroGuardian ? (
-                  <Shield className="size-5 shrink-0" aria-hidden />
                 ) : (
-                  <Sparkles className="size-5 shrink-0" aria-hidden />
+                  <FileText className="size-5 shrink-0" aria-hidden />
                 )}
                 {heroGuest
                   ? t("ctaPrimaryRequest")
                   : heroGuardian
-                    ? t("heroCtaGuardianAuthedPrimary")
-                    : t("heroCtaTravelerAuthedPrimary")}
+                    ? t("heroPolicyGuardianWrite")
+                    : t("heroPolicyTravelerFind")}
               </Link>
             </Button>
             <Button
@@ -157,25 +158,53 @@ export function HomeHeroCarousel() {
               className="h-auto min-h-12 w-full gap-2.5 rounded-[var(--radius-md)] border-2 border-white/45 bg-white/10 px-8 py-3.5 text-base font-semibold text-white shadow-sm backdrop-blur-sm sm:w-auto hover:border-white/70 hover:bg-white/18 active:scale-[0.99]"
             >
               <Link
-                href={heroGuest ? "/posts?content=route" : heroGuardian ? "/guardian/posts" : "/guardians"}
+                href={
+                  heroGuest ? "/posts" : heroGuardian ? "/guardian/matches" : "/mypage/saved-guardians"
+                }
                 className="gap-2 whitespace-nowrap"
               >
-                {heroGuardian ? (
+                {heroGuest ? (
                   <FileText className="size-5 shrink-0 text-white" aria-hidden />
+                ) : heroGuardian ? (
+                  <Heart className="size-5 shrink-0 text-white" aria-hidden />
                 ) : (
-                  <Compass className="size-5 shrink-0 text-white" aria-hidden />
+                  <Bookmark className="size-5 shrink-0 text-white" aria-hidden />
                 )}
                 <span>
                   {heroGuest
-                    ? t("ctaSecondaryExplore")
+                    ? t("heroPolicyGuestPosts")
                     : heroGuardian
-                      ? t("heroCtaGuardianAuthedSecondary")
-                      : t("heroCtaTravelerAuthedSecondary")}
+                      ? t("heroPolicyGuardianMatches")
+                      : t("heroPolicyTravelerSaved")}
                 </span>
                 <ArrowRight className="size-5 shrink-0 text-white/90" aria-hidden />
               </Link>
             </Button>
           </div>
+          {heroTraveler ? (
+            <Link
+              href="/mypage/saved-posts"
+              className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-white/75 underline-offset-4 transition-colors hover:text-white hover:underline"
+            >
+              {t("heroPolicyTravelerRecentPosts")}
+            </Link>
+          ) : null}
+          {heroGuardian ? (
+            <Link
+              href="/mypage/points"
+              className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-white/75 underline-offset-4 transition-colors hover:text-white hover:underline"
+            >
+              {t("heroPolicyGuardianPoints")}
+            </Link>
+          ) : null}
+          {heroGuest ? (
+            <Link
+              href="/guardians/apply"
+              className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-white/65 underline-offset-4 transition-colors hover:text-white/90 hover:underline"
+            >
+              {t("heroPolicyGuestGuardianApply")}
+            </Link>
+          ) : null}
           <p className="mt-6 text-xs leading-relaxed text-white/55">{t("scopeNote")}</p>
         </div>
 

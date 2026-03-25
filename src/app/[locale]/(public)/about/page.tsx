@@ -71,6 +71,15 @@ export default async function AboutPage() {
           <Section title={t("serviceTitle")}>
             <p>{t("serviceBody")}</p>
           </Section>
+
+          <section id="terms" className="scroll-mt-28">
+            <h2 className="text-text-strong text-xl font-semibold tracking-tight sm:text-2xl">{t("legalTermsTitle")}</h2>
+            <p className="text-muted-foreground mt-4 text-[15px] leading-relaxed sm:text-base">{t("legalTermsBody")}</p>
+          </section>
+          <section id="privacy" className="scroll-mt-28">
+            <h2 className="text-text-strong text-xl font-semibold tracking-tight sm:text-2xl">{t("legalPrivacyTitle")}</h2>
+            <p className="text-muted-foreground mt-4 text-[15px] leading-relaxed sm:text-base">{t("legalPrivacyBody")}</p>
+          </section>
         </div>
 
         <div className="border-border/60 mt-14 flex flex-col gap-3 sm:mt-16 sm:flex-row sm:flex-wrap sm:gap-4">

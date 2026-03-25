@@ -1,10 +1,10 @@
 import Link from "next/link";
+import { redirect } from "@/i18n/navigation";
 import { listPostsForGuardian } from "@/lib/posts-public";
 import { getContentPostFormat, postHasRouteJourney } from "@/lib/content-post-route";
+import { getSessionUserId } from "@/lib/supabase/server-user";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
-const MOCK_GUARDIAN_ID = "g1";
 
 function formatLabel(format: ReturnType<typeof getContentPostFormat>) {
   if (format === "hybrid") return "하이브리드";
@@ -15,10 +15,17 @@ function formatLabel(format: ReturnType<typeof getContentPostFormat>) {
 
 export default async function GuardianMyPostsPage({
   searchParams,
+  params,
 }: {
   searchParams?: Promise<{ saved?: string }>;
+  params: Promise<{ locale: string }>;
 }) {
-  const posts = listPostsForGuardian(MOCK_GUARDIAN_ID);
+  const { locale } = await params;
+  const sessionUserId = await getSessionUserId();
+  if (!sessionUserId) {
+    redirect({ href: "/login", locale });
+  }
+  const posts = listPostsForGuardian(sessionUserId as string);
   const sp = searchParams ? await searchParams : {};
 
   return (
@@ -33,7 +40,7 @@ export default async function GuardianMyPostsPage({
           <p className="text-primary text-[10px] font-bold tracking-widest uppercase">Content</p>
           <h1 className="text-2xl font-semibold tracking-tight">내 포스트</h1>
           <p className="text-muted-foreground mt-2 max-w-xl text-sm">
-            스팟 · 루트 · 하이브리드 포맷을 구분해 표시합니다. (MVP: {MOCK_GUARDIAN_ID} 목업 계정)
+            스팟 · 루트 · 하이브리드 포맷을 구분해 표시합니다. (MVP: 로그인·임시 로그인 계정 기준)
           </p>
         </div>
         <Button asChild className="rounded-2xl">

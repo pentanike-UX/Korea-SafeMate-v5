@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import { buildMockSupabaseUser, readMockGuardianIdFromDocumentCookie } from "@/lib/dev/mock-guardian-auth";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
 /** `undefined` = 아직 확인 전, `null` = 비로그인 */
@@ -9,6 +10,13 @@ export function useAuthUser(): User | null | undefined {
   const [user, setUser] = useState<User | null | undefined>(undefined);
 
   useEffect(() => {
+    const mockId = readMockGuardianIdFromDocumentCookie();
+    if (mockId) {
+      const u = buildMockSupabaseUser(mockId);
+      setUser(u);
+      return;
+    }
+
     const sb = createSupabaseBrowserClient();
     if (!sb) {
       setUser(null);
@@ -22,6 +30,11 @@ export function useAuthUser(): User | null | undefined {
     const {
       data: { subscription },
     } = sb.auth.onAuthStateChange((_event, session) => {
+      const mid = readMockGuardianIdFromDocumentCookie();
+      if (mid) {
+        setUser(buildMockSupabaseUser(mid));
+        return;
+      }
       setUser(session?.user ?? null);
     });
 

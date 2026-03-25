@@ -14,7 +14,7 @@ export const metadata = {
   title: "Guardian dashboard | 42 Guardians",
 };
 
-const DEFAULT_PREVIEW_ID = "g1";
+const DEFAULT_PREVIEW_ID = "mg14";
 
 type Props = {
   searchParams?: Promise<{ as?: string }>;

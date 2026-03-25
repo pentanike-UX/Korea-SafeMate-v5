@@ -38,11 +38,13 @@ export function SiteHeader() {
   const heroContrast = useHomeHeaderContrast();
   const onDarkSurface = isHome && heroContrast === "dark";
 
+  const navItems = user ? NAV : NAV.filter((item) => item.href !== "/guardians");
+
   const NavLinks = ({ mobile = false }: { mobile?: boolean }) => {
     const glassHeaderNav = onDarkSurface && !mobile;
     return (
       <nav className={cn("flex gap-1", mobile ? "flex-col gap-1.5" : "items-center")}>
-        {NAV.map((item) => {
+        {navItems.map((item) => {
           const active = isNavActive(item.href, pathname);
           const Icon = item.Icon;
           return (
@@ -168,11 +170,6 @@ export function SiteHeader() {
                   {!user ? (
                     <Button asChild variant="default" className="w-full justify-center rounded-[var(--radius-md)] font-semibold">
                       <Link href="/login">{tHeader("logIn")}</Link>
-                    </Button>
-                  ) : null}
-                  {!user ? (
-                    <Button asChild variant="ghost" className="text-muted-foreground w-full justify-center rounded-[var(--radius-md)] text-sm">
-                      <Link href="/login/guardian">{tHeader("guardianLoginShort")}</Link>
                     </Button>
                   ) : null}
                 </div>

@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
+import { getMockGuardianSeedPoints } from "@/lib/dev/mock-guardian-auth";
 import { fetchBalanceSnapshot, fetchLedgerForUser } from "@/lib/points/point-ledger-service";
 import { BRAND } from "@/lib/constants";
 import { getSessionUserId } from "@/lib/supabase/server-user";
@@ -46,11 +47,25 @@ export default async function TravelerPointsPage() {
     );
   }
 
-  const [snap, ledger] = await Promise.all([fetchBalanceSnapshot(userId), fetchLedgerForUser(userId, 100)]);
+  const mockSeedPoints = getMockGuardianSeedPoints(userId);
 
-  const balance = snap?.balance ?? 0;
-  const earned = snap?.lifetime_earned ?? 0;
-  const revoked = snap?.lifetime_revoked ?? 0;
+  let balance = 0;
+  let earned = 0;
+  let revoked = 0;
+  let ledger: Awaited<ReturnType<typeof fetchLedgerForUser>> = [];
+
+  if (mockSeedPoints !== null) {
+    balance = mockSeedPoints;
+    earned = mockSeedPoints;
+    revoked = 0;
+    ledger = [];
+  } else {
+    const [snap, ledgerFromDb] = await Promise.all([fetchBalanceSnapshot(userId), fetchLedgerForUser(userId, 100)]);
+    balance = snap?.balance ?? 0;
+    earned = snap?.lifetime_earned ?? 0;
+    revoked = snap?.lifetime_revoked ?? 0;
+    ledger = ledgerFromDb;
+  }
 
   return (
     <div className="space-y-8">

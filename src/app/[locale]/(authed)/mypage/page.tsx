@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BRAND } from "@/lib/constants";
 import { getServerSupabaseForUser, getSessionUserId } from "@/lib/supabase/server-user";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles, Wallet } from "lucide-react";
 
 export async function generateMetadata() {
   const t = await getTranslations("TravelerHub");
@@ -56,7 +56,7 @@ export default async function TravelerOverviewPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="rounded-2xl border-border/60 py-0 shadow-[var(--shadow-sm)]">
           <CardContent className="p-5">
             <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t("statRequests")}</p>
@@ -81,6 +81,18 @@ export default async function TravelerOverviewPage() {
             <p className="text-text-strong mt-2 text-3xl font-semibold tabular-nums">{savedP}</p>
             <Button asChild variant="link" className="mt-2 h-auto px-0 text-sm font-semibold">
               <Link href="/mypage/saved-posts">{t("viewAll")}</Link>
+            </Button>
+          </CardContent>
+        </Card>
+        <Card className="rounded-2xl border-border/60 py-0 shadow-[var(--shadow-sm)]">
+          <CardContent className="p-5">
+            <p className="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+              <Wallet className="size-3.5 opacity-80" aria-hidden />
+              {t("statPointsSummary")}
+            </p>
+            <p className="text-text-strong mt-2 text-3xl font-semibold tabular-nums">{t("statPointsPlaceholder")}</p>
+            <Button asChild variant="link" className="mt-2 h-auto px-0 text-sm font-semibold">
+              <Link href="/mypage/points">{t("viewAll")}</Link>
             </Button>
           </CardContent>
         </Card>
@@ -115,6 +127,18 @@ export default async function TravelerOverviewPage() {
           })}
         </ul>
       </section>
+
+      <Card className="border-[var(--brand-trust-blue)]/25 from-[var(--brand-trust-blue-soft)]/40 rounded-2xl border-2 border-dashed bg-gradient-to-br to-card py-0 shadow-none">
+        <CardContent className="space-y-4 p-6 sm:p-8">
+          <div>
+            <h2 className="text-text-strong text-lg font-semibold">{t("travelerEnticeTitle")}</h2>
+            <p className="text-muted-foreground mt-2 max-w-xl text-[15px] leading-relaxed">{t("travelerEnticeBody")}</p>
+          </div>
+          <Button asChild size="lg" className="h-12 rounded-[var(--radius-md)] font-semibold">
+            <Link href="/guardians/apply">{t("travelerEnticeCta")}</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <p className="text-muted-foreground text-xs leading-relaxed">{t("mvpNote")}</p>
     </div>

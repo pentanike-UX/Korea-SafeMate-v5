@@ -125,6 +125,7 @@ export function HeaderAccountMenu({
   }, [load, authUser.id]);
 
   const handleSignOut = async () => {
+    await fetch("/api/dev/mock-guardian-logout", { method: "POST", credentials: "include" });
     const sb = createSupabaseBrowserClient();
     await sb?.auth.signOut();
     setDesktopOpen(false);

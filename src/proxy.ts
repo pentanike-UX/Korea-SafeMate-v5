@@ -8,12 +8,13 @@ import {
   type GuardianProfileStatus,
 } from "@/lib/auth/guardian-profile-status";
 import { isPrivilegedAppRole } from "@/lib/auth/app-role";
+import { loginPathWithNext, stripLocaleFromPathname, withLocalePath } from "@/lib/auth/route-path";
 import {
-  loginPathForLocale,
-  loginPathWithNext,
-  stripLocaleFromPathname,
-  withLocalePath,
-} from "@/lib/auth/route-path";
+  getGuardianSeedRow,
+  isMockGuardianId,
+  lifecycleToGuardianProfileStatus,
+  MOCK_GUARDIAN_COOKIE_NAME,
+} from "@/lib/dev/mock-guardian-auth";
 import { routing } from "./i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
@@ -43,6 +44,18 @@ function createSupabaseForResponse(request: NextRequest, response: NextResponse)
 }
 
 async function loadAccessContext(request: NextRequest, response: NextResponse): Promise<AccessCtx> {
+  const mockRaw = request.cookies.get(MOCK_GUARDIAN_COOKIE_NAME)?.value;
+  if (isMockGuardianId(mockRaw)) {
+    const row = getGuardianSeedRow(mockRaw);
+    if (row) {
+      return {
+        user: { id: mockRaw },
+        appRole: "guardian",
+        guardianStatus: lifecycleToGuardianProfileStatus(row.lifecycle_status),
+      };
+    }
+  }
+
   const sb = createSupabaseForResponse(request, response);
   if (!sb) return { user: null, appRole: null, guardianStatus: "none" };
 
@@ -104,6 +117,15 @@ function isConsumerAuthedPath(pathWithoutLocale: string) {
 function isGuardianContributorPath(pathWithoutLocale: string) {
   if (pathWithoutLocale.startsWith("/guardians")) return false;
   return pathWithoutLocale === "/guardian" || pathWithoutLocale.startsWith("/guardian/");
+}
+
+/** 여행자도 신청·온보딩·프로필 편집을 위해 접근 가능한 가디언 영역 (포스팅/매칭 제외). */
+function isGuardianOnboardingOrHubPath(pathWithoutLocale: string) {
+  if (pathWithoutLocale === "/guardian" || pathWithoutLocale === "/guardian/") return true;
+  if (pathWithoutLocale.startsWith("/guardian/onboarding")) return true;
+  if (pathWithoutLocale === "/guardian/profile" || pathWithoutLocale.startsWith("/guardian/profile/")) return true;
+  if (pathWithoutLocale === "/guardian/dashboard" || pathWithoutLocale.startsWith("/guardian/dashboard/")) return true;
+  return false;
 }
 
 function isTravelerPrivatePath(pathWithoutLocale: string) {
@@ -170,8 +192,13 @@ export default async function proxy(request: NextRequest) {
     if (isPrivilegedAppRole(ctx.appRole ?? undefined)) {
       return redirectWithSession(request, intlResponse, "/admin/dashboard");
     }
-    if (ctx.appRole !== "guardian") {
-      return redirectWithSession(request, intlResponse, withLocalePath(locale, "/guardians/apply"));
+
+    const canUseGuardianAuthoring =
+      ctx.appRole === "guardian" || ctx.guardianStatus === "approved";
+    if (!canUseGuardianAuthoring) {
+      if (!isGuardianOnboardingOrHubPath(pathWo)) {
+        return redirectWithSession(request, intlResponse, withLocalePath(locale, "/guardians/apply"));
+      }
     }
 
     if (guardianPathRequiresApproved(pathWo)) {

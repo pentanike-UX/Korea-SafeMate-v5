@@ -14,19 +14,16 @@ export function HomeDualCtaSection() {
   const viewer = useViewerRole();
   const guest = viewer == null;
   const guardian = viewer === "guardian";
+  const traveler = viewer !== null && viewer !== undefined && !guardian;
 
-  const travelerPrimaryHref = guest ? "/guardians" : guardian ? "/guardian" : "/mypage";
-  const travelerSecondaryHref = guest ? "/explore" : guardian ? "/guardians" : "/guardians";
-  const travelerPrimaryLabel = guest
-    ? t("dualCtaTravelerPrimary")
+  const leftPrimaryHref = guest ? "/guardians" : guardian ? "/guardian/posts" : "/guardians";
+  const leftSecondaryHref = guest ? "/posts" : guardian ? "/guardian/matches" : "/mypage/saved-guardians";
+  const leftPrimaryLabel = guest ? t("dualCtaTravelerPrimary") : guardian ? t("dualPolicyGuardianPrimary") : t("dualPolicyTravelerPrimary");
+  const leftSecondaryLabel = guest
+    ? t("dualPolicyGuestSecondary")
     : guardian
-      ? t("dualCtaSignedGuardianLeftPrimary")
-      : t("dualCtaSignedTravelerPrimary");
-  const travelerSecondaryLabel = guest
-    ? t("dualCtaTravelerSecondary")
-    : guardian
-      ? t("dualCtaSignedGuardianLeftSecondary")
-      : t("dualCtaSignedTravelerSecondary");
+      ? t("dualPolicyGuardianSecondary")
+      : t("dualPolicyTravelerSecondary");
 
   return (
     <section className="mx-auto max-w-6xl px-4 py-12 pb-16 sm:px-5 sm:py-14 sm:pb-20">
@@ -41,7 +38,7 @@ export function HomeDualCtaSection() {
             </div>
             <div className="flex w-full flex-col gap-2.5 sm:flex-row sm:flex-wrap">
               <Button asChild size="lg" className="w-full rounded-[var(--radius-md)] font-semibold sm:w-auto sm:min-w-[11rem]">
-                <Link href={travelerPrimaryHref}>{travelerPrimaryLabel}</Link>
+                <Link href={leftPrimaryHref}>{leftPrimaryLabel}</Link>
               </Button>
               <Button
                 asChild
@@ -49,8 +46,8 @@ export function HomeDualCtaSection() {
                 variant="outline"
                 className="group/cta2 w-full rounded-[var(--radius-md)] border-2 bg-background font-semibold sm:w-auto sm:min-w-[11rem]"
               >
-                <Link href={travelerSecondaryHref} className="inline-flex items-center justify-center gap-2">
-                  {travelerSecondaryLabel}
+                <Link href={leftSecondaryHref} className="inline-flex items-center justify-center gap-2">
+                  {leftSecondaryLabel}
                   <ArrowRight
                     className="size-4 shrink-0 transition-transform duration-200 group-hover/cta2:translate-x-0.5"
                     aria-hidden
@@ -58,6 +55,22 @@ export function HomeDualCtaSection() {
                 </Link>
               </Button>
             </div>
+            {traveler ? (
+              <Link
+                href="/mypage/saved-posts"
+                className="text-muted-foreground hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
+              >
+                {t("dualPolicyTravelerTertiary")}
+              </Link>
+            ) : null}
+            {guardian ? (
+              <Link
+                href="/mypage/points"
+                className="text-muted-foreground hover:text-foreground text-sm font-medium underline-offset-4 hover:underline"
+              >
+                {t("dualPolicyGuardianTertiary")}
+              </Link>
+            ) : null}
           </div>
           <div className="relative h-52 w-full shrink-0 sm:h-auto sm:min-h-[17rem] sm:w-[min(42%,280px)]">
             <Image
@@ -87,8 +100,8 @@ export function HomeDualCtaSection() {
               variant="secondary"
               className="w-full rounded-[var(--radius-md)] border border-white/35 bg-white font-semibold text-zinc-900 hover:bg-white/95 sm:w-auto sm:min-w-[11rem]"
             >
-              <Link href={guest || viewer !== "guardian" ? "/guardians/apply" : "/guardian/profile"}>
-                {guest || viewer !== "guardian" ? t("dualCtaGuardianButton") : tHeader("accountGuardianProfile")}
+              <Link href={guest || !guardian ? "/guardians/apply" : "/guardian/profile"}>
+                {guest || !guardian ? t("dualCtaGuardianButton") : tHeader("accountGuardianProfile")}
               </Link>
             </Button>
           </div>

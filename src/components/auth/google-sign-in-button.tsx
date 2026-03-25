@@ -9,12 +9,8 @@ import { getOAuthRedirectOriginForClient } from "@/lib/site-url";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-type Variant = "traveler" | "guardian";
-
-function postLoginPath(locale: string, variant: Variant): string {
-  if (variant === "guardian") {
-    return locale === routing.defaultLocale ? "/guardian" : `/${locale}/guardian`;
-  }
+/** 로그인 직후 기본 목적지 — traveler 허브(마이페이지). 가디언 전환은 마이페이지에서 처리합니다. */
+function defaultPostLoginPath(locale: string): string {
   return locale === routing.defaultLocale ? "/mypage" : `/${locale}/mypage`;
 }
 
@@ -42,13 +38,12 @@ function GoogleMark({ className }: { className?: string }) {
 }
 
 type Props = {
-  variant?: Variant;
   className?: string;
   /** 로그인 페이지 `?next=` — 승인 후 이 경로(로케일 포함)로 복귀 */
   returnPath?: string | null;
 };
 
-export function GoogleSignInButton({ variant = "traveler", className, returnPath = null }: Props) {
+export function GoogleSignInButton({ className, returnPath = null }: Props) {
   const t = useTranslations("Login");
   const locale = useLocale();
   const [loading, setLoading] = useState(false);
@@ -62,9 +57,11 @@ export function GoogleSignInButton({ variant = "traveler", className, returnPath
       return;
     }
 
+    await fetch("/api/dev/mock-guardian-logout", { method: "POST", credentials: "include" });
+
     setLoading(true);
     try {
-      const next = safeNextPath(returnPath) ?? postLoginPath(locale, variant);
+      const next = safeNextPath(returnPath) ?? defaultPostLoginPath(locale);
       const origin = getOAuthRedirectOriginForClient() || window.location.origin;
       const redirectTo = new URL("/auth/callback", origin);
       redirectTo.searchParams.set("next", next);
