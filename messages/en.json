@@ -338,7 +338,12 @@
   "Login": {
     "metaTitle": "Log in",
     "title": "Log in",
-    "description": "Authentication is not wired in this MVP build. Use public pages and role dashboards for UI preview only.",
+    "description": "Sign in with Google, or use the links below to browse and book.",
+    "continueGoogle": "Continue with Google",
+    "googleSigningIn": "Redirecting to Google…",
+    "googleConfigMissing": "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment.",
+    "googleSignInFailed": "Could not start Google sign-in. Please try again.",
+    "oauthFailed": "Sign-in failed. Please try again.",
     "continueEmail": "Continue with email (soon)",
     "browseExplore": "Browse Explore",
     "continueBooking": "Continue to booking flow",
@@ -646,7 +651,8 @@
   },
   "LoginGuardian": {
     "title": "Guardian login",
-    "description": "Manage dashboard, profile, and posts with your guardian account. (MVP: auth coming)",
+    "description": "Sign in with Google to open the guardian dashboard. Roles and approvals follow ops policy.",
+    "emailSoon": "Email sign-in (coming soon)",
     "travelerLogin": "Traveler login",
     "dashboardPreview": "Guardian dashboard preview",
     "startOnboarding": "Start onboarding"

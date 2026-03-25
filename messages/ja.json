@@ -338,7 +338,12 @@
   "Login": {
     "metaTitle": "ログイン",
     "title": "ログイン",
-    "description": "このMVPでは認証は未接続です。公開ページと各ロールのダッシュボードはUIプレビュー用です。",
+    "description": "Googleでログインするか、下のリンクから閲覧・予約に進めます。",
+    "continueGoogle": "Googleで続ける",
+    "googleSigningIn": "Googleへ移動中…",
+    "googleConfigMissing": "環境変数 NEXT_PUBLIC_SUPABASE_URL と NEXT_PUBLIC_SUPABASE_ANON_KEY を設定してください。",
+    "googleSignInFailed": "Googleログインを開始できませんでした。しばらくしてからお試しください。",
+    "oauthFailed": "ログインに失敗しました。もう一度お試しください。",
     "continueEmail": "メールで続行（近日）",
     "browseExplore": "Exploreを見る",
     "continueBooking": "予約フローへ",
@@ -646,7 +651,8 @@
   },
   "LoginGuardian": {
     "title": "Guardianログイン",
-    "description": "ダッシュボード管理（MVP: 認証予定）",
+    "description": "Googleでログイン後、Guardianダッシュボードへ進みます。ロール・承認は運用ポリシーに従います。",
+    "emailSoon": "メールログイン（準備中）",
     "travelerLogin": "旅行者ログイン",
     "dashboardPreview": "ダッシュボードプレビュー",
     "startOnboarding": "オンボーディングを始める"
