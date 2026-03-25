@@ -3,13 +3,19 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { syncOAuthUserFromSession } from "@/lib/auth/sync-oauth-user";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role";
+import { getCanonicalSiteOrigin } from "@/lib/site-url";
 
 function safeNextPath(raw: string | null): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/";
   return raw;
 }
 
-function resolveBase(request: Request, origin: string): string {
+/** Prefer NEXT_PUBLIC_SITE_URL so OAuth return URL matches production, not a deployment host. */
+function resolveRedirectBase(request: Request): string {
+  const canonical = getCanonicalSiteOrigin();
+  if (canonical) return canonical;
+
+  const { origin } = new URL(request.url);
   const forwardedHost = request.headers.get("x-forwarded-host");
   const isLocal = process.env.NODE_ENV === "development";
   if (!isLocal && forwardedHost) {
@@ -25,10 +31,10 @@ function resolveBase(request: Request, origin: string): string {
  * - Redirect URLs: `http://localhost:3000/auth/callback` 및 프로덕션 동일 경로
  */
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const next = safeNextPath(searchParams.get("next"));
-  const base = resolveBase(request, origin);
+  const base = resolveRedirectBase(request);
 
   const sbUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const sbKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

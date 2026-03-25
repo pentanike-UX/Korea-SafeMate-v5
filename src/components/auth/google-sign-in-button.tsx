@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { routing } from "@/i18n/routing";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { getCanonicalSiteOrigin } from "@/lib/site-url";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -61,7 +62,8 @@ export function GoogleSignInButton({ variant = "traveler", className }: Props) {
     setLoading(true);
     try {
       const next = postLoginPath(locale, variant);
-      const redirectTo = new URL("/auth/callback", window.location.origin);
+      const origin = getCanonicalSiteOrigin() || window.location.origin;
+      const redirectTo = new URL("/auth/callback", origin);
       redirectTo.searchParams.set("next", next);
 
       const { error } = await supabase.auth.signInWithOAuth({
