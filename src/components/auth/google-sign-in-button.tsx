@@ -62,7 +62,7 @@ export function GoogleSignInButton({ className, returnPath = null }: Props) {
     setLoading(true);
     try {
       const next = safeNextPath(returnPath) ?? defaultPostLoginPath(locale);
-      const origin = getOAuthRedirectOriginForClient() || window.location.origin;
+      const origin = getOAuthRedirectOriginForClient();
       const redirectTo = new URL("/auth/callback", origin);
       redirectTo.searchParams.set("next", next);
 

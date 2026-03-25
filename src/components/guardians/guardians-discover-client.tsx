@@ -353,7 +353,7 @@ export function GuardiansDiscoverClient() {
                   <Card className="border-border/70 h-full overflow-hidden rounded-[var(--radius-md)] py-0 shadow-[var(--shadow-sm)] transition-all hover:shadow-[var(--shadow-md)]">
                     <div className="flex flex-col sm:flex-row">
                       <div className="relative aspect-[5/4] w-full sm:aspect-auto sm:h-auto sm:w-[42%] sm:min-h-[220px]">
-                        <Image src={imgs.landscape} alt="" fill className="object-cover object-center" sizes="(max-width:640px) 100vw, 40vw" />
+                        <Image src={imgs.default} alt="" fill className="object-cover object-center" sizes="(max-width:640px) 100vw, 40vw" />
                       </div>
                       <CardContent className="flex flex-1 flex-col gap-4 p-6 sm:p-7">
                         <div>

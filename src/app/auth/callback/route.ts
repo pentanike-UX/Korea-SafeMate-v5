@@ -9,8 +9,9 @@ import { resolveOAuthRedirectBase } from "@/lib/site-url";
 /**
  * Supabase OAuth (Google 등) PKCE 콜백.
  * Supabase 대시보드 → Authentication → URL configuration:
- * - Site URL: 배포 도메인 (로컬은 http://localhost:3000)
- * - Redirect URLs: `http://localhost:3000/auth/callback` 및 프로덕션 동일 경로
+ * - Site URL: 프로덕션 canonical (예: https://korea-safe-mate-v3.vercel.app)
+ * - Redirect URLs: 위 origin의 `/auth/callback`, 로컬, 필요 시 `https://*.vercel.app/auth/callback` (와일드카드는 허용만)
+ * - `next` 쿼리로 `/ko/mypage` 등 로케일 경로 전달; origin은 `src/lib/site-url.ts`에서 프로덕션 고정
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

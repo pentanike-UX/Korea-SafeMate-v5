@@ -35,7 +35,10 @@ export function guardianProfileImageUrlsFromIndex(index: number): {
 }
 
 /**
- * 가디언별 동일 번호 세트: 기본 / 가로(히어로·배너) / 아바타(썸네일·헤더).
+ * 가디언별 동일 번호 세트:
+ * - `default` (profile_XX.jpg): 세로 비율 — /guardians 목록의 큰 카드 썸네일 등
+ * - `landscape` (profile_XX_landscape.jpg): 가로 배너 — 상세(/guardians/[id]) 히어로 등
+ * - `avatar` (profile_XX_avatar.jpg): 정사각형 — 상세 원형 아바타·작은 프로필 등
  * 인덱스를 알 수 없으면 `photo_url`로 세 타입에 동일 폴백.
  */
 export function guardianProfileImageUrls(g: Pick<GuardianProfile, "user_id" | "photo_url">): {
