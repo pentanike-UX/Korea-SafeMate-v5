@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
-import { Heart, Search, Sparkles } from "lucide-react";
+import { ArrowDownWideNarrow, FileQuestion, Heart, Layers, MapPin, Search, Sparkles, Tag } from "lucide-react";
 
 const REGION_SLUGS = ["all", "seoul", "busan", "jeju"] as const;
 type RegionFilter = (typeof REGION_SLUGS)[number];
@@ -86,38 +86,42 @@ export function PostsListClient({
     <div className="bg-[var(--bg-page)] min-h-screen">
       <section className="relative overflow-hidden border-b border-border/60 bg-card">
         <div className="absolute inset-0 bg-hero-42 opacity-95" />
-        <div className="relative mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-18">
-          <p className="text-primary inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.2em] uppercase">
+        <div className="page-container relative py-14 sm:py-16 md:py-20">
+          <p className="text-[var(--brand-trust-blue)] inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.18em] uppercase">
             <Sparkles className="size-3.5" aria-hidden />
             42 Guardians
           </p>
-          <h1 className="text-text-strong mt-4 max-w-2xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+          <h1 className="text-text-strong mt-4 max-w-2xl text-[1.65rem] font-semibold leading-tight tracking-tight text-balance sm:text-4xl">
             {t("heroTitle")}
           </h1>
-          <p className="text-muted-foreground mt-4 max-w-xl text-sm leading-relaxed sm:text-base">{t("heroBody")}</p>
+          <p className="text-muted-foreground mt-5 max-w-xl text-[15px] leading-relaxed sm:mt-6 sm:text-base">{t("heroBody")}</p>
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        <div className="border-border/60 bg-card mb-8 space-y-4 rounded-2xl border p-4 shadow-[var(--shadow-sm)] sm:p-5">
+      <div className="page-container py-10 sm:py-12 md:py-14">
+        <div className="border-border/60 bg-card mb-10 space-y-8 rounded-[var(--radius-lg)] border p-5 shadow-[var(--shadow-sm)] sm:mb-12 sm:p-7 md:p-8">
           <div className="relative">
-            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-[1.125rem] -translate-y-1/2" aria-hidden />
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder={t("searchPlaceholder")}
-              className="h-11 rounded-xl pl-10"
+              className="pl-11"
+              aria-label={t("searchPlaceholder")}
             />
           </div>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t("filterCategory")}</p>
-              <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-col gap-10 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between lg:gap-x-10 lg:gap-y-8">
+            <div className="space-y-3 lg:min-w-0 lg:flex-1">
+              <p className="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+                <Tag className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
+                {t("filterCategory")}
+              </p>
+              <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  size="sm"
+                  size="default"
                   variant={category === "all" ? "default" : "outline"}
-                  className="rounded-full text-xs"
+                  className="rounded-full px-5 text-sm"
                   onClick={() => setCategory("all")}
                 >
                   {t("all")}
@@ -126,9 +130,9 @@ export function PostsListClient({
                   <Button
                     key={c.slug}
                     type="button"
-                    size="sm"
+                    size="default"
                     variant={category === c.slug ? "default" : "outline"}
-                    className="rounded-full text-xs"
+                    className="rounded-full px-5 text-sm"
                     onClick={() => setCategory(c.slug)}
                   >
                     {c.name}
@@ -136,16 +140,19 @@ export function PostsListClient({
                 ))}
               </div>
             </div>
-            <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t("filterRegion")}</p>
-              <div className="flex flex-wrap gap-1.5">
+            <div className="space-y-3 lg:min-w-0 lg:flex-1">
+              <p className="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+                <MapPin className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
+                {t("filterRegion")}
+              </p>
+              <div className="flex flex-wrap gap-2">
                 {REGION_SLUGS.map((r) => (
                   <Button
                     key={r}
                     type="button"
-                    size="sm"
+                    size="default"
                     variant={region === r ? "default" : "outline"}
-                    className="rounded-full text-xs capitalize"
+                    className="rounded-full px-5 text-sm capitalize"
                     onClick={() => setRegion(r)}
                   >
                     {r === "all" ? t("all") : t(`region.${r}`)}
@@ -153,16 +160,19 @@ export function PostsListClient({
                 ))}
               </div>
             </div>
-            <div className="space-y-2">
-              <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t("sort")}</p>
-              <div className="flex flex-wrap gap-1.5">
+            <div className="space-y-3 lg:min-w-0 lg:flex-1">
+              <p className="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+                <ArrowDownWideNarrow className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
+                {t("sort")}
+              </p>
+              <div className="flex flex-wrap gap-2">
                 {SORTS.map((m) => (
                   <Button
                     key={m}
                     type="button"
-                    size="sm"
+                    size="default"
                     variant={sort === m ? "default" : "outline"}
-                    className="rounded-full text-xs"
+                    className="rounded-full px-5 text-sm"
                     onClick={() => setSort(m)}
                   >
                     {t(`sort${m.charAt(0).toUpperCase() + m.slice(1)}` as "sortRecommended")}
@@ -170,16 +180,19 @@ export function PostsListClient({
                 ))}
               </div>
             </div>
-            <div className="space-y-2 lg:min-w-[200px]">
-              <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t("filterContent")}</p>
-              <div className="flex flex-wrap gap-1.5">
+            <div className="space-y-3 lg:min-w-[220px]">
+              <p className="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+                <Layers className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
+                {t("filterContent")}
+              </p>
+              <div className="flex flex-wrap gap-2">
                 {CONTENT_FILTERS.map((f) => (
                   <Button
                     key={f}
                     type="button"
-                    size="sm"
+                    size="default"
                     variant={contentFilter === f ? "default" : "outline"}
-                    className="rounded-full text-xs"
+                    className="rounded-full px-5 text-sm"
                     onClick={() => setContentFilter(f)}
                   >
                     {t(`content${f.charAt(0).toUpperCase() + f.slice(1)}` as "contentAll")}
@@ -191,9 +204,14 @@ export function PostsListClient({
         </div>
 
         {filtered.length === 0 ? (
-          <p className="text-muted-foreground py-16 text-center text-sm">{t("empty")}</p>
+          <div className="border-border/60 text-muted-foreground flex flex-col items-center justify-center gap-4 rounded-[var(--radius-lg)] border border-dashed bg-muted/20 px-6 py-20 text-center sm:py-24">
+            <span className="text-[var(--brand-trust-blue)] flex size-14 items-center justify-center rounded-full bg-[var(--brand-trust-blue-soft)]">
+              <FileQuestion className="size-7" strokeWidth={1.5} aria-hidden />
+            </span>
+            <p className="text-foreground max-w-sm text-base font-medium">{t("empty")}</p>
+          </div>
         ) : (
-          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3 lg:gap-8">
             {filtered.map((p) => {
               const coverUrl = postCoverImageUrl(p);
               return (
@@ -203,7 +221,7 @@ export function PostsListClient({
                 ) : (
                   <Link
                     href={`/posts/${p.id}`}
-                    className="border-border/70 bg-card group flex h-full flex-col overflow-hidden rounded-2xl border shadow-[var(--shadow-sm)] transition-all hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-[var(--shadow-md)]"
+                    className="border-border/70 bg-card group flex h-full flex-col overflow-hidden rounded-[var(--radius-md)] border shadow-[var(--shadow-sm)] transition-all hover:border-[color-mix(in_srgb,var(--brand-trust-blue)_35%,var(--border))] hover:shadow-[var(--shadow-md)] active:scale-[0.99]"
                   >
                     <div className="relative aspect-[16/10] overflow-hidden bg-muted">
                       {coverUrl ? (
@@ -226,14 +244,15 @@ export function PostsListClient({
                         </div>
                       ) : null}
                     </div>
-                    <div className="flex flex-1 flex-col p-5">
-                      <p className="text-primary text-[10px] font-bold tracking-widest uppercase">
+                    <div className="flex flex-1 flex-col p-5 sm:p-6">
+                      <p className="text-muted-foreground flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase">
+                        <Tag className="text-[var(--brand-trust-blue)] size-3 shrink-0" aria-hidden />
                         {p.tags.slice(0, 3).join(" · ")}
                       </p>
-                      <h2 className="text-foreground mt-2 line-clamp-2 font-semibold leading-snug group-hover:text-primary">
+                      <h2 className="text-foreground mt-3 line-clamp-2 text-[17px] font-semibold leading-snug group-hover:text-[var(--link-color)] sm:text-lg">
                         {p.title}
                       </h2>
-                      <p className="text-muted-foreground mt-2 line-clamp-2 flex-1 text-sm">{p.summary}</p>
+                      <p className="text-muted-foreground mt-3 line-clamp-2 flex-1 text-sm leading-relaxed sm:text-[15px]">{p.summary}</p>
                       <div className="text-muted-foreground mt-4 flex flex-wrap items-center gap-2 text-xs">
                         <span>{p.author_display_name}</span>
                         <span aria-hidden>·</span>

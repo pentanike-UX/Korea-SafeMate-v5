@@ -2,6 +2,18 @@ import NextLink from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { BRAND } from "@/lib/constants";
+import {
+  Calendar,
+  Compass,
+  FileText,
+  Info,
+  LayoutDashboard,
+  LogIn,
+  Plane,
+  Shield,
+  UserPlus,
+  Users,
+} from "lucide-react";
 
 export async function SiteFooter() {
   const tFooter = await getTranslations("Footer");
@@ -9,95 +21,126 @@ export async function SiteFooter() {
   const tNav = await getTranslations("Nav");
   const tHeader = await getTranslations("Header");
 
+  const product = [
+    { href: "/explore" as const, label: tNav("explore"), Icon: Compass },
+    { href: "/posts" as const, label: tNav("posts"), Icon: FileText },
+    { href: "/guardians" as const, label: tNav("guardians"), Icon: Users },
+    { href: "/traveler" as const, label: tHeader("myJourney"), Icon: Plane },
+    { href: "/about" as const, label: tNav("about"), Icon: Info },
+    { href: "/book" as const, label: tNav("book"), Icon: Calendar },
+  ];
+
+  const guardians: {
+    href: string;
+    label: string;
+    Icon: typeof Users;
+    native?: boolean;
+  }[] = [
+    { href: "/guardians", label: tNav("guardians"), Icon: Users },
+    { href: "/guardians/apply", label: tFooter("apply"), Icon: UserPlus },
+    { href: "/guardian/dashboard", label: tFooter("dashboard"), Icon: LayoutDashboard, native: true },
+    { href: "/login/guardian", label: tFooter("guardianLogin"), Icon: LogIn },
+  ];
+
+  const ops: { href: string; label: string; Icon: typeof Shield; native?: boolean }[] = [
+    { href: "/admin", label: tFooter("admin"), Icon: Shield, native: true },
+    { href: "/login", label: tHeader("logIn"), Icon: LogIn },
+  ];
+
   return (
     <footer className="border-t border-border/80 bg-[var(--bg-surface-subtle)]">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
-          <div className="max-w-sm">
-            <p className="text-text-strong text-sm font-semibold">{BRAND.name}</p>
-            <p className="text-muted-foreground mt-1 text-sm leading-snug">{tBrand("tagline")}</p>
-            <p className="text-muted-foreground mt-4 text-xs leading-relaxed">{tFooter("disclaimerShort")}</p>
+      <div className="page-container py-10 sm:py-12 md:py-14">
+        <div className="flex flex-col gap-12 md:flex-row md:items-start md:justify-between md:gap-16">
+          <div className="max-w-md">
+            <p className="text-text-strong text-base font-semibold tracking-tight">{BRAND.name}</p>
+            <p className="text-muted-foreground mt-2 text-sm leading-relaxed sm:text-[15px]">{tBrand("tagline")}</p>
+            <p className="text-muted-foreground mt-6 text-xs leading-relaxed sm:text-sm">{tFooter("disclaimerShort")}</p>
           </div>
-          <nav className="grid grid-cols-2 gap-x-10 gap-y-1 text-sm sm:grid-cols-3" aria-label="Footer">
+          <nav className="grid w-full gap-10 sm:grid-cols-2 lg:grid-cols-3 lg:gap-12" aria-label="Footer">
             <div>
-              <p className="text-text-strong mb-2 text-xs font-semibold uppercase tracking-wider">
-                {tFooter("product")}
-              </p>
-              <ul className="text-muted-foreground space-y-1.5">
-                <li>
-                  <Link href="/explore" className="hover:text-foreground transition-colors">
-                    {tNav("explore")}
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/posts" className="hover:text-foreground transition-colors">
-                    {tNav("posts")}
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/guardians" className="hover:text-foreground transition-colors">
-                    {tNav("guardians")}
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/traveler" className="hover:text-foreground transition-colors">
-                    {tHeader("myJourney")}
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/about" className="hover:text-foreground transition-colors">
-                    {tNav("about")}
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/book" className="hover:text-foreground font-medium text-primary transition-colors">
-                    {tNav("book")}
-                  </Link>
-                </li>
+              <p className="text-text-strong mb-4 text-xs font-semibold tracking-wider uppercase">{tFooter("product")}</p>
+              <ul className="flex flex-col gap-1">
+                {product.map(({ href, label, Icon }) => (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center gap-3 rounded-[var(--radius-md)] py-1 pr-2 text-sm font-medium transition-colors"
+                    >
+                      <span className="text-[var(--brand-trust-blue)] flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-trust-blue-soft)]">
+                        <Icon className="size-[1.125rem]" strokeWidth={1.75} aria-hidden />
+                      </span>
+                      {label}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
             <div>
-              <p className="text-text-strong mb-2 text-xs font-semibold uppercase tracking-wider">
-                {tFooter("guardians")}
-              </p>
-              <ul className="text-muted-foreground space-y-1.5">
-                <li>
-                  <Link href="/guardians" className="hover:text-foreground transition-colors">
-                    {tNav("guardians")}
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/guardians/apply" className="hover:text-foreground transition-colors">
-                    {tFooter("apply")}
-                  </Link>
-                </li>
-                <li>
-                  <NextLink href="/guardian/dashboard" className="hover:text-foreground transition-colors">
-                    {tFooter("dashboard")}
-                  </NextLink>
-                </li>
-                <li>
-                  <Link href="/login/guardian" className="hover:text-foreground transition-colors">
-                    {tFooter("guardianLogin")}
-                  </Link>
-                </li>
+              <p className="text-text-strong mb-4 text-xs font-semibold tracking-wider uppercase">{tFooter("guardians")}</p>
+              <ul className="flex flex-col gap-1">
+                {guardians.map(({ href, label, Icon, native }) => {
+                  const row = (
+                    <>
+                      <span className="text-[var(--brand-trust-blue)] flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-trust-blue-soft)]">
+                        <Icon className="size-[1.125rem]" strokeWidth={1.75} aria-hidden />
+                      </span>
+                      {label}
+                    </>
+                  );
+                  return (
+                    <li key={href}>
+                      {native ? (
+                        <NextLink
+                          href={href}
+                          className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center gap-3 rounded-[var(--radius-md)] py-1 pr-2 text-sm font-medium transition-colors"
+                        >
+                          {row}
+                        </NextLink>
+                      ) : (
+                        <Link
+                          href={href}
+                          className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center gap-3 rounded-[var(--radius-md)] py-1 pr-2 text-sm font-medium transition-colors"
+                        >
+                          {row}
+                        </Link>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
-            <div className="col-span-2 sm:col-span-1">
-              <p className="text-text-strong mb-2 text-xs font-semibold uppercase tracking-wider">
-                {tFooter("operations")}
-              </p>
-              <ul className="text-muted-foreground space-y-1.5">
-                <li>
-                  <NextLink href="/admin" className="hover:text-foreground transition-colors">
-                    {tFooter("admin")}
-                  </NextLink>
-                </li>
-                <li>
-                  <Link href="/login" className="hover:text-foreground transition-colors">
-                    {tHeader("logIn")}
-                  </Link>
-                </li>
+            <div className="sm:col-span-2 lg:col-span-1">
+              <p className="text-text-strong mb-4 text-xs font-semibold tracking-wider uppercase">{tFooter("operations")}</p>
+              <ul className="flex flex-col gap-1">
+                {ops.map(({ href, label, Icon, native }) => {
+                  const row = (
+                    <>
+                      <span className="text-[var(--brand-trust-blue)] flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-trust-blue-soft)]">
+                        <Icon className="size-[1.125rem]" strokeWidth={1.75} aria-hidden />
+                      </span>
+                      {label}
+                    </>
+                  );
+                  return (
+                    <li key={href}>
+                      {native ? (
+                        <NextLink
+                          href={href}
+                          className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center gap-3 rounded-[var(--radius-md)] py-1 pr-2 text-sm font-medium transition-colors"
+                        >
+                          {row}
+                        </NextLink>
+                      ) : (
+                        <Link
+                          href={href}
+                          className="text-muted-foreground hover:text-foreground inline-flex min-h-11 items-center gap-3 rounded-[var(--radius-md)] py-1 pr-2 text-sm font-medium transition-colors"
+                        >
+                          {row}
+                        </Link>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </nav>

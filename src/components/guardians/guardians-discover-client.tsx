@@ -14,7 +14,16 @@ import { TrustBadgeRow } from "@/components/forty-two/trust-badges";
 import { guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
 import { SaveGuardianButton } from "@/components/guardians/save-guardian-button";
 import { cn } from "@/lib/utils";
-import { MapPin, SlidersHorizontal, Star } from "lucide-react";
+import {
+  ArrowDownWideNarrow,
+  MapPin,
+  Palette,
+  SlidersHorizontal,
+  ShieldCheck,
+  Star,
+  Languages,
+  UserCircle,
+} from "lucide-react";
 
 type SortMode = "recommended" | "rating" | "reviews" | "fast";
 
@@ -108,49 +117,54 @@ export function GuardiansDiscoverClient() {
     <div className="bg-[var(--bg-page)]">
       <section className="relative overflow-hidden border-b border-border/60 bg-card">
         <div className="absolute inset-0 bg-hero-42 opacity-90" />
-        <div className="relative mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-18">
-          <h1 className="text-text-strong max-w-3xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+        <div className="page-container relative py-14 sm:py-16 md:py-20">
+          <h1 className="text-text-strong max-w-3xl text-[1.65rem] font-semibold leading-tight tracking-tight text-balance sm:text-4xl">
             {t("heroTitle")}
           </h1>
-          <p className="text-muted-foreground mt-4 max-w-2xl text-sm leading-relaxed sm:text-base">{t("heroBody")}</p>
+          <p className="text-muted-foreground mt-5 max-w-2xl text-[15px] leading-relaxed sm:mt-6 sm:text-base">{t("heroBody")}</p>
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="text-muted-foreground size-4" aria-hidden />
-            <h2 className="text-lg font-semibold">{t("filterTitle")}</h2>
+      <div className="page-container py-10 sm:py-12 md:py-14">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="text-[var(--brand-trust-blue)] flex size-11 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-trust-blue-soft)]">
+              <SlidersHorizontal className="size-5" strokeWidth={1.75} aria-hidden />
+            </span>
+            <h2 className="text-text-strong text-lg font-semibold sm:text-xl">{t("filterTitle")}</h2>
           </div>
-          <Button type="button" variant="outline" size="sm" className="md:hidden" onClick={() => setShowFilters((v) => !v)}>
+          <Button type="button" variant="outline" size="default" className="md:hidden" onClick={() => setShowFilters((v) => !v)}>
             {t("filterTitle")}
           </Button>
         </div>
 
         <div
           className={cn(
-            "border-border/60 bg-card mb-8 space-y-4 rounded-2xl border p-4 shadow-[var(--shadow-sm)]",
+            "border-border/60 bg-card mb-10 space-y-8 rounded-[var(--radius-lg)] border p-5 shadow-[var(--shadow-sm)] sm:mb-12 sm:p-7 md:p-8",
             !showFilters && "hidden md:block",
           )}
         >
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
             <div>
-              <p className="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-wide">{t("filterRegion")}</p>
-              <div className="flex flex-wrap gap-1.5">
+              <p className="text-muted-foreground mb-3 flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+                <MapPin className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
+                {t("filterRegion")}
+              </p>
+              <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  size="sm"
+                  size="default"
                   variant={region === "" ? "default" : "outline"}
-                  className="rounded-full text-xs"
+                  className="rounded-full px-4 text-sm"
                   onClick={() => setRegion("")}
                 >
                   {t("filterLaunchAreas")}
                 </Button>
                 <Button
                   type="button"
-                  size="sm"
+                  size="default"
                   variant={region === "all" ? "default" : "outline"}
-                  className="rounded-full text-xs"
+                  className="rounded-full px-4 text-sm"
                   onClick={() => setRegion("all")}
                 >
                   {t("all")}
@@ -159,9 +173,9 @@ export function GuardiansDiscoverClient() {
                   <Button
                     key={slug}
                     type="button"
-                    size="sm"
+                    size="default"
                     variant={region === slug ? "default" : "outline"}
-                    className="rounded-full text-xs"
+                    className="rounded-full px-4 text-sm"
                     onClick={() => setRegion(slug)}
                   >
                     {(tLaunch.raw(slug) as { name: string }).name}
@@ -170,13 +184,16 @@ export function GuardiansDiscoverClient() {
               </div>
             </div>
             <div>
-              <p className="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-wide">{t("filterLanguage")}</p>
-              <div className="flex flex-wrap gap-1.5">
+              <p className="text-muted-foreground mb-3 flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+                <Languages className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
+                {t("filterLanguage")}
+              </p>
+              <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  size="sm"
+                  size="default"
                   variant={language === "" ? "default" : "outline"}
-                  className="rounded-full text-xs"
+                  className="rounded-full px-4 text-sm"
                   onClick={() => setLanguage("")}
                 >
                   {t("all")}
@@ -185,9 +202,9 @@ export function GuardiansDiscoverClient() {
                   <Button
                     key={code}
                     type="button"
-                    size="sm"
+                    size="default"
                     variant={language === code ? "default" : "outline"}
-                    className="rounded-full text-xs uppercase"
+                    className="rounded-full px-4 text-sm uppercase"
                     onClick={() => setLanguage(code)}
                   >
                     {code}
@@ -196,15 +213,18 @@ export function GuardiansDiscoverClient() {
               </div>
             </div>
             <div>
-              <p className="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-wide">{t("sort")}</p>
-              <div className="flex flex-wrap gap-1.5">
+              <p className="text-muted-foreground mb-3 flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+                <ArrowDownWideNarrow className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
+                {t("sort")}
+              </p>
+              <div className="flex flex-wrap gap-2">
                 {(["recommended", "rating", "reviews", "fast"] as const).map((m) => (
                   <Button
                     key={m}
                     type="button"
-                    size="sm"
+                    size="default"
                     variant={sort === m ? "default" : "outline"}
-                    className="rounded-full text-xs"
+                    className="rounded-full px-4 text-sm"
                     onClick={() => setSort(m)}
                   >
                     {m === "recommended"
@@ -219,13 +239,16 @@ export function GuardiansDiscoverClient() {
               </div>
             </div>
             <div>
-              <p className="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-wide">{t("filterTheme")}</p>
-              <div className="flex flex-wrap gap-1.5">
+              <p className="text-muted-foreground mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+                <Palette className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
+                {t("filterTheme")}
+              </p>
+              <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  size="sm"
+                  size="default"
                   variant={theme === "" ? "default" : "outline"}
-                  className="rounded-full text-xs"
+                  className="rounded-full px-4 text-sm"
                   onClick={() => setTheme("")}
                 >
                   {t("all")}
@@ -234,9 +257,9 @@ export function GuardiansDiscoverClient() {
                   <Button
                     key={slug}
                     type="button"
-                    size="sm"
+                    size="default"
                     variant={theme === slug ? "default" : "outline"}
-                    className="rounded-full text-xs"
+                    className="rounded-full px-4 text-sm"
                     onClick={() => setTheme(slug)}
                   >
                     {(tThemes.raw(slug) as { title: string }).title}
@@ -245,13 +268,16 @@ export function GuardiansDiscoverClient() {
               </div>
             </div>
             <div>
-              <p className="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-wide">{t("filterStyle")}</p>
-              <div className="flex flex-wrap gap-1.5">
+              <p className="text-muted-foreground mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+                <UserCircle className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
+                {t("filterStyle")}
+              </p>
+              <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
-                  size="sm"
+                  size="default"
                   variant={style === "" ? "default" : "outline"}
-                  className="rounded-full text-xs"
+                  className="rounded-full px-4 text-sm"
                   onClick={() => setStyle("")}
                 >
                   {t("all")}
@@ -260,9 +286,9 @@ export function GuardiansDiscoverClient() {
                   <Button
                     key={slug}
                     type="button"
-                    size="sm"
+                    size="default"
                     variant={style === slug ? "default" : "outline"}
-                    className="rounded-full text-xs"
+                    className="rounded-full px-4 text-sm"
                     onClick={() => setStyle(slug)}
                   >
                     {tStyles(slug)}
@@ -271,55 +297,62 @@ export function GuardiansDiscoverClient() {
               </div>
             </div>
             <div>
-              <p className="text-muted-foreground mb-2 text-xs font-semibold uppercase tracking-wide">{t("filterRating")}</p>
-              <div className="flex flex-wrap gap-1.5">
+              <p className="text-muted-foreground mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide">
+                <Star className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
+                {t("filterRating")}
+              </p>
+              <div className="flex flex-wrap gap-2">
                 {[0, 4, 4.5].map((r) => (
                   <Button
                     key={r}
                     type="button"
-                    size="sm"
+                    size="default"
                     variant={minRating === r ? "default" : "outline"}
-                    className="rounded-full text-xs"
+                    className="rounded-full px-4 text-sm"
                     onClick={() => setMinRating(r)}
                   >
                     {r === 0 ? t("all") : `${r}+`}
                   </Button>
                 ))}
               </div>
-              <label className="text-muted-foreground mt-3 flex cursor-pointer items-center gap-2 text-sm">
+              <label className="text-foreground mt-5 flex min-h-11 cursor-pointer items-center gap-3 rounded-[var(--radius-md)] py-2 text-sm font-medium">
                 <input
                   type="checkbox"
                   checked={verifiedOnly}
                   onChange={(e) => setVerifiedOnly(e.target.checked)}
-                  className="accent-primary size-4 rounded border-border"
+                  className="accent-primary size-5 shrink-0 rounded border-border"
                 />
+                <ShieldCheck className="text-[var(--brand-trust-blue)] size-4 shrink-0" aria-hidden />
                 {t("filterVerified")}
               </label>
             </div>
           </div>
-          <Button type="button" variant="ghost" size="sm" onClick={clearFilters}>
+          <Button type="button" variant="ghost" size="default" className="w-full justify-center sm:w-auto" onClick={clearFilters}>
             {t("clear")}
           </Button>
         </div>
 
         {filtered.length === 0 ? (
-          <div className="border-border/60 mx-auto max-w-lg rounded-2xl border border-dashed bg-muted/10 px-6 py-16 text-center">
-            <p className="text-foreground text-sm font-semibold">{t("empty")}</p>
-            <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{t("emptyBody")}</p>
+          <div className="border-border/60 mx-auto max-w-lg rounded-[var(--radius-lg)] border border-dashed bg-muted/15 px-6 py-16 text-center sm:py-20">
+            <span className="text-[var(--brand-trust-blue)] mx-auto mb-5 flex size-14 items-center justify-center rounded-full bg-[var(--brand-trust-blue-soft)]">
+              <UserCircle className="size-7" strokeWidth={1.5} aria-hidden />
+            </span>
+            <p className="text-foreground text-base font-semibold">{t("empty")}</p>
+            <p className="text-muted-foreground mt-3 text-sm leading-relaxed sm:text-[15px]">{t("emptyBody")}</p>
           </div>
         ) : (
-          <ul className="grid gap-6 lg:grid-cols-2">
+          <ul className="grid gap-7 lg:grid-cols-2 lg:gap-8">
             {filtered.map((g) => {
               const rep = repPostFor(g);
               const areaName = (tLaunch.raw(g.launch_area_slug) as { name: string }).name;
               return (
                 <li key={g.user_id}>
-                  <Card className="border-border/70 h-full overflow-hidden rounded-2xl py-0 shadow-[var(--shadow-sm)] transition-all hover:shadow-[var(--shadow-md)]">
+                  <Card className="border-border/70 h-full overflow-hidden rounded-[var(--radius-md)] py-0 shadow-[var(--shadow-sm)] transition-all hover:shadow-[var(--shadow-md)]">
                     <div className="flex flex-col sm:flex-row">
                       <div className="relative aspect-[5/4] w-full sm:aspect-auto sm:h-auto sm:w-[42%] sm:min-h-[220px]">
                         <Image src={g.photo_url} alt="" fill className="object-cover" sizes="(max-width:640px) 100vw, 40vw" />
                       </div>
-                      <CardContent className="flex flex-1 flex-col gap-3 p-5 sm:p-6">
+                      <CardContent className="flex flex-1 flex-col gap-4 p-6 sm:p-7">
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div>
                             <p className="text-foreground text-lg font-semibold">{g.display_name}</p>
@@ -337,11 +370,11 @@ export function GuardiansDiscoverClient() {
                             {g.languages.map((l) => l.language_code.toUpperCase()).join(" · ")}
                           </span>
                         </div>
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="flex flex-wrap gap-2">
                           {g.expertise_tags.slice(0, 5).map((tag) => (
                             <span
                               key={tag}
-                              className="bg-primary/8 text-primary rounded-full px-2.5 py-0.5 text-[11px] font-medium"
+                              className="border-border/70 text-muted-foreground rounded-full border bg-muted/30 px-3 py-1.5 text-xs font-medium"
                             >
                               {tag}
                             </span>
@@ -372,14 +405,14 @@ export function GuardiansDiscoverClient() {
                             <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">{rep.summary}</p>
                           </div>
                         ) : null}
-                        <div className="mt-auto grid gap-2 pt-2 sm:grid-cols-3">
-                          <Button asChild className="rounded-xl sm:col-span-1">
+                        <div className="mt-auto grid gap-3 pt-3 sm:grid-cols-3 sm:gap-3">
+                          <Button asChild className="w-full rounded-[var(--radius-md)] sm:col-span-1">
                             <Link href={`/guardians/${g.user_id}`}>{t("cardCtaPrimary")}</Link>
                           </Button>
-                          <div className="sm:col-span-1">
+                          <div className="sm:col-span-1 [&_button]:w-full">
                             <SaveGuardianButton guardianUserId={g.user_id} />
                           </div>
-                          <Button asChild variant="outline" className="rounded-xl sm:col-span-1">
+                          <Button asChild variant="outline" className="w-full rounded-[var(--radius-md)] sm:col-span-1">
                             <Link href={`/book?guardian=${g.user_id}`}>{t("cardCtaSecondary")}</Link>
                           </Button>
                         </div>
@@ -392,10 +425,10 @@ export function GuardiansDiscoverClient() {
           </ul>
         )}
 
-        <section className="border-border/60 from-card to-muted/20 mt-16 rounded-[1.75rem] border bg-gradient-to-br p-8 sm:p-10">
-          <h2 className="text-text-strong text-xl font-semibold tracking-tight">{t("footerCtaTitle")}</h2>
-          <p className="text-muted-foreground mt-3 max-w-2xl text-sm leading-relaxed">{t("footerCtaBody")}</p>
-          <Button asChild className="mt-6 rounded-2xl">
+        <section className="border-border/60 from-card to-muted/20 mt-16 rounded-[var(--radius-lg)] border bg-gradient-to-br p-8 sm:mt-20 sm:p-10 md:p-12">
+          <h2 className="text-text-strong text-xl font-semibold tracking-tight sm:text-2xl">{t("footerCtaTitle")}</h2>
+          <p className="text-muted-foreground mt-4 max-w-2xl text-[15px] leading-relaxed sm:text-base">{t("footerCtaBody")}</p>
+          <Button asChild className="mt-8 rounded-[var(--radius-md)]">
             <Link href="/guardians/apply">{t("footerCtaButton")}</Link>
           </Button>
         </section>

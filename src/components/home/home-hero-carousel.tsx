@@ -117,7 +117,7 @@ export function HomeHeroCarousel() {
             <Button
               asChild
               size="lg"
-              className="h-auto min-h-12 w-full gap-2.5 rounded-2xl border-0 bg-white px-8 py-3.5 text-base font-semibold text-[var(--brand-primary)] shadow-lg shadow-black/25 hover:bg-white/95 sm:w-auto"
+              className="h-auto min-h-12 w-full gap-2.5 rounded-[var(--radius-md)] border-0 bg-white px-8 py-3.5 text-base font-semibold text-zinc-900 shadow-lg shadow-black/25 hover:bg-white/95 sm:w-auto"
             >
               <Link href="/guardians" className="gap-2.5">
                 <Users className="size-5 shrink-0" aria-hidden />
@@ -128,7 +128,7 @@ export function HomeHeroCarousel() {
               asChild
               size="lg"
               variant="outline"
-              className="h-auto min-h-12 w-full gap-2.5 rounded-2xl border-2 border-white/45 bg-white/10 px-8 py-3.5 text-base font-semibold text-white shadow-sm backdrop-blur-sm sm:w-auto hover:border-white/70 hover:bg-white/18"
+              className="h-auto min-h-12 w-full gap-2.5 rounded-[var(--radius-md)] border-2 border-white/45 bg-white/10 px-8 py-3.5 text-base font-semibold text-white shadow-sm backdrop-blur-sm sm:w-auto hover:border-white/70 hover:bg-white/18 active:scale-[0.99]"
             >
               <Link href="/posts?content=route" className="gap-2 whitespace-nowrap">
                 <Compass className="size-5 shrink-0 text-white" aria-hidden />

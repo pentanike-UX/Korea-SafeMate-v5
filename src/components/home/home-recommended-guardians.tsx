@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { TextActionLink } from "@/components/ui/text-action";
 import { TrustBadgeRow } from "@/components/forty-two/trust-badges";
-import { MapPin } from "lucide-react";
+import { FileText, MapPin } from "lucide-react";
 import { useHomeExplorePreferences } from "@/components/home/home-explore-preferences";
 import type { ContentPost, GuardianTier } from "@/types/domain";
 
@@ -65,10 +65,10 @@ export function HomeRecommendedGuardiansSection() {
 
   return (
     <section className="border-border/35 border-t bg-card">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-        <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-5 sm:py-16 md:py-20">
+        <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-start sm:justify-between">
           <div className="max-w-2xl">
-            <h2 className="text-text-strong text-2xl font-semibold tracking-tight sm:text-3xl">
+            <h2 className="text-text-strong text-xl font-semibold tracking-tight sm:text-2xl md:text-3xl">
               {t("featuredGuardiansSectionTitle")}
             </h2>
             <p className="text-muted-foreground mt-2 text-sm leading-relaxed sm:text-[15px]">
@@ -80,13 +80,13 @@ export function HomeRecommendedGuardiansSection() {
           </TextActionLink>
         </div>
 
-        <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
+        <div className="mx-auto grid max-w-5xl gap-4 sm:gap-5 md:grid-cols-3">
           {picks.map((g) => {
             const rep = repBlock(g, locale);
             return (
               <article
                 key={g.user_id}
-                className="border-border/60 bg-card flex flex-col rounded-2xl border p-5 shadow-[var(--shadow-sm)] transition-shadow hover:shadow-[var(--shadow-md)]"
+                className="border-border/70 bg-card flex flex-col rounded-[var(--radius-md)] border p-4 shadow-[var(--shadow-sm)] transition-shadow sm:p-5 hover:shadow-[var(--shadow-md)] active:scale-[0.99]"
               >
                 <div className="flex gap-4">
                   <div className="border-border/50 relative size-[4.5rem] shrink-0 overflow-hidden rounded-full border bg-muted">
@@ -130,12 +130,17 @@ export function HomeRecommendedGuardiansSection() {
                   <div className="border-border/50 bg-muted/25 mt-4 rounded-xl border p-3">
                     {rep.kind === "post" ? (
                       <>
-                        <p className="text-primary text-[10px] font-bold tracking-widest uppercase">
+                        <p className="text-muted-foreground flex items-center gap-1 text-[10px] font-bold tracking-widest uppercase">
+                          {postHasRouteJourney(rep.post) ? (
+                            <MapPin className="text-[var(--brand-trust-blue)] size-3 shrink-0" aria-hidden />
+                          ) : (
+                            <FileText className="text-[var(--brand-trust-blue)] size-3 shrink-0" aria-hidden />
+                          )}
                           {postHasRouteJourney(rep.post) ? t("recommendedSpotRouteLabel") : t("recommendedSpotPostLabel")}
                         </p>
                         <Link
                           href={`/posts/${rep.post.id}`}
-                          className="text-foreground mt-1 block text-sm font-medium leading-snug underline decoration-[color-mix(in_srgb,var(--brand-primary)_30%,transparent)] decoration-2 underline-offset-[3px] transition-colors hover:decoration-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
+                          className="text-foreground mt-1 block text-sm font-medium leading-snug underline decoration-[color-mix(in_srgb,var(--brand-trust-blue)_35%,transparent)] decoration-2 underline-offset-[3px] transition-colors hover:decoration-[var(--brand-trust-blue)] hover:text-[var(--link-color)]"
                         >
                           {rep.post.title}
                         </Link>
@@ -143,8 +148,8 @@ export function HomeRecommendedGuardiansSection() {
                       </>
                     ) : (
                       <>
-                        <p className="text-primary flex items-center gap-1 text-[10px] font-bold tracking-widest uppercase">
-                          <MapPin className="size-3" aria-hidden />
+                        <p className="text-muted-foreground flex items-center gap-1 text-[10px] font-bold tracking-widest uppercase">
+                          <MapPin className="text-[var(--brand-trust-blue)] size-3 shrink-0" aria-hidden />
                           {t("recommendedSpotRouteLabel")}
                         </p>
                         <p className="text-foreground mt-1 text-sm font-medium leading-snug">{rep.title}</p>
@@ -155,7 +160,7 @@ export function HomeRecommendedGuardiansSection() {
                 ) : null}
 
                 <div className="mt-5 flex-1" />
-                <Button asChild className="w-full rounded-xl font-semibold">
+                <Button asChild className="w-full rounded-[var(--radius-md)] font-semibold">
                   <Link href={`/guardians/${g.user_id}`}>{t("recommendedGuardianCardCta")}</Link>
                 </Button>
               </article>

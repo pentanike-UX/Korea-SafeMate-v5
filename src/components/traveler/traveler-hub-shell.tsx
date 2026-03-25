@@ -20,19 +20,19 @@ export function TravelerHubShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="bg-[var(--bg-page)] min-h-screen">
       <div className="border-border/60 border-b bg-card/95 backdrop-blur-sm">
-        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
-          <p className="text-primary text-[11px] font-semibold tracking-[0.2em] uppercase">42 Guardians</p>
-          <h1 className="text-text-strong mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{t("hubTitle")}</h1>
-          <p className="text-muted-foreground mt-2 max-w-xl text-sm leading-relaxed">{t("hubLead")}</p>
+        <div className="page-container py-10 sm:py-12 md:py-14">
+          <p className="text-[var(--brand-trust-blue)] text-[11px] font-semibold tracking-[0.18em] uppercase">42 Guardians</p>
+          <h1 className="text-text-strong mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">{t("hubTitle")}</h1>
+          <p className="text-muted-foreground mt-3 max-w-xl text-[15px] leading-relaxed sm:text-base">{t("hubLead")}</p>
         </div>
       </div>
 
-      <div className="mx-auto flex max-w-6xl flex-col gap-8 px-4 py-6 sm:px-6 sm:py-10 lg:flex-row lg:gap-10">
+      <div className="page-container flex flex-col gap-10 py-8 sm:py-10 md:gap-12 lg:flex-row lg:gap-14">
         <nav
-          className="border-border/60 lg:w-56 lg:shrink-0 lg:space-y-1 lg:border-r lg:pr-6"
+          className="border-border/60 lg:w-60 lg:shrink-0 lg:border-r lg:pr-8"
           aria-label={t("navAria")}
         >
-          <ul className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+          <ul className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-col lg:gap-1.5 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
             {NAV.map(({ href, labelKey, Icon }) => {
               const active = pathname === href || (href !== "/traveler" && pathname.startsWith(href));
               return (
@@ -40,13 +40,13 @@ export function TravelerHubShell({ children }: { children: React.ReactNode }) {
                   <Link
                     href={href}
                     className={cn(
-                      "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+                      "flex min-h-11 items-center gap-3 rounded-[var(--radius-md)] px-4 py-3 text-[15px] font-medium transition-colors lg:min-h-12 lg:py-3.5",
                       active
-                        ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
+                        ? "bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] ring-1 ring-[color-mix(in_srgb,var(--brand-trust-blue)_22%,transparent)]"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                   >
-                    <Icon className="size-4 shrink-0 opacity-80" aria-hidden />
+                    <Icon className="size-5 shrink-0 opacity-90" strokeWidth={1.75} aria-hidden />
                     {t(labelKey)}
                   </Link>
                 </li>
@@ -54,7 +54,7 @@ export function TravelerHubShell({ children }: { children: React.ReactNode }) {
             })}
           </ul>
         </nav>
-        <div className="min-w-0 flex-1 pb-20 lg:pb-10">{children}</div>
+        <div className="min-w-0 flex-1 pb-24 lg:pb-12">{children}</div>
       </div>
     </div>
   );
