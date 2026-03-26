@@ -330,7 +330,7 @@ export function PostsListClient({
         </SheetContent>
       </Sheet>
 
-      <div className="page-container py-8 sm:py-10 md:py-12">
+      <div className="w-full px-4 py-8 sm:px-6 sm:py-10 md:px-8 md:py-12 xl:px-10">
         {filtered.length === 0 ? (
           <div className="border-border/60 text-muted-foreground flex flex-col items-center justify-center gap-4 rounded-[var(--radius-lg)] border border-dashed bg-muted/20 px-6 py-20 text-center sm:py-24">
             <span className="text-[var(--brand-trust-blue)] flex size-14 items-center justify-center rounded-full bg-[var(--brand-trust-blue-soft)]">

@@ -438,7 +438,7 @@ export function GuardiansDiscoverClient() {
         </SheetContent>
       </Sheet>
 
-      <div className="page-container max-w-[112rem] py-8 sm:py-10 md:py-12">
+      <div className="w-full px-4 py-8 sm:px-6 sm:py-10 md:px-8 md:py-12 xl:px-10">
         {filtered.length === 0 ? (
           <div className="border-border/60 mx-auto max-w-lg rounded-[var(--radius-lg)] border border-dashed bg-muted/15 px-6 py-16 text-center sm:py-20">
             <span className="text-[var(--brand-trust-blue)] mx-auto mb-5 flex size-14 items-center justify-center rounded-full bg-[var(--brand-trust-blue-soft)]">
