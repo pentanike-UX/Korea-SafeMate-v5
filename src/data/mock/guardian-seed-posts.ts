@@ -3,6 +3,7 @@ import {
   GUARDIAN_SEED_USE_LOCAL_POST_COVERS,
   type GuardianSeedRow,
 } from "./guardian-seed-types";
+import { resolveGuardianDisplayName } from "./guardian-seed-display-names";
 
 type SeedPostTheme = {
   category_slug: string;
@@ -463,7 +464,7 @@ function pushPosts(
     out.push({
       id,
       author_user_id: row.id,
-      author_display_name: row.display_name,
+      author_display_name: resolveGuardianDisplayName(row.id, row.display_name),
       region_slug: row.primary_region_slug,
       category_slug: theme.category_slug,
       kind: theme.kind,

@@ -5,6 +5,7 @@ import type {
   GuardianSeedRow,
   ProductGuardianTier,
 } from "./guardian-seed-types";
+import { resolveGuardianDisplayName } from "./guardian-seed-display-names";
 
 function lifecycleToApproval(status: GuardianLifecycleStatus): GuardianApprovalStatus {
   switch (status) {
@@ -422,7 +423,7 @@ export const GUARDIAN_SEED_ROWS: readonly GuardianSeedRow[] = [
 function rowToGuardianProfile(row: GuardianSeedRow): GuardianProfile {
   return {
     user_id: row.id,
-    display_name: row.display_name,
+    display_name: resolveGuardianDisplayName(row.id, row.display_name),
     headline: row.headline,
     bio: row.bio,
     guardian_tier: productTierToGuardianTier(row.product_tier),

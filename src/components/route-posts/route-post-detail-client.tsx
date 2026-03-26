@@ -243,13 +243,16 @@ export function RoutePostDetailClient({ post }: { post: ContentPost }) {
       </header>
 
       <div className="mt-8 space-y-5 sm:space-y-6">
-        <Card ref={mapCardRef} className="overflow-hidden rounded-2xl border-border/60 py-0 shadow-[var(--shadow-md)]">
-          <div className="border-border/50 flex items-center justify-between border-b bg-white/90 px-5 py-4">
-            <div>
+        <Card
+          ref={mapCardRef}
+          className="gap-0 overflow-hidden rounded-2xl border-border/60 py-0 shadow-[var(--shadow-md)]"
+        >
+          <div className="border-border/60 flex items-center justify-between border-b bg-white/95 px-5 pt-4 pb-3 sm:px-6 sm:pt-4 sm:pb-3.5">
+            <div className="min-w-0 pr-2">
               <p className="text-primary text-[10px] font-bold tracking-widest uppercase">{t("routeEyebrow")}</p>
-              <h2 className="text-text-strong text-lg font-semibold">{t("mapTitle")}</h2>
+              <h2 className="text-text-strong mt-0.5 text-lg font-semibold leading-snug">{t("mapTitle")}</h2>
             </div>
-            <Badge variant="outline" className="rounded-full text-[10px] font-semibold">
+            <Badge variant="outline" className="shrink-0 rounded-full text-[10px] font-semibold tabular-nums">
               {spots.length} {t("stops")}
             </Badge>
           </div>

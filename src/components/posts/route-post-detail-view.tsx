@@ -27,7 +27,7 @@ export async function RoutePostDetailView({ post }: { post: ContentPost }) {
         <div className="lg:col-span-8">
           <RoutePostDetailClient post={post} />
         </div>
-        <PostDetailStickyAside>
+        <PostDetailStickyAside variant="route">
           <PostAuthorAside post={post} />
         </PostDetailStickyAside>
       </div>
