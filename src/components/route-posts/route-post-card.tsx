@@ -50,7 +50,7 @@ export function RoutePostCard({ post, regionLabel, className }: { post: ContentP
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0e1b3d]/60 via-transparent to-transparent" />
           <div className="absolute top-3 left-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-1.5">
-            {post.is_sample ? <PostSampleBadge className="bg-white/90" /> : null}
+            {post.is_sample ? <PostSampleBadge variant="onImage" /> : null}
             <Badge className="rounded-full bg-white/95 text-[10px] font-bold text-[var(--brand-primary)] shadow-sm">{formatLabel}</Badge>
             {showRouteIncludedBadge ? (
               <Badge variant="secondary" className="rounded-full border-0 bg-black/55 text-[10px] font-semibold text-white shadow-sm backdrop-blur-sm">

@@ -2,7 +2,7 @@ import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { ContentPost } from "@/types/domain";
-import { POST_SAMPLE_BADGE_CLASS } from "@/components/posts/post-sample-constants";
+import { PostSampleBadge } from "@/components/posts/post-sample-badge";
 import { relatedPostsFor } from "@/lib/posts-public";
 import {
   getPostHeroImageAlt,
@@ -71,11 +71,7 @@ export async function PostDetailView({ post }: { post: ContentPost }) {
             <div className="absolute inset-0 bg-gradient-to-t from-white via-white/70 to-transparent" />
             <div className="absolute right-0 bottom-0 left-0 space-y-3 p-6 sm:p-10">
               <div className="flex flex-wrap items-center gap-2">
-                {post.is_sample ? (
-                  <span className={POST_SAMPLE_BADGE_CLASS} title={t("sampleBadgeAria")}>
-                    {t("sampleBadge")}
-                  </span>
-                ) : null}
+                {post.is_sample ? <PostSampleBadge /> : null}
                 {post.tags.map((tag) => (
                   <Badge key={tag} variant="secondary" className="rounded-full font-medium">
                     {tag}

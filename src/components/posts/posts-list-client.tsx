@@ -229,7 +229,7 @@ export function PostsListClient({
                       />
                       <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-[#0e1b3d]/45 to-transparent" />
                       <div className="absolute top-3 left-3 z-10 flex flex-wrap items-center gap-1.5">
-                        {p.is_sample ? <PostSampleBadge /> : null}
+                        {p.is_sample ? <PostSampleBadge variant="onImage" /> : null}
                         {p.featured ? (
                           <Badge className="rounded-full bg-card/95 text-[10px] font-semibold text-[var(--brand-primary)] shadow-sm backdrop-blur-sm">
                             {t("featured")}

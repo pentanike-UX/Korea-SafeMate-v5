@@ -213,7 +213,7 @@ export function RoutePostDetailClient({ post }: { post: ContentPost }) {
           <div className="absolute inset-0 bg-gradient-to-t from-[#0e1b3d]/80 via-[#0e1b3d]/35 to-transparent" />
           <div className="absolute right-0 bottom-0 left-0 space-y-3 p-6 sm:p-10">
             <div className="flex flex-wrap items-center gap-2">
-              {post.is_sample ? <PostSampleBadge className="border-white/30 bg-black/35 text-white" /> : null}
+              {post.is_sample ? <PostSampleBadge variant="onImage" /> : null}
               {post.tags.map((tag) => (
                 <Badge key={tag} variant="secondary" className="rounded-full border-white/20 bg-white/15 font-medium text-white">
                   {tag}

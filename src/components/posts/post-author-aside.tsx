@@ -10,7 +10,7 @@ import { TrustBadgesServer } from "@/components/forty-two/trust-badges-server";
 import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
 import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
 import { cn } from "@/lib/utils";
-import { POST_SAMPLE_BADGE_CLASS } from "@/components/posts/post-sample-constants";
+import { PostSampleBadge } from "@/components/posts/post-sample-badge";
 
 export async function PostAuthorAside({ post }: { post: ContentPost }) {
   const t = await getTranslations("Posts");
@@ -34,9 +34,7 @@ export async function PostAuthorAside({ post }: { post: ContentPost }) {
           <p className="text-muted-foreground text-[10px] font-bold tracking-widest uppercase">{t("authorCardEyebrow")}</p>
           {post.is_sample ? (
             <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs leading-relaxed">
-              <span className={POST_SAMPLE_BADGE_CLASS} title={t("sampleBadgeAria")}>
-                {t("sampleBadge")}
-              </span>
+              <PostSampleBadge />
               <span>{t("sampleAuthorNote")}</span>
             </p>
           ) : null}
