@@ -242,6 +242,10 @@ export interface ContentPost {
   featured: boolean;
   /** Omitted or `article` for legacy text-only posts. */
   post_format?: ContentPostFormat;
+  /**
+   * List/detail hero when set. Route posts may also use the first spot `image_urls` entry.
+   * If absent and no spot images, UI fills via `getPostHeroImageUrl` (curated, keyword-matched stills).
+   */
   cover_image_url?: string | null;
   route_journey?: RouteJourney;
   /** Short bullets for traveler “insight” strip on route detail. */

@@ -3,6 +3,7 @@ import { Link } from "@/i18n/navigation";
 import type { ContentPost } from "@/types/domain";
 import { relatedPostsFor } from "@/lib/posts-public";
 import { PostAuthorAside } from "@/components/posts/post-author-aside";
+import { PostDetailStickyAside } from "@/components/posts/post-detail-sticky-aside";
 import { RoutePostDetailClient } from "@/components/route-posts/route-post-detail-client";
 import { ArrowLeft } from "lucide-react";
 
@@ -26,9 +27,9 @@ export async function RoutePostDetailView({ post }: { post: ContentPost }) {
         <div className="lg:col-span-8">
           <RoutePostDetailClient post={post} />
         </div>
-        <div className="lg:col-span-4">
+        <PostDetailStickyAside>
           <PostAuthorAside post={post} />
-        </div>
+        </PostDetailStickyAside>
       </div>
 
       {related.length > 0 ? (

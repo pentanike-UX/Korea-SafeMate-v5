@@ -4,9 +4,17 @@ import { Link } from "@/i18n/navigation";
 import type { ContentPost } from "@/types/domain";
 import { POST_SAMPLE_BADGE_CLASS } from "@/components/posts/post-sample-constants";
 import { relatedPostsFor } from "@/lib/posts-public";
-import { postCoverImageUrl, postHasRouteJourney } from "@/lib/content-post-route";
+import {
+  getPostHeroImageAlt,
+  getPostHeroImageUrl,
+  getPostSecondaryImageAlt,
+  getPostSecondaryImageUrl,
+  postHasOwnVisualMedia,
+  postHasRouteJourney,
+} from "@/lib/content-post-route";
 import { Badge } from "@/components/ui/badge";
 import { PostAuthorAside } from "@/components/posts/post-author-aside";
+import { PostDetailStickyAside } from "@/components/posts/post-detail-sticky-aside";
 import { RoutePostDetailView } from "@/components/posts/route-post-detail-view";
 import { ArrowLeft, Calendar, Heart, MapPin } from "lucide-react";
 
@@ -22,7 +30,11 @@ export async function PostDetailView({ post }: { post: ContentPost }) {
 
   const t = await getTranslations("Posts");
   const related = relatedPostsFor(post, 4);
-  const heroCover = postCoverImageUrl(post);
+  const heroCover = getPostHeroImageUrl(post);
+  const heroAlt = getPostHeroImageAlt(post);
+  const secondaryCover = getPostSecondaryImageUrl(post);
+  const secondaryAlt = getPostSecondaryImageAlt(post);
+  const showEnrichedPair = !postHasOwnVisualMedia(post) && secondaryCover;
 
   const date = new Date(post.created_at).toLocaleDateString(undefined, {
     year: "numeric",
@@ -49,8 +61,8 @@ export async function PostDetailView({ post }: { post: ContentPost }) {
         >
           <div className="relative aspect-[21/10] max-h-[320px] min-h-[200px] sm:aspect-[3/1]">
             <Image
-              src={heroCover ?? "https://images.unsplash.com/photo-1538485399081-7191377e8241?w=1200&q=80"}
-              alt=""
+              src={heroCover}
+              alt={heroAlt}
               fill
               className="object-cover opacity-35 mix-blend-multiply"
               sizes="100vw"
@@ -95,8 +107,19 @@ export async function PostDetailView({ post }: { post: ContentPost }) {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-12">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-12 lg:gap-12">
         <div className="max-w-none lg:col-span-8">
+          {showEnrichedPair ? (
+            <figure className="border-border/60 relative mb-8 aspect-[16/10] overflow-hidden rounded-xl border sm:aspect-[21/9]">
+              <Image
+                src={secondaryCover!}
+                alt={secondaryAlt ?? heroAlt}
+                fill
+                className="object-cover"
+                sizes="(max-width:1024px) 100vw, 66vw"
+              />
+            </figure>
+          ) : null}
           <div className="text-foreground space-y-4 text-[15px] leading-relaxed sm:text-base">
             {post.body.split("\n").map((para, i) => (
               <p key={i}>{para}</p>
@@ -104,9 +127,9 @@ export async function PostDetailView({ post }: { post: ContentPost }) {
           </div>
         </div>
 
-        <div className="lg:col-span-4">
+        <PostDetailStickyAside>
           <PostAuthorAside post={post} />
-        </div>
+        </PostDetailStickyAside>
       </div>
 
       {related.length > 0 ? (

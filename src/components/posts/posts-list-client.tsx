@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import type { ContentCategory } from "@/types/domain";
 import type { ContentPost } from "@/types/domain";
-import { postCoverImageUrl, postHasRouteJourney } from "@/lib/content-post-route";
+import { getPostHeroImageAlt, getPostHeroImageUrl, postHasRouteJourney } from "@/lib/content-post-route";
 import { PostSampleBadge } from "@/components/posts/post-sample-badge";
 import { RoutePostCard } from "@/components/route-posts/route-post-card";
 import { Button } from "@/components/ui/button";
@@ -23,12 +23,6 @@ type SortMode = (typeof SORTS)[number];
 
 const CONTENT_FILTERS = ["all", "article", "route"] as const;
 type ContentFilter = (typeof CONTENT_FILTERS)[number];
-
-function postVisualSeed(id: string) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h + id.charCodeAt(i) * (i + 1)) % 360;
-  return `linear-gradient(135deg, hsl(${h} 65% 88%) 0%, hsl(${(h + 40) % 360} 55% 78%) 100%)`;
-}
 
 export function PostsListClient({
   posts,
@@ -214,7 +208,8 @@ export function PostsListClient({
         ) : (
           <ul className="grid gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3 lg:gap-8">
             {filtered.map((p) => {
-              const coverUrl = postCoverImageUrl(p);
+              const coverUrl = getPostHeroImageUrl(p);
+              const coverAlt = getPostHeroImageAlt(p);
               return (
               <li key={p.id}>
                 {postHasRouteJourney(p) ? (
@@ -225,17 +220,13 @@ export function PostsListClient({
                     className="border-border/70 bg-card group flex h-full flex-col overflow-hidden rounded-[var(--radius-md)] border shadow-[var(--shadow-sm)] transition-all hover:border-[color-mix(in_srgb,var(--brand-trust-blue)_35%,var(--border))] hover:shadow-[var(--shadow-md)] active:scale-[0.99]"
                   >
                     <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-                      {coverUrl ? (
-                        <Image
-                          src={coverUrl}
-                          alt=""
-                          fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-                          sizes="(max-width:768px) 100vw, 33vw"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 z-0" style={{ background: postVisualSeed(p.id) }} />
-                      )}
+                      <Image
+                        src={coverUrl}
+                        alt={coverAlt}
+                        fill
+                        className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                        sizes="(max-width:768px) 100vw, 33vw"
+                      />
                       <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-[#0e1b3d]/45 to-transparent" />
                       <div className="absolute top-3 left-3 z-10 flex flex-wrap items-center gap-1.5">
                         {p.is_sample ? <PostSampleBadge /> : null}

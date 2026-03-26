@@ -19,7 +19,7 @@ export async function PostAuthorAside({ post }: { post: ContentPost }) {
   const imgs = guardian ? guardianProfileImageUrls(guardian) : null;
 
   return (
-    <aside className="space-y-6">
+    <aside className="contents">
       <Card className="border-border/60 overflow-hidden rounded-2xl py-0 shadow-[var(--shadow-sm)]">
         <div className="relative aspect-[16/10]">
           {guardian && imgs ? (
@@ -68,7 +68,7 @@ export async function PostAuthorAside({ post }: { post: ContentPost }) {
         </CardContent>
       </Card>
 
-      <Card className="border-border/60 rounded-2xl border bg-white/90 shadow-none">
+      <Card className="border-border/60 rounded-2xl border bg-white/90 shadow-[var(--shadow-sm)]">
         <CardContent className="space-y-2 p-5">
           <p className="text-sm font-semibold">{t("trustNoteTitle")}</p>
           <p className="text-muted-foreground text-sm leading-relaxed">{t("trustNoteBody")}</p>

@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import type { ContentPost } from "@/types/domain";
 import type { LaunchAreaSlug } from "@/types/launch-area";
-import { postCoverImageUrl, postHasRouteJourney } from "@/lib/content-post-route";
+import { getPostHeroImageUrl, postHasRouteJourney } from "@/lib/content-post-route";
 import type { PublicGuardian } from "@/lib/guardian-public";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -841,7 +841,7 @@ export function ExploreResultsDashboard(props: {
               <h3 className="text-foreground font-semibold">{t("dashRoutesTitle")}</h3>
               <div className="grid gap-3 sm:grid-cols-2">
                 {routePosts.map((p) => {
-                  const cover = postCoverImageUrl(p);
+                  const cover = getPostHeroImageUrl(p);
                   return (
                     <Link
                       key={p.id}
@@ -873,7 +873,7 @@ export function ExploreResultsDashboard(props: {
               <h3 className="text-foreground font-semibold">{t("dashPostsTitle")}</h3>
               <div className="grid gap-3 sm:grid-cols-2">
                 {articlePosts.map((p) => {
-                  const cover = postCoverImageUrl(p);
+                  const cover = getPostHeroImageUrl(p);
                   return (
                     <Link
                       key={p.id}

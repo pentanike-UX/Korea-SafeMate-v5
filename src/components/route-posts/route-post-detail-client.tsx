@@ -13,21 +13,35 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { PostSampleBadge } from "@/components/posts/post-sample-badge";
-import { postCoverImageUrl } from "@/lib/content-post-route";
+import {
+  getPostHeroImageAlt,
+  getPostHeroImageUrl,
+  getSpotDisplayImageAlt,
+  getSpotDisplayImageUrl,
+} from "@/lib/content-post-route";
 import { cn } from "@/lib/utils";
 import { ArrowRight, Calendar, Heart, MapPin } from "lucide-react";
 
-function SpotDetailBody({ spot, isLast, onNext }: { spot: RouteSpot; isLast: boolean; onNext?: () => void }) {
+function SpotDetailBody({
+  spot,
+  post,
+  isLast,
+  onNext,
+}: {
+  spot: RouteSpot;
+  post: ContentPost;
+  isLast: boolean;
+  onNext?: () => void;
+}) {
   const t = useTranslations("RoutePosts");
-  const img = spot.image_urls[0];
+  const img = getSpotDisplayImageUrl(spot, post);
+  const imgAlt = getSpotDisplayImageAlt(spot, post);
 
   return (
     <div className="space-y-4">
-      {img ? (
-        <div className="border-border/60 relative aspect-[16/10] overflow-hidden rounded-xl border">
-          <Image src={img} alt="" fill className="object-cover" sizes="(max-width:768px) 100vw, 640px" />
-        </div>
-      ) : null}
+      <div className="border-border/60 relative aspect-[16/10] overflow-hidden rounded-xl border">
+        <Image src={img} alt={imgAlt} fill className="object-cover" sizes="(max-width:768px) 100vw, 640px" />
+      </div>
       <div>
         <p className="text-primary text-[10px] font-bold tracking-widest uppercase">{spot.place_name}</p>
         {spot.address_line ? (
@@ -174,7 +188,8 @@ export function RoutePostDetailClient({ post }: { post: ContentPost }) {
 
   const selectedSpot = spots.find((s) => s.id === activeSpotId) ?? null;
 
-  const cover = postCoverImageUrl(post);
+  const cover = getPostHeroImageUrl(post);
+  const coverAlt = getPostHeroImageAlt(post);
   const date = new Date(post.created_at).toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
@@ -195,11 +210,7 @@ export function RoutePostDetailClient({ post }: { post: ContentPost }) {
 
       <header className="relative overflow-hidden rounded-[1.75rem] border border-border/60 shadow-[var(--shadow-md)]">
         <div className="relative aspect-[21/11] max-h-[340px] min-h-[200px] sm:aspect-[3/1]">
-          {cover ? (
-            <Image src={cover} alt="" fill className="object-cover" sizes="100vw" priority />
-          ) : (
-            <div className="bg-muted absolute inset-0" />
-          )}
+          <Image src={cover} alt={coverAlt} fill className="object-cover" sizes="100vw" priority />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0e1b3d]/80 via-[#0e1b3d]/35 to-transparent" />
           <div className="absolute right-0 bottom-0 left-0 space-y-3 p-6 sm:p-10">
             <div className="flex flex-wrap items-center gap-2">
@@ -324,7 +335,12 @@ export function RoutePostDetailClient({ post }: { post: ContentPost }) {
                 </div>
               </div>
               <div className="mt-6">
-                <SpotDetailBody spot={spot} isLast={isLast} onNext={isLast ? undefined : () => goNextFrom(spot.id)} />
+                <SpotDetailBody
+                  spot={spot}
+                  post={post}
+                  isLast={isLast}
+                  onNext={isLast ? undefined : () => goNextFrom(spot.id)}
+                />
               </div>
               {!isLast ? (
                 <p className="text-primary mt-6 text-center text-xs font-semibold tracking-wide uppercase">{t("nextCue")}</p>
@@ -354,6 +370,7 @@ export function RoutePostDetailClient({ post }: { post: ContentPost }) {
               <div className="mt-2 max-h-[calc(88vh-5rem)] overflow-y-auto pr-1">
                 <SpotDetailBody
                   spot={selectedSpot}
+                  post={post}
                   isLast={selectedSpot.id === spots[spots.length - 1]?.id}
                   onNext={() => goNextFrom(selectedSpot.id)}
                 />

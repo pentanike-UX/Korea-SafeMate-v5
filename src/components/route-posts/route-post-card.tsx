@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import type { ContentPost } from "@/types/domain";
-import { getContentPostFormat, postCoverImageUrl } from "@/lib/content-post-route";
+import { getContentPostFormat, getPostHeroImageAlt, getPostHeroImageUrl } from "@/lib/content-post-route";
 import { PostSampleBadge } from "@/components/posts/post-sample-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,8 @@ export function RoutePostCard({ post, regionLabel, className }: { post: ContentP
   const journey = post.route_journey!;
   const meta = journey.metadata;
   const format = getContentPostFormat(post);
-  const cover = postCoverImageUrl(post);
+  const cover = getPostHeroImageUrl(post);
+  const coverAlt = getPostHeroImageAlt(post);
 
   const formatLabel =
     format === "hybrid"
@@ -40,17 +41,13 @@ export function RoutePostCard({ post, regionLabel, className }: { post: ContentP
     >
       <Link href={`/posts/${post.id}`} className="group block">
         <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-          {cover ? (
-            <Image
-              src={cover}
-              alt=""
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-              sizes="(max-width:768px) 100vw, 33vw"
-            />
-          ) : (
-            <div className="bg-muted absolute inset-0" />
-          )}
+          <Image
+            src={cover}
+            alt={coverAlt}
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+            sizes="(max-width:768px) 100vw, 33vw"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0e1b3d]/60 via-transparent to-transparent" />
           <div className="absolute top-3 left-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-1.5">
             {post.is_sample ? <PostSampleBadge className="bg-white/90" /> : null}
