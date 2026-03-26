@@ -15,6 +15,7 @@ import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
 import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
 import { TextActionSecondary } from "@/components/ui/text-action";
 import { SaveGuardianButton } from "@/components/guardians/save-guardian-button";
+import { ExplorationFilterSummaryBar, type ExplorationSummaryChip } from "@/components/listing/exploration-filter-summary-bar";
 import { StickyListingFiltersBar } from "@/components/listing/sticky-listing-filters-bar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,7 @@ function repPostFor(g: PublicGuardian) {
 
 export function GuardiansDiscoverClient() {
   const t = useTranslations("GuardiansDiscover");
+  const tExplore = useTranslations("ListingExploration");
   const tLaunch = useTranslations("LaunchAreas");
   const tThemes = useTranslations("ExperienceThemes");
   const tStyles = useTranslations("CompanionStyles");
@@ -102,6 +104,74 @@ export function GuardiansDiscoverClient() {
     }
     return g;
   }, [all, region, language, theme, style, minRating, verifiedOnly, sort]);
+
+  const summaryChips = useMemo((): ExplorationSummaryChip[] => {
+    const chips: ExplorationSummaryChip[] = [];
+    if (region === "all") {
+      chips.push({
+        id: "region-all",
+        label: t("chipAllRegions"),
+        onClear: () => setRegion(""),
+      });
+    } else if (region !== "") {
+      const name = (tLaunch.raw(region) as { name: string }).name;
+      chips.push({
+        id: "region",
+        label: t("chipRegion", { name }),
+        onClear: () => setRegion(""),
+      });
+    }
+    if (language) {
+      chips.push({
+        id: "lang",
+        label: t("chipLanguage", { code: language.toUpperCase() }),
+        onClear: () => setLanguage(""),
+      });
+    }
+    if (theme) {
+      const title = (tThemes.raw(theme) as { title: string }).title;
+      chips.push({
+        id: "theme",
+        label: t("chipTheme", { name: title }),
+        onClear: () => setTheme(""),
+      });
+    }
+    if (style) {
+      chips.push({
+        id: "style",
+        label: t("chipStyle", { name: tStyles(style) }),
+        onClear: () => setStyle(""),
+      });
+    }
+    if (minRating > 0) {
+      chips.push({
+        id: "rating",
+        label: t("chipRating", { rating: minRating }),
+        onClear: () => setMinRating(0),
+      });
+    }
+    if (verifiedOnly) {
+      chips.push({
+        id: "verified",
+        label: t("chipVerifiedShort"),
+        onClear: () => setVerifiedOnly(false),
+      });
+    }
+    if (sort !== "recommended") {
+      const sortLabel =
+        sort === "rating"
+          ? t("sortRating")
+          : sort === "reviews"
+            ? t("sortReviews")
+            : t("sortFast");
+      chips.push({
+        id: "sort",
+        label: t("chipSort", { name: sortLabel }),
+        onClear: () => setSort("recommended"),
+      });
+    }
+    return chips;
+  }, [region, language, theme, style, minRating, verifiedOnly, sort, t, tLaunch, tThemes, tStyles]);
 
   function pos(g: PublicGuardian) {
     return isKo ? g.positioning.ko : g.positioning.en;
@@ -201,7 +271,14 @@ export function GuardiansDiscoverClient() {
           </p>
           <div className="-mx-1 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-wrap lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
             {(["recommended", "rating", "reviews", "fast"] as const).map((m) => (
-              <Button key={m} type="button" size="sm" variant={sort === m ? "default" : "outline"} className="shrink-0 rounded-full px-3.5 text-xs sm:text-sm" onClick={() => setSort(m)}>
+              <Button
+                key={m}
+                type="button"
+                size="sm"
+                variant={sort === m ? "default" : "outline"}
+                className="shrink-0 rounded-full px-3.5 text-xs sm:text-sm"
+                onClick={() => setSort((prev) => (prev === m && m !== "recommended" ? "recommended" : m))}
+              >
                 {m === "recommended"
                   ? t("sortRecommended")
                   : m === "rating"
@@ -305,53 +382,41 @@ export function GuardiansDiscoverClient() {
         </div>
       </section>
 
-      <StickyListingFiltersBar>
-        <div className="md:hidden">
-          <div className="border-border/60 bg-card flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-lg)] border p-3 shadow-[var(--shadow-sm)]">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="text-[var(--brand-trust-blue)] flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-trust-blue-soft)]">
-                <SlidersHorizontal className="size-4" strokeWidth={1.75} aria-hidden />
-              </span>
-              <div className="min-w-0">
-                <p className="text-text-strong truncate text-sm font-semibold">{t("filterTitle")}</p>
-                <p className="text-muted-foreground truncate text-xs tabular-nums">{t("listResultsCount", { count: filtered.length })}</p>
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              {hasActiveFilters ? (
-                <Button type="button" variant="ghost" size="sm" className="h-9 px-2 text-xs font-semibold" onClick={clearFilters}>
-                  {t("clear")}
-                </Button>
-              ) : null}
-              <Button type="button" variant="default" size="sm" className="h-9 rounded-[var(--radius-md)] px-3 text-xs font-semibold" onClick={() => setFilterSheetOpen(true)}>
-                {t("openFullFilters")}
-              </Button>
-            </div>
-          </div>
-        </div>
-        <div
-          className={cn(
-            "border-border/60 bg-card hidden max-h-[min(52vh,360px)] overflow-y-auto overscroll-contain rounded-[var(--radius-lg)] border p-4 shadow-[var(--shadow-sm)] md:block md:max-h-[min(48vh,400px)] lg:max-h-none lg:overflow-visible lg:p-6",
-          )}
-          aria-label={t("filterBarAria")}
-        >
-          <div className="border-border/60 mb-4 flex items-center gap-3 border-b pb-4">
-            <span className="text-[var(--brand-trust-blue)] flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-trust-blue-soft)]">
-              <SlidersHorizontal className="size-[1.15rem]" strokeWidth={1.75} aria-hidden />
-            </span>
-            <h2 className="text-text-strong text-lg font-semibold sm:text-xl">{t("filterTitle")}</h2>
-          </div>
-          {filterPanel}
-        </div>
+      <StickyListingFiltersBar innerClassName="py-2 sm:py-2.5">
+        <ExplorationFilterSummaryBar
+          chips={summaryChips}
+          allExploringLabel={t("explorationAll")}
+          resultSummary={t("listResultsCount", { count: filtered.length })}
+          resultSummaryShort={String(filtered.length)}
+          showReset={hasActiveFilters}
+          resetLabel={t("clear")}
+          onReset={clearFilters}
+          openFiltersLabel={t("openFullFilters")}
+          onOpenFilters={() => setFilterSheetOpen(true)}
+          summaryAriaLabel={t("explorationSummaryAria")}
+          chipClearLabel={(label) => tExplore("chipRemoveAria", { label })}
+        />
       </StickyListingFiltersBar>
 
       <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
-        <SheetContent side="bottom" showCloseButton className="max-h-[min(92dvh,720px)] gap-0 overflow-hidden rounded-t-2xl px-0 pt-2 pb-6">
+        <SheetContent
+          side="bottom"
+          showCloseButton
+          className="max-h-[min(92dvh,720px)] gap-0 overflow-hidden rounded-t-2xl px-0 pt-2 pb-6 sm:max-h-[min(85dvh,800px)]"
+        >
           <SheetHeader className="border-border/60 shrink-0 border-b px-5 pb-4 text-left sm:px-6">
             <SheetTitle>{t("filterSheetTitle")}</SheetTitle>
             <p className="text-muted-foreground text-sm tabular-nums">{t("listResultsCount", { count: filtered.length })}</p>
           </SheetHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">{filterPanel}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
+            <div className="border-border/60 mb-4 flex items-center gap-3 border-b pb-4 md:hidden">
+              <span className="text-[var(--brand-trust-blue)] flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-trust-blue-soft)]">
+                <SlidersHorizontal className="size-[1.15rem]" strokeWidth={1.75} aria-hidden />
+              </span>
+              <h2 className="text-text-strong text-base font-semibold">{t("filterTitle")}</h2>
+            </div>
+            {filterPanel}
+          </div>
         </SheetContent>
       </Sheet>
 

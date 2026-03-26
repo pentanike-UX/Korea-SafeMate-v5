@@ -7,12 +7,14 @@ import { Link } from "@/i18n/navigation";
 import type { ContentCategory } from "@/types/domain";
 import type { ContentPost } from "@/types/domain";
 import { getPostHeroImageAlt, getPostHeroImageUrl, postHasRouteJourney } from "@/lib/content-post-route";
+import { ExplorationFilterSummaryBar, type ExplorationSummaryChip } from "@/components/listing/exploration-filter-summary-bar";
 import { StickyListingFiltersBar } from "@/components/listing/sticky-listing-filters-bar";
 import { PostSampleBadge } from "@/components/posts/post-sample-badge";
 import { RoutePostCard } from "@/components/route-posts/route-post-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import Image from "next/image";
 import { ArrowDownWideNarrow, FileQuestion, Heart, Layers, MapPin, Search, Sparkles, Tag } from "lucide-react";
 
@@ -33,12 +35,14 @@ export function PostsListClient({
   categories: ContentCategory[];
 }) {
   const t = useTranslations("Posts");
+  const tExplore = useTranslations("ListingExploration");
   const searchParams = useSearchParams();
   const [q, setQ] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [region, setRegion] = useState<RegionFilter>("all");
   const [sort, setSort] = useState<SortMode>("recommended");
   const [contentFilter, setContentFilter] = useState<ContentFilter>("all");
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   useEffect(() => {
     const c = searchParams.get("content");
@@ -105,6 +109,157 @@ export function PostsListClient({
     return list;
   }, [posts, q, category, region, sort, contentFilter]);
 
+  const summaryChips = useMemo((): ExplorationSummaryChip[] => {
+    const chips: ExplorationSummaryChip[] = [];
+    const qt = q.trim();
+    if (qt) {
+      const short = qt.length > 20 ? `${qt.slice(0, 20)}…` : qt;
+      chips.push({
+        id: "q",
+        label: t("chipSearch", { q: short }),
+        onClear: () => setQ(""),
+      });
+    }
+    if (category !== "all") {
+      const cat = categories.find((c) => c.slug === category);
+      chips.push({
+        id: "category",
+        label: t("chipCategory", { name: cat?.name ?? category }),
+        onClear: () => setCategory("all"),
+      });
+    }
+    if (region !== "all") {
+      chips.push({
+        id: "region",
+        label: t("chipRegion", { name: t(`region.${region}` as "region.seoul") }),
+        onClear: () => setRegion("all"),
+      });
+    }
+    if (sort !== "recommended") {
+      chips.push({
+        id: "sort",
+        label: t("chipSort", { name: t(`sort${sort.charAt(0).toUpperCase() + sort.slice(1)}` as "sortRecommended") }),
+        onClear: () => setSort("recommended"),
+      });
+    }
+    if (contentFilter !== "all") {
+      chips.push({
+        id: "content",
+        label: t("chipContent", {
+          name: t(`content${contentFilter.charAt(0).toUpperCase() + contentFilter.slice(1)}` as "contentAll"),
+        }),
+        onClear: () => setContentFilter("all"),
+      });
+    }
+    return chips;
+  }, [q, category, region, sort, contentFilter, categories, t]);
+
+  const filterPanel = (
+    <div className="space-y-5 sm:space-y-6">
+      <div className="relative">
+        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-[1.125rem] -translate-y-1/2" aria-hidden />
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={t("searchPlaceholder")}
+          className="h-10 pl-11 sm:h-11"
+          aria-label={t("searchPlaceholder")}
+        />
+      </div>
+      <div className="flex flex-col gap-6 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between lg:gap-x-8 lg:gap-y-6">
+        <div className="min-w-0 space-y-2 lg:flex-1">
+          <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
+            <Tag className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
+            {t("filterCategory")}
+          </p>
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-wrap lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
+            <Button
+              type="button"
+              size="sm"
+              variant={category === "all" ? "default" : "outline"}
+              className="shrink-0 rounded-full px-4 text-xs sm:text-sm"
+              onClick={() => pickCategory("all")}
+            >
+              {t("all")}
+            </Button>
+            {categories.map((c) => (
+              <Button
+                key={c.slug}
+                type="button"
+                size="sm"
+                variant={category === c.slug ? "default" : "outline"}
+                className="shrink-0 rounded-full px-4 text-xs sm:text-sm"
+                onClick={() => pickCategory(c.slug)}
+              >
+                {c.name}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <div className="min-w-0 space-y-2 lg:flex-1">
+          <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
+            <MapPin className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
+            {t("filterRegion")}
+          </p>
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-wrap lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
+            {REGION_SLUGS.map((r) => (
+              <Button
+                key={r}
+                type="button"
+                size="sm"
+                variant={region === r ? "default" : "outline"}
+                className="shrink-0 rounded-full px-4 text-xs capitalize sm:text-sm"
+                onClick={() => pickRegion(r)}
+              >
+                {r === "all" ? t("all") : t(`region.${r}` as "region.seoul")}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <div className="min-w-0 space-y-2 lg:flex-1">
+          <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
+            <ArrowDownWideNarrow className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
+            {t("sort")}
+          </p>
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-wrap lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
+            {SORTS.map((m) => (
+              <Button
+                key={m}
+                type="button"
+                size="sm"
+                variant={sort === m ? "default" : "outline"}
+                className="shrink-0 rounded-full px-4 text-xs sm:text-sm"
+                onClick={() => setSort((prev) => (prev === m && m !== "recommended" ? "recommended" : m))}
+              >
+                {t(`sort${m.charAt(0).toUpperCase() + m.slice(1)}` as "sortRecommended")}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <div className="min-w-0 space-y-2 lg:min-w-[200px]">
+          <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
+            <Layers className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
+            {t("filterContent")}
+          </p>
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-wrap lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
+            {CONTENT_FILTERS.map((f) => (
+              <Button
+                key={f}
+                type="button"
+                size="sm"
+                variant={contentFilter === f ? "default" : "outline"}
+                className="shrink-0 rounded-full px-4 text-xs sm:text-sm"
+                onClick={() => pickContent(f)}
+              >
+                {t(`content${f.charAt(0).toUpperCase() + f.slice(1)}` as "contentAll")}
+              </Button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="bg-[var(--bg-page)] min-h-screen">
       <section className="relative overflow-hidden border-b border-border/60 bg-card">
@@ -121,122 +276,35 @@ export function PostsListClient({
         </div>
       </section>
 
-      <StickyListingFiltersBar>
-        <div
-          className="border-border/60 bg-card max-h-[min(52vh,320px)] space-y-4 overflow-y-auto overscroll-contain rounded-[var(--radius-lg)] border p-4 shadow-[var(--shadow-sm)] sm:max-h-[min(48vh,380px)] sm:space-y-5 sm:p-5 md:max-h-none md:overflow-visible lg:space-y-6 lg:p-6"
-          aria-label={t("filterBarAria")}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2 gap-y-2">
-            <p className="text-muted-foreground text-sm font-medium tabular-nums">{t("listResultsCount", { count: filtered.length })}</p>
-            {hasActiveFilters ? (
-              <Button type="button" variant="ghost" size="sm" className="h-9 shrink-0 text-xs font-semibold sm:text-sm" onClick={resetFilters}>
-                {t("resetFilters")}
-              </Button>
-            ) : null}
-          </div>
-          <div className="relative">
-            <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-[1.125rem] -translate-y-1/2" aria-hidden />
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t("searchPlaceholder")}
-              className="h-10 pl-11 sm:h-11"
-              aria-label={t("searchPlaceholder")}
-            />
-          </div>
-          <div className="flex flex-col gap-6 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between lg:gap-x-8 lg:gap-y-6">
-            <div className="min-w-0 space-y-2 lg:flex-1">
-              <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
-                <Tag className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
-                {t("filterCategory")}
-              </p>
-              <div className="-mx-1 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-wrap lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={category === "all" ? "default" : "outline"}
-                  className="shrink-0 rounded-full px-4 text-xs sm:text-sm"
-                  onClick={() => pickCategory("all")}
-                >
-                  {t("all")}
-                </Button>
-                {categories.map((c) => (
-                  <Button
-                    key={c.slug}
-                    type="button"
-                    size="sm"
-                    variant={category === c.slug ? "default" : "outline"}
-                    className="shrink-0 rounded-full px-4 text-xs sm:text-sm"
-                    onClick={() => pickCategory(c.slug)}
-                  >
-                    {c.name}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <div className="min-w-0 space-y-2 lg:flex-1">
-              <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
-                <MapPin className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
-                {t("filterRegion")}
-              </p>
-              <div className="-mx-1 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-wrap lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
-                {REGION_SLUGS.map((r) => (
-                  <Button
-                    key={r}
-                    type="button"
-                    size="sm"
-                    variant={region === r ? "default" : "outline"}
-                    className="shrink-0 rounded-full px-4 text-xs capitalize sm:text-sm"
-                    onClick={() => pickRegion(r)}
-                  >
-                    {r === "all" ? t("all") : t(`region.${r}`)}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <div className="min-w-0 space-y-2 lg:flex-1">
-              <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
-                <ArrowDownWideNarrow className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
-                {t("sort")}
-              </p>
-              <div className="-mx-1 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-wrap lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
-                {SORTS.map((m) => (
-                  <Button
-                    key={m}
-                    type="button"
-                    size="sm"
-                    variant={sort === m ? "default" : "outline"}
-                    className="shrink-0 rounded-full px-4 text-xs sm:text-sm"
-                    onClick={() => setSort(m)}
-                  >
-                    {t(`sort${m.charAt(0).toUpperCase() + m.slice(1)}` as "sortRecommended")}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <div className="min-w-0 space-y-2 lg:min-w-[200px]">
-              <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
-                <Layers className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
-                {t("filterContent")}
-              </p>
-              <div className="-mx-1 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-wrap lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
-                {CONTENT_FILTERS.map((f) => (
-                  <Button
-                    key={f}
-                    type="button"
-                    size="sm"
-                    variant={contentFilter === f ? "default" : "outline"}
-                    className="shrink-0 rounded-full px-4 text-xs sm:text-sm"
-                    onClick={() => pickContent(f)}
-                  >
-                    {t(`content${f.charAt(0).toUpperCase() + f.slice(1)}` as "contentAll")}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+      <StickyListingFiltersBar innerClassName="py-2 sm:py-2.5">
+        <ExplorationFilterSummaryBar
+          chips={summaryChips}
+          allExploringLabel={t("explorationAll")}
+          resultSummary={t("listResultsCount", { count: filtered.length })}
+          resultSummaryShort={String(filtered.length)}
+          showReset={hasActiveFilters}
+          resetLabel={t("resetFilters")}
+          onReset={resetFilters}
+          openFiltersLabel={t("openFullFilters")}
+          onOpenFilters={() => setFilterSheetOpen(true)}
+          summaryAriaLabel={t("explorationSummaryAria")}
+          chipClearLabel={(label) => tExplore("chipRemoveAria", { label })}
+        />
       </StickyListingFiltersBar>
+
+      <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+        <SheetContent
+          side="bottom"
+          showCloseButton
+          className="max-h-[min(90dvh,720px)] gap-0 overflow-hidden rounded-t-2xl px-0 pt-2 pb-6 sm:max-h-[min(85dvh,800px)]"
+        >
+          <SheetHeader className="border-border/60 shrink-0 border-b px-5 pb-4 text-left sm:px-6">
+            <SheetTitle>{t("filterSheetTitle")}</SheetTitle>
+            <p className="text-muted-foreground text-sm tabular-nums">{t("listResultsCount", { count: filtered.length })}</p>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">{filterPanel}</div>
+        </SheetContent>
+      </Sheet>
 
       <div className="page-container py-8 sm:py-10 md:py-12">
         {filtered.length === 0 ? (
@@ -252,63 +320,63 @@ export function PostsListClient({
               const coverUrl = getPostHeroImageUrl(p);
               const coverAlt = getPostHeroImageAlt(p);
               return (
-              <li key={p.id}>
-                {postHasRouteJourney(p) ? (
-                  <RoutePostCard post={p} regionLabel={t(`region.${p.region_slug}` as "region.seoul")} />
-                ) : (
-                  <Link
-                    href={`/posts/${p.id}`}
-                    className="border-border/70 bg-card group flex h-full flex-col overflow-hidden rounded-[var(--radius-md)] border shadow-[var(--shadow-sm)] transition-all hover:border-[color-mix(in_srgb,var(--brand-trust-blue)_35%,var(--border))] hover:shadow-[var(--shadow-md)] active:scale-[0.99]"
-                  >
-                    <div className="relative aspect-[16/10] overflow-hidden bg-muted">
-                      <Image
-                        src={coverUrl}
-                        alt={coverAlt}
-                        fill
-                        className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-                        sizes="(max-width:768px) 100vw, 33vw"
-                      />
-                      <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-[#0e1b3d]/45 to-transparent" />
-                      <div className="absolute top-3 left-3 z-10 flex flex-wrap items-center gap-1.5">
-                        {p.is_sample ? <PostSampleBadge variant="onImage" /> : null}
-                        {p.featured ? (
-                          <Badge className="rounded-full bg-card/95 text-[10px] font-semibold text-[var(--brand-primary)] shadow-sm backdrop-blur-sm">
-                            {t("featured")}
-                          </Badge>
-                        ) : null}
+                <li key={p.id}>
+                  {postHasRouteJourney(p) ? (
+                    <RoutePostCard post={p} regionLabel={t(`region.${p.region_slug}` as "region.seoul")} />
+                  ) : (
+                    <Link
+                      href={`/posts/${p.id}`}
+                      className="border-border/70 bg-card group flex h-full flex-col overflow-hidden rounded-[var(--radius-md)] border shadow-[var(--shadow-sm)] transition-all hover:border-[color-mix(in_srgb,var(--brand-trust-blue)_35%,var(--border))] hover:shadow-[var(--shadow-md)] active:scale-[0.99]"
+                    >
+                      <div className="relative aspect-[16/10] overflow-hidden bg-muted">
+                        <Image
+                          src={coverUrl}
+                          alt={coverAlt}
+                          fill
+                          className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                          sizes="(max-width:768px) 100vw, 33vw"
+                        />
+                        <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-[#0e1b3d]/45 to-transparent" />
+                        <div className="absolute top-3 left-3 z-10 flex flex-wrap items-center gap-1.5">
+                          {p.is_sample ? <PostSampleBadge variant="onImage" /> : null}
+                          {p.featured ? (
+                            <Badge className="rounded-full bg-card/95 text-[10px] font-semibold text-[var(--brand-primary)] shadow-sm backdrop-blur-sm">
+                              {t("featured")}
+                            </Badge>
+                          ) : null}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex flex-1 flex-col p-5 sm:p-6">
-                      <p className="text-muted-foreground flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase">
-                        <Tag className="text-[var(--brand-trust-blue)] size-3 shrink-0" aria-hidden />
-                        {p.tags.slice(0, 3).join(" · ")}
-                      </p>
-                      <div className="mt-3 flex flex-wrap items-start gap-2 gap-y-1">
-                        <h2 className="text-foreground line-clamp-2 min-w-0 flex-1 text-[17px] font-semibold leading-snug group-hover:text-[var(--link-color)] sm:text-lg">
-                          {p.title}
-                        </h2>
-                        {p.is_sample ? <PostSampleBadge className="mt-0.5 sm:hidden" /> : null}
+                      <div className="flex flex-1 flex-col p-5 sm:p-6">
+                        <p className="text-muted-foreground flex items-center gap-1.5 text-[10px] font-bold tracking-widest uppercase">
+                          <Tag className="text-[var(--brand-trust-blue)] size-3 shrink-0" aria-hidden />
+                          {p.tags.slice(0, 3).join(" · ")}
+                        </p>
+                        <div className="mt-3 flex flex-wrap items-start gap-2 gap-y-1">
+                          <h2 className="text-foreground line-clamp-2 min-w-0 flex-1 text-[17px] font-semibold leading-snug group-hover:text-[var(--link-color)] sm:text-lg">
+                            {p.title}
+                          </h2>
+                          {p.is_sample ? <PostSampleBadge className="mt-0.5 sm:hidden" /> : null}
+                        </div>
+                        <p className="text-muted-foreground mt-3 line-clamp-2 flex-1 text-sm leading-relaxed sm:text-[15px]">{p.summary}</p>
+                        <div className="text-muted-foreground mt-4 flex flex-wrap items-center gap-2 text-xs">
+                          <span>{p.author_display_name}</span>
+                          <span aria-hidden>·</span>
+                          <span className="capitalize">{t(`region.${p.region_slug}` as "region.seoul")}</span>
+                          {p.helpful_rating != null ? (
+                            <>
+                              <span aria-hidden>·</span>
+                              <span className="inline-flex items-center gap-0.5">
+                                <Heart className="size-3.5 fill-rose-400/80 text-rose-400/80" aria-hidden />
+                                {p.helpful_rating.toFixed(1)}
+                              </span>
+                            </>
+                          ) : null}
+                        </div>
                       </div>
-                      <p className="text-muted-foreground mt-3 line-clamp-2 flex-1 text-sm leading-relaxed sm:text-[15px]">{p.summary}</p>
-                      <div className="text-muted-foreground mt-4 flex flex-wrap items-center gap-2 text-xs">
-                        <span>{p.author_display_name}</span>
-                        <span aria-hidden>·</span>
-                        <span className="capitalize">{t(`region.${p.region_slug}` as "region.seoul")}</span>
-                        {p.helpful_rating != null ? (
-                          <>
-                            <span aria-hidden>·</span>
-                            <span className="inline-flex items-center gap-0.5">
-                              <Heart className="size-3.5 fill-rose-400/80 text-rose-400/80" aria-hidden />
-                              {p.helpful_rating.toFixed(1)}
-                            </span>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                  </Link>
-                )}
-              </li>
-            );
+                    </Link>
+                  )}
+                </li>
+              );
             })}
           </ul>
         )}

@@ -151,6 +151,11 @@ function isSuperAdminOnlyPath(pathWithoutLocale: string) {
   );
 }
 
+/** Dev / staged QA: skip admin auth redirect so `/admin` opens without login. Production stays protected. */
+function allowAdminWithoutSession(): boolean {
+  return process.env.SAFEMATE_ADMIN_OPEN === "1" || process.env.NODE_ENV === "development";
+}
+
 /** Next.js 16+: `middleware` convention renamed to `proxy` (same behavior at the edge). */
 export default async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -164,6 +169,9 @@ export default async function proxy(request: NextRequest) {
 
   if (pathWo.startsWith("/admin")) {
     const res = NextResponse.next();
+    if (allowAdminWithoutSession()) {
+      return res;
+    }
     const ctx = await loadAccessContext(request, res);
 
     if (!ctx.user) {
