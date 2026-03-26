@@ -137,7 +137,7 @@ export function HomeDualCtaSection() {
                 src={HOME_CTA_IMAGES.guardianPortrait}
                 alt={t("dualCtaGuardianImageAlt")}
                 fill
-                className="object-cover object-[center_28%]"
+                className="object-cover object-top sm:object-[center_28%]"
                 sizes="(max-width:1024px) 100vw, 300px"
                 priority={false}
               />

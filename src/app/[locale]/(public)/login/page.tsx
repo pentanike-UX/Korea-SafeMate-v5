@@ -87,7 +87,7 @@ export default async function LoginPage({ searchParams }: Props) {
             <span className="opacity-40" aria-hidden>
               ·
             </span>
-            <NextLink href="/admin" className="underline-offset-4 hover:underline">
+            <NextLink href="/admin/dashboard" className="underline-offset-4 hover:underline">
               {t("footerAdmin")}
             </NextLink>
           </CardFooter>

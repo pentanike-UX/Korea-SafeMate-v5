@@ -1,6 +1,12 @@
 import type { GuardianProfile } from "@/types/domain";
 
 /**
+ * `object-cover`와 함께 쓰세요. 모바일에서 카드 미디어 박스가 낮아질 때 중앙 크롭 대신 상단(얼굴) 우선.
+ * `sm` 이상에서는 세로형·와이드 레이아웃에 맞게 중앙으로 복귀.
+ */
+export const GUARDIAN_PROFILE_COVER_POSITION_CLASS = "object-cover object-top sm:object-center";
+
+/**
  * 시드·프로필 경로에서 01–15 인덱스를 추출합니다. (`mg01` / `profile_03.jpg` 등)
  */
 export function parseProfileImageIndex(g: Pick<GuardianProfile, "user_id" | "photo_url">): number | null {

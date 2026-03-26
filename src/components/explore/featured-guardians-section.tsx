@@ -2,7 +2,7 @@ import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { FeaturedGuardian, GuardianProfile } from "@/types/domain";
-import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
+import { guardianProfileImageUrls, GUARDIAN_PROFILE_COVER_POSITION_CLASS } from "@/lib/guardian-profile-images";
 import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -52,7 +52,7 @@ export async function FeaturedGuardiansSection({ featured, guardians }: Props) {
                     src={guardianProfileImageUrls(g).avatar}
                     alt=""
                     fill
-                    className="object-cover object-center"
+                    className={GUARDIAN_PROFILE_COVER_POSITION_CLASS}
                     sizes="56px"
                   />
                 </div>

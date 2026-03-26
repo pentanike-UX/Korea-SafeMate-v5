@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrustBadgesServer } from "@/components/forty-two/trust-badges-server";
-import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
+import { guardianProfileImageUrls, GUARDIAN_PROFILE_COVER_POSITION_CLASS } from "@/lib/guardian-profile-images";
 import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
 import { cn } from "@/lib/utils";
 import { PostSampleBadge } from "@/components/posts/post-sample-badge";
@@ -23,7 +23,7 @@ export async function PostAuthorAside({ post }: { post: ContentPost }) {
       <Card className="border-border/60 overflow-hidden rounded-2xl py-0 shadow-[var(--shadow-sm)]">
         <div className="relative aspect-[16/10]">
           {guardian && imgs ? (
-            <Image src={imgs.landscape} alt="" fill className="object-cover object-center" sizes="400px" />
+            <Image src={imgs.landscape} alt="" fill className={GUARDIAN_PROFILE_COVER_POSITION_CLASS} sizes="400px" />
           ) : (
             <div className="flex h-full items-center justify-center bg-gradient-to-br from-[var(--brand-primary-soft)] to-[var(--brand-trust-blue-soft)] text-2xl font-bold text-primary/40">
               42

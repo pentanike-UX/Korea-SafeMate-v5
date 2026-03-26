@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { TrustBadgeRow } from "@/components/forty-two/trust-badges";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
+import { guardianProfileImageUrls, GUARDIAN_PROFILE_COVER_POSITION_CLASS } from "@/lib/guardian-profile-images";
 import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -752,7 +752,7 @@ export function ExploreResultsDashboard(props: {
                             src={guardianProfileImageUrls(featured).landscape}
                             alt=""
                             fill
-                            className="object-cover object-center"
+                            className={GUARDIAN_PROFILE_COVER_POSITION_CLASS}
                             sizes="(max-width:1024px) 100vw, 280px"
                           />
                           <div className="absolute top-3 left-3">
@@ -804,7 +804,7 @@ export function ExploreResultsDashboard(props: {
                                 src={guardianProfileImageUrls(g).avatar}
                                 alt=""
                                 fill
-                                className="object-cover object-center"
+                                className={GUARDIAN_PROFILE_COVER_POSITION_CLASS}
                                 sizes="80px"
                               />
                             </div>

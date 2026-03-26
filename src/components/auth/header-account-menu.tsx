@@ -191,7 +191,7 @@ export function HeaderAccountMenu({
     if (isPrivilegedAppRole(role)) {
       return (
         <>
-          <DropdownMenuItem className="min-h-11" onClick={itemClick("/admin")}>
+          <DropdownMenuItem className="min-h-11" onClick={itemClick("/admin/dashboard")}>
             <Shield className="size-4 opacity-80" aria-hidden />
             {t("accountAdminConsole")}
           </DropdownMenuItem>
@@ -312,7 +312,7 @@ export function HeaderAccountMenu({
     if (isPrivilegedAppRole(role)) {
       return (
         <nav className="flex flex-col gap-1 px-2" aria-label={t("accountMenuTitle")}>
-          <button type="button" className={row} onClick={() => go("/admin", close)}>
+          <button type="button" className={row} onClick={() => go("/admin/dashboard", close)}>
             <Shield className="size-5 shrink-0 opacity-80" aria-hidden />
             {t("accountAdminConsole")}
           </button>

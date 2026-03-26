@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrustBadgeRow } from "@/components/forty-two/trust-badges";
-import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
+import { guardianProfileImageUrls, GUARDIAN_PROFILE_COVER_POSITION_CLASS } from "@/lib/guardian-profile-images";
 import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
 import { TextActionSecondary } from "@/components/ui/text-action";
 import { SaveGuardianButton } from "@/components/guardians/save-guardian-button";
@@ -440,7 +440,7 @@ export function GuardiansDiscoverClient() {
                   <Card className="border-border/70 h-full overflow-hidden rounded-[var(--radius-md)] py-0 shadow-[var(--shadow-sm)] transition-all hover:shadow-[var(--shadow-md)]">
                     <div className="flex flex-col sm:flex-row">
                       <div className="relative aspect-[5/4] w-full sm:aspect-auto sm:h-auto sm:w-[42%] sm:min-h-[220px]">
-                        <Image src={imgs.default} alt="" fill className="object-cover object-center" sizes="(max-width:640px) 100vw, 40vw" />
+                        <Image src={imgs.default} alt="" fill className={GUARDIAN_PROFILE_COVER_POSITION_CLASS} sizes="(max-width:640px) 100vw, 40vw" />
                       </div>
                       <CardContent className="flex flex-1 flex-col gap-4 p-6 sm:p-7">
                         <div>

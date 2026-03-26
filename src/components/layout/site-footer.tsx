@@ -26,7 +26,7 @@ export async function SiteFooter() {
   ];
 
   const ops: { href: string; label: string; Icon: typeof Shield; native?: boolean }[] = [
-    { href: "/admin", label: tFooter("adminConsoleLink"), Icon: Shield, native: true },
+    { href: "/admin/dashboard", label: tFooter("adminConsoleLink"), Icon: Shield, native: true },
     { href: "/login", label: tHeader("logIn"), Icon: LogIn },
   ];
 
@@ -117,7 +117,7 @@ export async function SiteFooter() {
           <FooterPreferences />
           <div className="flex flex-col gap-3 sm:items-end">
             <NextLink
-              href="/admin"
+              href="/admin/dashboard"
               className="text-muted-foreground hover:text-foreground order-first min-h-10 text-xs font-medium underline-offset-4 hover:underline sm:order-none sm:text-sm"
             >
               {tFooter("adminConsoleLink")}
