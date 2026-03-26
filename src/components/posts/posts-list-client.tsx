@@ -7,6 +7,7 @@ import { Link } from "@/i18n/navigation";
 import type { ContentCategory } from "@/types/domain";
 import type { ContentPost } from "@/types/domain";
 import { getPostHeroImageAlt, getPostHeroImageUrl, postHasRouteJourney } from "@/lib/content-post-route";
+import { StickyListingFiltersBar } from "@/components/listing/sticky-listing-filters-bar";
 import { PostSampleBadge } from "@/components/posts/post-sample-badge";
 import { RoutePostCard } from "@/components/route-posts/route-post-card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,33 @@ export function PostsListClient({
     if (c === "route") setContentFilter("route");
     else if (c === "article") setContentFilter("article");
   }, [searchParams]);
+
+  const hasActiveFilters =
+    q.trim().length > 0 ||
+    category !== "all" ||
+    region !== "all" ||
+    sort !== "recommended" ||
+    contentFilter !== "all";
+
+  const resetFilters = () => {
+    setQ("");
+    setCategory("all");
+    setRegion("all");
+    setSort("recommended");
+    setContentFilter("all");
+  };
+
+  const pickCategory = (slug: string) => {
+    setCategory((prev) => (prev === slug && slug !== "all" ? "all" : slug));
+  };
+
+  const pickRegion = (r: RegionFilter) => {
+    setRegion((prev) => (prev === r && r !== "all" ? "all" : r));
+  };
+
+  const pickContent = (f: ContentFilter) => {
+    setContentFilter((prev) => (prev === f && f !== "all" ? "all" : f));
+  };
 
   const filtered = useMemo(() => {
     let list = [...posts];
@@ -93,31 +121,42 @@ export function PostsListClient({
         </div>
       </section>
 
-      <div className="page-container py-10 sm:py-12 md:py-14">
-        <div className="border-border/60 bg-card mb-10 space-y-8 rounded-[var(--radius-lg)] border p-5 shadow-[var(--shadow-sm)] sm:mb-12 sm:p-7 md:p-8">
+      <StickyListingFiltersBar>
+        <div
+          className="border-border/60 bg-card max-h-[min(52vh,320px)] space-y-4 overflow-y-auto overscroll-contain rounded-[var(--radius-lg)] border p-4 shadow-[var(--shadow-sm)] sm:max-h-[min(48vh,380px)] sm:space-y-5 sm:p-5 md:max-h-none md:overflow-visible lg:space-y-6 lg:p-6"
+          aria-label={t("filterBarAria")}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2 gap-y-2">
+            <p className="text-muted-foreground text-sm font-medium tabular-nums">{t("listResultsCount", { count: filtered.length })}</p>
+            {hasActiveFilters ? (
+              <Button type="button" variant="ghost" size="sm" className="h-9 shrink-0 text-xs font-semibold sm:text-sm" onClick={resetFilters}>
+                {t("resetFilters")}
+              </Button>
+            ) : null}
+          </div>
           <div className="relative">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-[1.125rem] -translate-y-1/2" aria-hidden />
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder={t("searchPlaceholder")}
-              className="pl-11"
+              className="h-10 pl-11 sm:h-11"
               aria-label={t("searchPlaceholder")}
             />
           </div>
-          <div className="flex flex-col gap-10 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between lg:gap-x-10 lg:gap-y-8">
-            <div className="space-y-3 lg:min-w-0 lg:flex-1">
-              <p className="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+          <div className="flex flex-col gap-6 lg:flex-row lg:flex-wrap lg:items-start lg:justify-between lg:gap-x-8 lg:gap-y-6">
+            <div className="min-w-0 space-y-2 lg:flex-1">
+              <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
                 <Tag className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
                 {t("filterCategory")}
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="-mx-1 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-wrap lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
                 <Button
                   type="button"
-                  size="default"
+                  size="sm"
                   variant={category === "all" ? "default" : "outline"}
-                  className="rounded-full px-5 text-sm"
-                  onClick={() => setCategory("all")}
+                  className="shrink-0 rounded-full px-4 text-xs sm:text-sm"
+                  onClick={() => pickCategory("all")}
                 >
                   {t("all")}
                 </Button>
@@ -125,49 +164,49 @@ export function PostsListClient({
                   <Button
                     key={c.slug}
                     type="button"
-                    size="default"
+                    size="sm"
                     variant={category === c.slug ? "default" : "outline"}
-                    className="rounded-full px-5 text-sm"
-                    onClick={() => setCategory(c.slug)}
+                    className="shrink-0 rounded-full px-4 text-xs sm:text-sm"
+                    onClick={() => pickCategory(c.slug)}
                   >
                     {c.name}
                   </Button>
                 ))}
               </div>
             </div>
-            <div className="space-y-3 lg:min-w-0 lg:flex-1">
-              <p className="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+            <div className="min-w-0 space-y-2 lg:flex-1">
+              <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
                 <MapPin className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
                 {t("filterRegion")}
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="-mx-1 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-wrap lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
                 {REGION_SLUGS.map((r) => (
                   <Button
                     key={r}
                     type="button"
-                    size="default"
+                    size="sm"
                     variant={region === r ? "default" : "outline"}
-                    className="rounded-full px-5 text-sm capitalize"
-                    onClick={() => setRegion(r)}
+                    className="shrink-0 rounded-full px-4 text-xs capitalize sm:text-sm"
+                    onClick={() => pickRegion(r)}
                   >
                     {r === "all" ? t("all") : t(`region.${r}`)}
                   </Button>
                 ))}
               </div>
             </div>
-            <div className="space-y-3 lg:min-w-0 lg:flex-1">
-              <p className="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+            <div className="min-w-0 space-y-2 lg:flex-1">
+              <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
                 <ArrowDownWideNarrow className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
                 {t("sort")}
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="-mx-1 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-wrap lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
                 {SORTS.map((m) => (
                   <Button
                     key={m}
                     type="button"
-                    size="default"
+                    size="sm"
                     variant={sort === m ? "default" : "outline"}
-                    className="rounded-full px-5 text-sm"
+                    className="shrink-0 rounded-full px-4 text-xs sm:text-sm"
                     onClick={() => setSort(m)}
                   >
                     {t(`sort${m.charAt(0).toUpperCase() + m.slice(1)}` as "sortRecommended")}
@@ -175,20 +214,20 @@ export function PostsListClient({
                 ))}
               </div>
             </div>
-            <div className="space-y-3 lg:min-w-[220px]">
-              <p className="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wide uppercase">
+            <div className="min-w-0 space-y-2 lg:min-w-[200px]">
+              <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
                 <Layers className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
                 {t("filterContent")}
               </p>
-              <div className="flex flex-wrap gap-2">
+              <div className="-mx-1 flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-wrap lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
                 {CONTENT_FILTERS.map((f) => (
                   <Button
                     key={f}
                     type="button"
-                    size="default"
+                    size="sm"
                     variant={contentFilter === f ? "default" : "outline"}
-                    className="rounded-full px-5 text-sm"
-                    onClick={() => setContentFilter(f)}
+                    className="shrink-0 rounded-full px-4 text-xs sm:text-sm"
+                    onClick={() => pickContent(f)}
                   >
                     {t(`content${f.charAt(0).toUpperCase() + f.slice(1)}` as "contentAll")}
                   </Button>
@@ -197,7 +236,9 @@ export function PostsListClient({
             </div>
           </div>
         </div>
+      </StickyListingFiltersBar>
 
+      <div className="page-container py-8 sm:py-10 md:py-12">
         {filtered.length === 0 ? (
           <div className="border-border/60 text-muted-foreground flex flex-col items-center justify-center gap-4 rounded-[var(--radius-lg)] border border-dashed bg-muted/20 px-6 py-20 text-center sm:py-24">
             <span className="text-[var(--brand-trust-blue)] flex size-14 items-center justify-center rounded-full bg-[var(--brand-trust-blue-soft)]">

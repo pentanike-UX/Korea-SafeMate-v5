@@ -38,13 +38,11 @@ export function SiteHeader() {
   const heroContrast = useHomeHeaderContrast();
   const onDarkSurface = isHome && heroContrast === "dark";
 
-  const navItems = user ? NAV : NAV.filter((item) => item.href !== "/guardians");
-
   const NavLinks = ({ mobile = false }: { mobile?: boolean }) => {
     const glassHeaderNav = onDarkSurface && !mobile;
     return (
       <nav className={cn("flex gap-1", mobile ? "flex-col gap-1.5" : "items-center")}>
-        {navItems.map((item) => {
+        {NAV.map((item) => {
           const active = isNavActive(item.href, pathname);
           const Icon = item.Icon;
           return (
