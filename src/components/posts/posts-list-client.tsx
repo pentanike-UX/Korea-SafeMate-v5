@@ -339,12 +339,12 @@ export function PostsListClient({
             <p className="text-foreground max-w-sm text-base font-medium">{t("empty")}</p>
           </div>
         ) : (
-          <ul className="grid gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3 lg:gap-8">
+          <ul className="grid justify-items-center gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3 lg:gap-8">
             {filtered.map((p) => {
               const coverUrl = getPostHeroImageUrl(p);
               const coverAlt = getPostHeroImageAlt(p);
               return (
-                <li key={p.id}>
+                <li key={p.id} className="w-full max-w-[420px]">
                   {postHasRouteJourney(p) ? (
                     <RoutePostCard post={p} regionLabel={t(`region.${p.region_slug}` as "region.seoul")} />
                   ) : (
