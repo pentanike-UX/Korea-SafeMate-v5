@@ -186,14 +186,26 @@ function moodSlices(pool: readonly string[]): Record<VisualMood, string[]> {
   };
 }
 
-function hashPick(seed: string, choices: string[]): string {
-  if (choices.length === 0) return "";
+function hash32(seed: string): number {
   let h = 2166136261;
   for (let i = 0; i < seed.length; i++) {
     h ^= seed.charCodeAt(i);
     h = Math.imul(h, 16777619);
   }
-  return choices[Math.abs(h) % choices.length]!;
+  return Math.abs(h);
+}
+
+function spreadPick(seed: string, choices: string[], avoid: Set<string>): string {
+  if (choices.length === 0) return "";
+  const start = hash32(seed) % choices.length;
+  // Prime step gives good full-cycle distribution over most pool sizes.
+  const step = 7;
+  for (let i = 0; i < choices.length; i++) {
+    const idx = (start + i * step) % choices.length;
+    const pick = choices[idx]!;
+    if (!avoid.has(pick)) return pick;
+  }
+  return choices[start]!;
 }
 
 function pickFromPool(
@@ -204,10 +216,13 @@ function pickFromPool(
 ): string {
   if (pool.length === 0) return "";
   const slices = moodSlices(pool);
-  let candidates = slices[mood].filter((u) => !avoid.has(u));
-  if (candidates.length === 0) candidates = [...pool].filter((u) => !avoid.has(u));
-  if (candidates.length === 0) candidates = [...pool];
-  return hashPick(seed, candidates);
+  const primary = slices[mood];
+  if (primary.length > 0) {
+    const p = spreadPick(`${seed}|mood`, primary, avoid);
+    if (p) return p;
+  }
+  // Fallback to full regional pool to keep variety high even within same mood-heavy clusters.
+  return spreadPick(`${seed}|pool`, [...pool], avoid);
 }
 
 /**

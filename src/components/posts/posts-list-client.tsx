@@ -339,7 +339,7 @@ export function PostsListClient({
             <p className="text-foreground max-w-sm text-base font-medium">{t("empty")}</p>
           </div>
         ) : (
-          <ul className="grid justify-items-center gap-6 sm:grid-cols-2 sm:gap-7 lg:grid-cols-3 lg:gap-8">
+          <ul className="grid justify-center gap-6 [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),26.25rem))] sm:gap-7 lg:gap-8">
             {filtered.map((p) => {
               const coverUrl = getPostHeroImageUrl(p);
               const coverAlt = getPostHeroImageAlt(p);
