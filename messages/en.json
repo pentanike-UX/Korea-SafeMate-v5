@@ -398,7 +398,9 @@
     "footerAdmin": "Admin",
     "devMockGuardianEyebrow": "Dev / QA",
     "devMockGuardianTitle": "Quick login (seed guardians)",
-    "devMockGuardianHint": "Open My page as a seed guardian without Google. Remove before production."
+    "devMockGuardianHint": "Click a name to open that guardian’s public page. Use Log in to enter a seed account and open My page. Remove before production.",
+    "devMockGuardianLoginButton": "Log in",
+    "devMockGuardianProfileLinkTitle": "Open guardian public page"
   },
   "GuardiansPage": {
     "metaTitle": "Guardians",

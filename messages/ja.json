@@ -398,7 +398,9 @@
     "footerAdmin": "管理画面",
     "devMockGuardianEyebrow": "開発・検収",
     "devMockGuardianTitle": "ガーディアン仮ログイン",
-    "devMockGuardianHint": "Googleなしでシード・ガーディアンとしてマイページを確認します。本番前に削除予定です。"
+    "devMockGuardianHint": "名前を押すとそのガーディアンの公開ページへ移動します。「ログイン」でシードアカウントに入りマイページを開けます。本番前に削除予定です。",
+    "devMockGuardianLoginButton": "ログイン",
+    "devMockGuardianProfileLinkTitle": "ガーディアン公開ページへ"
   },
   "GuardiansPage": {
     "metaTitle": "Guardian",

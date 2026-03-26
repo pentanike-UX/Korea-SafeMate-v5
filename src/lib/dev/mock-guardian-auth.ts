@@ -3,6 +3,7 @@ import type { AppAccountRole } from "@/lib/auth/app-role";
 import type { GuardianProfileStatus } from "@/lib/auth/guardian-profile-status";
 import { getGuardianSeedBundle } from "@/data/mock/guardian-seed-bundle";
 import type { GuardianLifecycleStatus, GuardianSeedRow } from "@/data/mock/guardian-seed-types";
+import { resolveGuardianDisplayName } from "@/data/mock/guardian-seed-display-names";
 import { GUARDIAN_SEED_ROWS } from "@/data/mock/guardians-seed";
 import { guardianProfileImageUrls, guardianProfileImageUrlsFromIndex } from "@/lib/guardian-profile-images";
 import type { GuardianProfile } from "@/types/domain";
@@ -92,6 +93,7 @@ export function buildMockSupabaseUser(guardianId: string): User | null {
   const row = getGuardianSeedRow(guardianId);
   if (!row) return null;
   const { avatar } = guardianProfileImageUrlsFromIndex(row.profile_image_index);
+  const displayName = resolveGuardianDisplayName(row.id, row.display_name);
   return {
     id: row.id,
     aud: "mock",
@@ -100,7 +102,7 @@ export function buildMockSupabaseUser(guardianId: string): User | null {
     phone: "",
     created_at: new Date().toISOString(),
     app_metadata: { provider: "mock_guardian" },
-    user_metadata: { full_name: row.display_name, name: row.display_name, avatar_url: avatar, picture: avatar },
+    user_metadata: { full_name: displayName, name: displayName, avatar_url: avatar, picture: avatar },
     identities: [],
     factors: [],
     is_anonymous: false,
@@ -130,25 +132,26 @@ export function buildMockAccountMePayload(guardianId: string): MockAccountMePayl
   if (!row || !profile) return null;
   const { avatar } = guardianProfileImageUrlsFromIndex(row.profile_image_index);
   const status = lifecycleToGuardianProfileStatus(row.lifecycle_status);
+  const displayName = resolveGuardianDisplayName(row.id, row.display_name);
   return {
     auth: {
       id: row.id,
       email: row.email,
       sessionAvatar: avatar,
-      sessionName: row.display_name,
+      sessionName: displayName,
     },
     user: {
       id: row.id,
       email: row.email,
       app_role: "guardian",
       avatar_url: avatar,
-      legal_name: row.display_name,
+      legal_name: displayName,
       last_login_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
       auth_provider: "mock_guardian",
     },
     profile: {
-      display_name: row.display_name,
+      display_name: displayName,
       profile_image_url: avatar,
       intro: row.headline,
     },

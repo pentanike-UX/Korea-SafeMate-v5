@@ -42,7 +42,7 @@ export const GUARDIAN_SEED_ROWS: readonly GuardianSeedRow[] = [
   {
     id: "mg01",
     email: "guardian.seed.mg01@example.dev",
-    display_name: "박하늘",
+    display_name: "김민준",
     headline: "종로·동대문 · 첫 서울 동선 정리",
     bio: "역 주변에서 숙소까지 안전하게 이어지는 동선을 짚어 드립니다. 급하게 뛰지 않아도 되는 만남 장소와 표지판 읽는 순서를 함께 맞춥니다.",
     lifecycle_status: "draft",
@@ -67,7 +67,7 @@ export const GUARDIAN_SEED_ROWS: readonly GuardianSeedRow[] = [
   {
     id: "mg02",
     email: "guardian.seed.mg02@example.dev",
-    display_name: "최유진",
+    display_name: "이서연",
     headline: "홍대 인근 · 대중교통·환승 팁",
     bio: "복잡해 보이는 환승도 단계별로 나누면 부담이 줄어듭니다. 현장에서 자주 묻는 질문 위주로 짧게 정리해 공유합니다.",
     lifecycle_status: "draft",
@@ -92,7 +92,7 @@ export const GUARDIAN_SEED_ROWS: readonly GuardianSeedRow[] = [
   {
     id: "mg03",
     email: "guardian.seed.mg03@example.dev",
-    display_name: "김도현",
+    display_name: "최서윤",
     headline: "성수·건대 · 카페·산책 코스",
     bio: "사람 많은 골목에서도 길 잃지 않게 랜드마크 기준을 잡는 법을 안내합니다. 사진 포인트보다 발이 편한 동선을 우선합니다.",
     lifecycle_status: "draft",
@@ -117,7 +117,7 @@ export const GUARDIAN_SEED_ROWS: readonly GuardianSeedRow[] = [
   {
     id: "mg04",
     email: "guardian.seed.mg04@example.dev",
-    display_name: "이서준",
+    display_name: "최지우",
     headline: "명동·을지로 · 실전 주문·결제",
     bio: "메뉴판이 한글만 있어도 단계만 알면 주문이 어렵지 않습니다. 현금·카드·간편결제 선택지를 상황별로 짚어 드립니다.",
     lifecycle_status: "submitted",
@@ -142,7 +142,7 @@ export const GUARDIAN_SEED_ROWS: readonly GuardianSeedRow[] = [
   {
     id: "mg05",
     email: "guardian.seed.mg05@example.dev",
-    display_name: "정민지",
+    display_name: "오하윤",
     headline: "강남역·역삼 · 약속 장소 잡기",
     bio: "출구 번호만으로는 헷갈리는 경우가 많아 지도 핀과 랜드마크를 같이 맞춥니다. 비 오는 날 실내 대기 동선도 제안합니다.",
     lifecycle_status: "submitted",
@@ -167,7 +167,7 @@ export const GUARDIAN_SEED_ROWS: readonly GuardianSeedRow[] = [
   {
     id: "mg06",
     email: "guardian.seed.mg06@example.dev",
-    display_name: "강태양",
+    display_name: "서지원",
     headline: "이태원·한남 · 다국어 동행 경험",
     bio: "늦은 시간 이동이나 택시 승차 위치까지 현장감 있게 정리합니다. 안전하게 범위를 정하고 움직이는 습관을 나눕니다.",
     lifecycle_status: "submitted",
@@ -193,7 +193,7 @@ export const GUARDIAN_SEED_ROWS: readonly GuardianSeedRow[] = [
   {
     id: "mg07",
     email: "guardian.seed.mg07@example.dev",
-    display_name: "윤하은",
+    display_name: "유민서",
     headline: "압구정·청담 · 쇼핑 동선(초안)",
     bio: "브랜드 거리와 실제 쉬어갈 공간을 균형 있게 잡는 초안입니다. 검수 후 다시 다듬을 예정입니다.",
     lifecycle_status: "rejected",
@@ -218,7 +218,7 @@ export const GUARDIAN_SEED_ROWS: readonly GuardianSeedRow[] = [
   {
     id: "mg08",
     email: "guardian.seed.mg08@example.dev",
-    display_name: "문지후",
+    display_name: "수아",
     headline: "부산 해운대 · 해변·시내버스",
     bio: "이벤트 날 우회와 평소 노선 차이를 구분해 설명합니다. 바람이 강한 날 만남 장소는 실내 기준으로 잡는 편이 낫습니다.",
     lifecycle_status: "rejected",
@@ -243,7 +243,7 @@ export const GUARDIAN_SEED_ROWS: readonly GuardianSeedRow[] = [
   {
     id: "mg09",
     email: "guardian.seed.mg09@example.dev",
-    display_name: "배수아",
+    display_name: "서준",
     headline: "인천공항·첫 이동(일시 중지)",
     bio: "계정이 일시 중지되어 매칭은 열리지 않습니다. 공항에서 시내까지 첫 이동만 담은 초안 글을 남겨 두었습니다.",
     lifecycle_status: "suspended",
@@ -268,7 +268,7 @@ export const GUARDIAN_SEED_ROWS: readonly GuardianSeedRow[] = [
   {
     id: "mg10",
     email: "guardian.seed.mg10@example.dev",
-    display_name: "서은비",
+    display_name: "박도윤",
     headline: "광화문·종로 · 역사 산책(일시 중지)",
     bio: "이전에 승인된 글은 남아 있으나 현재는 일시 중지 상태입니다. 재개 시 안내에 따라 프로필이 다시 열립니다.",
     lifecycle_status: "suspended",
@@ -294,7 +294,7 @@ export const GUARDIAN_SEED_ROWS: readonly GuardianSeedRow[] = [
   {
     id: "mg11",
     email: "guardian.seed.mg11@example.dev",
-    display_name: "임재현",
+    display_name: "김건우",
     headline: "합정·망원 · 한강·소규모 동행",
     bio: "짧은 동행에서도 목적지·화장실·물 위치까지 미리 짚어 두면 마음이 한결 가벼워집니다. 한강 노을 시간대는 바람과 통행량을 같이 봅니다.",
     lifecycle_status: "approved",
@@ -319,7 +319,7 @@ export const GUARDIAN_SEED_ROWS: readonly GuardianSeedRow[] = [
   {
     id: "mg12",
     email: "guardian.seed.mg12@example.dev",
-    display_name: "오채원",
+    display_name: "임태윤",
     headline: "신촌·이대 · 식사·약속 코스",
     bio: "대학가 특유의 밀집 구간을 피해 조용히 앉을 수 있는 대안을 제시합니다. 웨이팅이 길 때 대체 식당 기준도 함께 적습니다.",
     lifecycle_status: "approved",
@@ -344,7 +344,7 @@ export const GUARDIAN_SEED_ROWS: readonly GuardianSeedRow[] = [
   {
     id: "mg13",
     email: "guardian.seed.mg13@example.dev",
-    display_name: "남기태",
+    display_name: "이예준",
     headline: "용산·삼각지 · 실용 정보·동선",
     bio: "역사와 쇼핑몰이 겹치는 구간에서 길 선택이 갈립니다. 짐이 많을 때와 가벼울 때를 나눠 동선을 추천합니다.",
     lifecycle_status: "approved",
@@ -370,7 +370,7 @@ export const GUARDIAN_SEED_ROWS: readonly GuardianSeedRow[] = [
   {
     id: "mg14",
     email: "guardian.seed.mg14@example.dev",
-    display_name: "홍서연",
+    display_name: "김서호",
     headline: "북촌·삼청 · 사진·예절이 어우러진 산책",
     bio: "주거지와 관광지가 섞인 골목에서는 소음과 촬영 매너를 먼저 맞춥니다. 햇살 각도에 따라 붐비지 않는 시간대를 제안합니다.",
     lifecycle_status: "approved",
@@ -396,7 +396,7 @@ export const GUARDIAN_SEED_ROWS: readonly GuardianSeedRow[] = [
   {
     id: "mg15",
     email: "guardian.seed.mg15@example.dev",
-    display_name: "한도윤",
+    display_name: "김시우",
     headline: "서울 전역 · 안심 동행·지역 큐레이션",
     bio: "여행 목적이 쇼핑이든 전시이든 ‘오늘 하루 무리 없이 끝내기’를 기준으로 짧은 리포트형 글을 씁니다. 동행 시에는 이탈·휴식 타이밍을 명확히 합니다.",
     lifecycle_status: "approved",

@@ -398,7 +398,9 @@
     "footerAdmin": "관리자화면",
     "devMockGuardianEyebrow": "개발 · 검수",
     "devMockGuardianTitle": "가디언즈 임시 로그인하기",
-    "devMockGuardianHint": "Google 로그인 없이 시드 가디언 계정으로 마이페이지를 확인합니다. 배포 전 제거 예정입니다."
+    "devMockGuardianHint": "이름을 누르면 해당 가디언 공개 페이지로 이동합니다. 로그인 버튼으로 시드 계정에 들어가 마이페이지를 확인할 수 있어요. 배포 전 제거 예정입니다.",
+    "devMockGuardianLoginButton": "로그인",
+    "devMockGuardianProfileLinkTitle": "가디언 공개 페이지로 이동"
   },
   "GuardiansPage": {
     "metaTitle": "Guardian",
