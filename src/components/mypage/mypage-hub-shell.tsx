@@ -94,20 +94,31 @@ export function MypageHubShell({
   useEffect(() => {
     const guardianUnlocked = snapshot.guardianSegmentUnlocked;
     const defaultMode: HubMode = appRole === "guardian" ? "guardian" : "traveler";
+    const resolveMode = (candidate: HubMode): HubMode =>
+      candidate === "guardian" && !guardianUnlocked ? "traveler" : candidate;
+
+    let next: HubMode = defaultMode;
     try {
-      const stored = localStorage.getItem(MYPAGE_MODE_KEY);
-      if (stored === "guardian" || stored === "traveler") {
-        if (stored === "guardian" && !guardianUnlocked) {
-          setHubMode("traveler");
-        } else {
-          setHubMode(stored);
+      const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
+      const seg = params.get("segment");
+      if (seg === "guardian" || seg === "traveler") {
+        next = resolveMode(seg);
+        if (typeof window !== "undefined") {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("segment");
+          const path = `${url.pathname}${url.search}`;
+          window.history.replaceState({}, "", path);
         }
       } else {
-        setHubMode(defaultMode);
+        const stored = localStorage.getItem(MYPAGE_MODE_KEY);
+        if (stored === "guardian" || stored === "traveler") {
+          next = resolveMode(stored);
+        }
       }
     } catch {
-      setHubMode(defaultMode);
+      next = defaultMode;
     }
+    setHubMode(next);
     setModeReady(true);
   }, [appRole, snapshot.guardianSegmentUnlocked]);
 

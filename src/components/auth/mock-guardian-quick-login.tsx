@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import { resolveGuardianDisplayName } from "@/data/mock/guardian-seed-display-names";
 import { GUARDIAN_SEED_ROWS } from "@/data/mock/guardians-seed";
 import { loginAsMockGuardian } from "@/lib/dev/login-as-mock-guardian";
+import { guardianProfileImageUrlsFromIndex } from "@/lib/guardian-profile-images";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const tierBadgeClass: Record<string, string> = {
@@ -33,7 +33,7 @@ export function MockGuardianQuickLogin({ className }: { className?: string }) {
         setPendingId(null);
         return;
       }
-      window.location.assign(`/${locale}/mypage`);
+      window.location.assign(`/${locale}/mypage?segment=guardian`);
     } catch {
       setPendingId(null);
     }
@@ -50,41 +50,45 @@ export function MockGuardianQuickLogin({ className }: { className?: string }) {
       <p className="text-muted-foreground text-[11px] font-semibold tracking-wide uppercase">{t("devMockGuardianEyebrow")}</p>
       <h2 className="text-muted-foreground mt-1 text-sm font-medium">{t("devMockGuardianTitle")}</h2>
       <p className="text-muted-foreground/90 mt-2 text-xs leading-relaxed">{t("devMockGuardianHint")}</p>
-      <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <ul className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
         {GUARDIAN_SEED_ROWS.map((row) => {
           const busy = pendingId === row.id;
           const displayName = resolveGuardianDisplayName(row.id, row.display_name);
+          const { avatar } = guardianProfileImageUrlsFromIndex(row.profile_image_index);
+          const initial = displayName.slice(0, 1).toUpperCase();
           return (
             <li key={row.id}>
-              <div
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void onPick(row.id)}
                 className={cn(
-                  "border-border/70 bg-card/40 flex min-h-12 w-full items-center gap-2 rounded-[var(--radius-md)] border px-2 py-2 sm:gap-2.5 sm:px-3 sm:py-2.5",
+                  "group border-border/70 bg-card/60 hover:border-[color-mix(in_srgb,var(--brand-trust-blue)_28%,var(--border))] hover:bg-card focus-visible:ring-ring flex w-full min-h-[4.5rem] items-center gap-3 rounded-[var(--radius-md)] border px-3 py-3 text-left shadow-[var(--shadow-sm)] transition-[border-color,background-color,transform,box-shadow] duration-200 sm:min-h-[4.75rem] sm:gap-3.5 sm:px-4 sm:py-3.5",
+                  "active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                  "disabled:pointer-events-none disabled:opacity-55",
                 )}
               >
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => void onPick(row.id)}
-                  className="border-border/70 text-foreground h-9 shrink-0 px-2.5 text-xs font-semibold sm:h-10 sm:px-3"
+                <Avatar className="size-11 shrink-0 ring-1 ring-border/50 sm:size-12">
+                  <AvatarImage src={avatar} alt="" />
+                  <AvatarFallback className="text-sm font-semibold">{initial}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="text-foreground truncate text-sm font-semibold sm:text-[15px]">{displayName}</p>
+                  <Badge
+                    variant="outline"
+                    className={cn("mt-1.5 px-2 py-0.5 text-[10px] font-semibold", tierBadgeClass[row.product_tier])}
+                  >
+                    {row.product_tier}
+                  </Badge>
+                </div>
+                <span
+                  className={cn(
+                    "border-border/80 bg-background text-foreground group-hover:border-[color-mix(in_srgb,var(--brand-trust-blue)_35%,var(--border))] group-hover:bg-[var(--brand-trust-blue-soft)]/35 group-active:bg-muted shrink-0 rounded-[var(--radius-md)] border px-3 py-2.5 text-xs font-semibold shadow-sm transition-colors sm:px-3.5 sm:py-3 sm:text-sm",
+                  )}
                 >
                   {busy ? "…" : t("devMockGuardianLoginButton")}
-                </Button>
-                <Badge
-                  variant="outline"
-                  className={cn("shrink-0 px-2 py-0.5 text-[10px] font-semibold", tierBadgeClass[row.product_tier])}
-                >
-                  {row.product_tier}
-                </Badge>
-                <Link
-                  href={`/guardians/${row.id}`}
-                  title={t("devMockGuardianProfileLinkTitle")}
-                  className="text-foreground hover:text-[var(--link-color)] min-w-0 flex-1 truncate text-left text-sm font-medium underline-offset-2 hover:underline"
-                >
-                  {displayName}
-                </Link>
-              </div>
+                </span>
+              </button>
             </li>
           );
         })}
