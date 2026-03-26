@@ -83,8 +83,11 @@ export function SiteHeader() {
           : "border-border/70 bg-background/93 shadow-[var(--shadow-sm)] supports-[backdrop-filter]:bg-background/86",
       )}
     >
-      <div className="flex min-h-14 h-14 w-full items-center justify-between gap-3 px-4 sm:h-16 sm:min-h-16 sm:gap-4 sm:px-6 md:px-8 xl:px-10">
-        <Link href="/" className="flex min-w-0 shrink-0 items-center gap-2.5 rounded-lg active:opacity-90">
+      <div className="flex min-h-14 h-14 w-full items-center gap-3 px-4 sm:h-16 sm:min-h-16 sm:gap-4 sm:px-6 md:px-8 xl:px-10">
+        <Link
+          href="/"
+          className="flex min-w-0 max-w-[min(100%,calc(100%-6.75rem))] shrink-0 items-center gap-2.5 rounded-lg active:opacity-90 sm:max-w-[min(100%,calc(100%-7.5rem))] md:max-w-none"
+        >
           <span
             className={cn(
               "flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-primary)] text-sm font-bold text-[var(--text-on-brand)] shadow-sm ring-2 transition-[box-shadow] duration-300",
@@ -115,11 +118,11 @@ export function SiteHeader() {
           </div>
         </Link>
 
-        <div className="hidden md:flex md:flex-1 md:justify-center">
+        <div className="hidden min-w-0 md:flex md:flex-1 md:justify-center">
           <NavLinks />
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <div className="flex shrink-0 items-center justify-end gap-1.5 sm:gap-2">
           {user === undefined ? (
             <div
               className={cn(

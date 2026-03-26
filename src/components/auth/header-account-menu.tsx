@@ -48,6 +48,34 @@ function initials(name: string, email: string) {
   return (s.slice(0, 2) || "U").toUpperCase();
 }
 
+function emailLocalPart(email: string) {
+  const at = email.indexOf("@");
+  if (at <= 0) return email.slice(0, 20);
+  return email.slice(0, at);
+}
+
+function desktopTriggerLabel(display: string, email: string) {
+  const d = display.trim();
+  if (d) return d;
+  if (email) return emailLocalPart(email);
+  return "User";
+}
+
+/** 모바일 트리거: 긴 이메일 전체 노출 금지 — 표시명·이니셜 위주 */
+function mobileTriggerLabel(display: string, email: string) {
+  const d = display.trim();
+  if (d.length > 0) {
+    if (d.length <= 14) return d;
+    return `${d.slice(0, 12)}…`;
+  }
+  if (email) {
+    const local = emailLocalPart(email);
+    if (local.length <= 10) return local;
+    return `${local.slice(0, 8)}…`;
+  }
+  return initials(display, email);
+}
+
 function roleTKey(role: AppAccountRole): "role_traveler" | "role_guardian" | "role_admin" | "role_super_admin" {
   if (role === "guardian") return "role_guardian";
   if (role === "admin") return "role_admin";
@@ -83,7 +111,12 @@ function AccountSummary({
       </Avatar>
       <div className="min-w-0 flex-1">
         <p className={cn("truncate text-sm font-semibold", onDarkSurface ? "text-white" : "text-foreground")}>{display}</p>
-        <p className={cn("truncate text-xs", onDarkSurface ? "text-white/75" : "text-muted-foreground")}>{email}</p>
+        <p
+          className={cn("truncate text-xs", onDarkSurface ? "text-white/75" : "text-muted-foreground")}
+          title={email || undefined}
+        >
+          {email ? (email.length > 36 ? `${email.slice(0, 34)}…` : email) : ""}
+        </p>
         <p
           className={cn(
             "mt-1 text-[10px] font-medium tracking-wide uppercase",
@@ -165,21 +198,57 @@ export function HeaderAccountMenu({
   const avatarSrc = me?.profile?.profile_image_url || me?.user?.avatar_url || me?.auth.sessionAvatar || null;
   const role = me?.user?.app_role ?? "traveler";
 
-  const triggerClass = cn(
-    "inline-flex h-10 max-w-[min(100%,14rem)] items-center gap-2 rounded-[var(--radius-md)] border px-2.5 text-left text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50",
+  const triggerClassBase =
+    "inline-flex h-10 min-w-0 items-center gap-2 rounded-[var(--radius-md)] border text-left text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50";
+
+  const triggerClassDesktop = cn(
+    triggerClassBase,
+    "max-w-[min(100%,15rem)] px-2.5",
     onDarkSurface
       ? "border-white/25 bg-white/10 text-white hover:bg-white/16"
       : "border-border/80 bg-background hover:bg-muted/80",
   );
 
-  const triggerInner = (
+  const triggerClassMobile = cn(
+    triggerClassBase,
+    "max-w-[min(100%,7.25rem)] px-2 max-[360px]:max-w-10 max-[360px]:justify-center max-[360px]:gap-0 max-[360px]:px-1.5",
+    onDarkSurface
+      ? "border-white/25 bg-white/10 text-white hover:bg-white/16"
+      : "border-border/80 bg-background hover:bg-muted/80",
+  );
+
+  const deskLabel = desktopTriggerLabel(display, email);
+  const mobLabel = mobileTriggerLabel(display, email);
+
+  const triggerInnerDesktop = (
     <>
       <Avatar size="sm">
         {avatarSrc ? <AvatarImage src={avatarSrc} alt="" /> : null}
         <AvatarFallback className="text-[10px]">{initials(display, email)}</AvatarFallback>
       </Avatar>
-      <span className={cn("min-w-0 flex-1 truncate", onDarkSurface ? "text-white" : "text-foreground")}>{email || display}</span>
+      <span className={cn("min-w-0 flex-1 truncate", onDarkSurface ? "text-white" : "text-foreground")} title={deskLabel}>
+        {deskLabel}
+      </span>
       <ChevronDown className={cn("size-4 shrink-0 opacity-70", onDarkSurface ? "text-white" : "")} aria-hidden />
+    </>
+  );
+
+  const triggerInnerMobile = (
+    <>
+      <Avatar size="sm">
+        {avatarSrc ? <AvatarImage src={avatarSrc} alt="" /> : null}
+        <AvatarFallback className="text-[10px]">{initials(display, email)}</AvatarFallback>
+      </Avatar>
+      <span
+        className={cn(
+          "min-w-0 flex-1 truncate text-xs max-[360px]:hidden",
+          onDarkSurface ? "text-white" : "text-foreground",
+        )}
+        title={mobLabel}
+      >
+        {mobLabel}
+      </span>
+      <ChevronDown className={cn("size-4 shrink-0 opacity-70 max-[360px]:ml-0", onDarkSurface ? "text-white" : "")} aria-hidden />
     </>
   );
 
@@ -423,12 +492,12 @@ export function HeaderAccountMenu({
       <div className="hidden sm:block">
         <DropdownMenu open={desktopOpen} onOpenChange={setDesktopOpen}>
           <DropdownMenuTrigger
-            className={triggerClass}
+            className={triggerClassDesktop}
             aria-label={t("accountMenuAria")}
             aria-expanded={desktopOpen}
             aria-haspopup="menu"
           >
-            {loading ? <span className="text-muted-foreground px-2 text-xs">…</span> : triggerInner}
+            {loading ? <span className="text-muted-foreground px-2 text-xs">…</span> : triggerInnerDesktop}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-[min(calc(100vw-2rem),20rem)] p-0" sideOffset={6}>
             <AccountSummary me={me} authUser={authUser} onDarkSurface={false} />
@@ -439,8 +508,8 @@ export function HeaderAccountMenu({
 
       <div className="sm:hidden">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetTrigger className={triggerClass} aria-label={t("accountMenuAria")} aria-expanded={mobileOpen}>
-            {loading ? <span className="text-muted-foreground px-2 text-xs">…</span> : triggerInner}
+          <SheetTrigger className={triggerClassMobile} aria-label={t("accountMenuAria")} aria-expanded={mobileOpen}>
+            {loading ? <span className="text-muted-foreground px-2 text-xs">…</span> : triggerInnerMobile}
           </SheetTrigger>
           <SheetContent side="bottom" className="max-h-[min(85vh,32rem)] rounded-t-2xl px-0 pt-4 pb-6">
             <SheetHeader className="sr-only">
