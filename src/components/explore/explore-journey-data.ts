@@ -45,7 +45,14 @@ export type PartySize = "solo" | "two" | "small" | "group";
 export const SCENE_MOOD_IDS = ["scene_neon", "scene_hanok", "scene_cafe", "scene_photo", "scene_quiet", "scene_romantic"] as const;
 export type SceneMoodId = (typeof SCENE_MOOD_IDS)[number];
 
-export const GUARDIAN_STYLE_IDS = ["style_calm", "style_planner", "style_energetic", "style_trendy", "style_flexible"] as const;
+export const GUARDIAN_STYLE_IDS = [
+  "style_calm",
+  "style_planner",
+  "style_energetic",
+  "style_trendy",
+  "style_flexible",
+  "style_no_match_test",
+] as const;
 export type GuardianStyleId = (typeof GUARDIAN_STYLE_IDS)[number];
 
 export function companionSlugsForStyle(id: GuardianStyleId): string[] {
@@ -60,6 +67,9 @@ export function companionSlugsForStyle(id: GuardianStyleId): string[] {
       return ["trendy"];
     case "style_flexible":
       return ["flexible"];
+    case "style_no_match_test":
+      // Intentionally unmatched option for empty-result UX testing.
+      return ["__no_guardian_match__"];
     default:
       return [];
   }

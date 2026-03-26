@@ -634,7 +634,9 @@
     "dashMoreGuardians": "More guardians to consider",
     "dashRoutesTitle": "Related routes",
     "dashPostsTitle": "Related posts",
-    "dashRouteBadge": "Route"
+    "dashRouteBadge": "Route",
+    "moodStyle_no_match_test": "이 옵션은 가디언이 매칭되지 않음",
+    "moodStyle_no_match_test_hint": "Intentional unmatched option for empty-result UX testing"
   },
   "GuardiansDiscover": {
     "metaTitle": "Guardians",

@@ -634,7 +634,9 @@
     "dashMoreGuardians": "함께 볼 만한 가디언",
     "dashRoutesTitle": "관련 루트",
     "dashPostsTitle": "관련 포스트",
-    "dashRouteBadge": "Route"
+    "dashRouteBadge": "Route",
+    "moodStyle_no_match_test": "이 옵션은 가디언이 매칭되지 않음",
+    "moodStyle_no_match_test_hint": "empty 결과 UX 테스트용 예외 항목"
   },
   "GuardiansDiscover": {
     "metaTitle": "가디언",

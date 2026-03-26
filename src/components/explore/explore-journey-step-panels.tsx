@@ -308,6 +308,7 @@ const STYLE_ICONS: Record<GuardianStyleId, LucideIcon> = {
   style_energetic: Zap,
   style_trendy: Sparkles,
   style_flexible: UsersRound,
+  style_no_match_test: UsersRound,
 };
 
 export function ExploreTasteBuilderStep(props: {
@@ -737,6 +738,17 @@ export function ExploreResultsDashboard(props: {
             <div className="border-border/60 rounded-[1.35rem] border border-dashed bg-muted/10 p-10 text-center">
               <p className="text-foreground text-sm font-semibold">{tG("empty")}</p>
               <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{tG("emptyBody")}</p>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5">
+                <Button type="button" variant="outline" className="h-10 rounded-xl" onClick={onEditConditions}>
+                  {t("editConditions")}
+                </Button>
+                <Button type="button" variant="ghost" className="h-10 rounded-xl" onClick={onReRecommend}>
+                  {t("reset")}
+                </Button>
+                <Button asChild className="h-10 rounded-xl">
+                  <Link href="/guardians">{t("btnGuardiansFirst")}</Link>
+                </Button>
+              </div>
             </div>
           ) : (
             <>

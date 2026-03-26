@@ -43,11 +43,19 @@ export function defaultMarketingFromGuardian(g: GuardianProfile): GuardianMarket
   }
   const urls = row ? guardianProfileImageUrlsFromIndex(row.profile_image_index) : guardianProfileImageUrls(g);
   const launch = row ? launchAreaFromSeedRow(row) : "gwanghwamun";
+  const stylePool = ["calm", "planner", "energetic", "trendy", "friendly", "flexible"] as const;
+  const themePool = ["k_drama_romance", "k_pop_day", "seoul_night", "movie_location", "safe_solo", "photo_route"] as const;
+  const n = row ? parseInt(row.id.replace(/\D/g, ""), 10) || 1 : 1;
+  const styleA = stylePool[(n - 1) % stylePool.length]!;
+  const styleB = stylePool[(n + 1) % stylePool.length]!;
+  const themeA = themePool[(n - 1) % themePool.length]!;
+  const themeB = themePool[(n + 2) % themePool.length]!;
   return {
     user_id: g.user_id,
     launch_area_slug: launch,
-    theme_slugs: (g.expertise_tags ?? []).slice(0, 4).map((t) => t.toLowerCase().replace(/\s+/g, "_")),
-    companion_style_slugs: ["calm", "planner"],
+    // Keep explore filters connected to real option IDs (avoid accidental dead options).
+    theme_slugs: [themeA, themeB],
+    companion_style_slugs: [styleA, styleB],
     trust_badge_ids: g.guardian_tier === "verified_guardian" ? ["verified", "language_checked", "reviewed"] : ["language_checked", "reviewed"],
     photo_url: urls.default,
     positioning: { ko: g.headline, en: g.headline },

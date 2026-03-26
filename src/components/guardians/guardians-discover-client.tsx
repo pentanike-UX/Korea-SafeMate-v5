@@ -438,7 +438,7 @@ export function GuardiansDiscoverClient() {
         </SheetContent>
       </Sheet>
 
-      <div className="page-container py-8 sm:py-10 md:py-12">
+      <div className="page-container max-w-[112rem] py-8 sm:py-10 md:py-12">
         {filtered.length === 0 ? (
           <div className="border-border/60 mx-auto max-w-lg rounded-[var(--radius-lg)] border border-dashed bg-muted/15 px-6 py-16 text-center sm:py-20">
             <span className="text-[var(--brand-trust-blue)] mx-auto mb-5 flex size-14 items-center justify-center rounded-full bg-[var(--brand-trust-blue-soft)]">
@@ -448,7 +448,7 @@ export function GuardiansDiscoverClient() {
             <p className="text-muted-foreground mt-3 text-sm leading-relaxed sm:text-[15px]">{t("emptyBody")}</p>
           </div>
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5 2xl:grid-cols-4">
+          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 2xl:gap-5">
             {filtered.map((g) => {
               const rep = repPostFor(g);
               const areaName = (tLaunch.raw(g.launch_area_slug) as { name: string }).name;
@@ -461,13 +461,12 @@ export function GuardiansDiscoverClient() {
               return (
                 <li key={g.user_id}>
                   <Card className="border-border/70 h-full overflow-hidden rounded-[var(--radius-md)] py-0 shadow-[var(--shadow-sm)] transition-all hover:border-[color-mix(in_srgb,var(--brand-trust-blue)_30%,var(--border))] hover:shadow-[var(--shadow-md)]">
-                    <div className="relative aspect-[4/3] w-full">
-                      <div className="absolute inset-0">
-                        <Image src={imgs.default} alt="" fill className={GUARDIAN_PROFILE_COVER_POSITION_CLASS} sizes="(max-width:640px) 100vw, 40vw" />
+                    <div className="flex h-full">
+                      <div className="relative w-[38%] min-w-[8.5rem] max-w-[10.5rem] self-stretch bg-muted/40 sm:min-w-[9rem]">
+                        <Image src={imgs.default} alt="" fill className={GUARDIAN_PROFILE_COVER_POSITION_CLASS} sizes="(max-width:640px) 40vw, 20vw" />
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent" />
                       </div>
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
-                    </div>
-                    <CardContent className="flex h-full flex-col gap-3.5 p-4">
+                      <CardContent className="flex min-w-0 flex-1 flex-col gap-3 p-3.5">
                       <div>
                         <p className="text-foreground truncate text-[17px] font-semibold">{g.display_name}</p>
                         <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -509,22 +508,23 @@ export function GuardiansDiscoverClient() {
                         ) : null}
                       </div>
 
-                      {rep ? (
-                        <div className="border-border/60 bg-muted/20 rounded-xl border p-2.5">
+                        {rep ? (
+                          <div className="border-border/60 bg-muted/20 rounded-xl border p-2">
                           <p className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">{t("repPost")}</p>
-                          <p className="text-foreground mt-1 line-clamp-2 text-sm font-medium leading-snug">{rep.title}</p>
-                        </div>
-                      ) : null}
+                            <p className="text-foreground mt-1 line-clamp-1 text-sm font-medium leading-snug">{rep.title}</p>
+                          </div>
+                        ) : null}
 
-                      <div className="mt-auto grid grid-cols-2 gap-2">
-                        <Button asChild className="h-10 w-full rounded-[var(--radius-md)] font-semibold">
-                          <Link href={`/guardians/${g.user_id}`}>{t("cardCtaPrimary")}</Link>
-                        </Button>
-                        <div className="[&_button]:h-10 [&_button]:w-full">
-                          <SaveGuardianButton guardianUserId={g.user_id} compact />
+                        <div className="mt-auto grid grid-cols-2 gap-2">
+                          <Button asChild className="h-9 w-full rounded-[var(--radius-md)] text-xs font-semibold sm:text-sm">
+                            <Link href={`/guardians/${g.user_id}`}>{t("cardCtaPrimary")}</Link>
+                          </Button>
+                          <div className="[&_button]:h-9 [&_button]:w-full [&_button]:text-xs sm:[&_button]:text-sm">
+                            <SaveGuardianButton guardianUserId={g.user_id} compact />
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
+                      </CardContent>
+                    </div>
                   </Card>
                 </li>
               );

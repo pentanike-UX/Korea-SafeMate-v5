@@ -104,12 +104,16 @@ export function ExploreJourneyClient() {
       g = g.filter((x) => x.companion_style_slugs.includes("energetic") || x.companion_style_slugs.includes("planner"));
     }
     if (guardianStylePrefs.length > 0) {
-      const filtered = g.filter((x) =>
-        guardianStylePrefs.some((pref) =>
-          companionSlugsForStyle(pref).some((slug) => x.companion_style_slugs.includes(slug)),
-        ),
-      );
-      if (filtered.length > 0) g = filtered;
+      const hasNoMatchStyle = guardianStylePrefs.includes("style_no_match_test");
+      if (hasNoMatchStyle) {
+        g = [];
+      } else {
+        g = g.filter((x) =>
+          guardianStylePrefs.some((pref) =>
+            companionSlugsForStyle(pref).some((slug) => x.companion_style_slugs.includes(slug)),
+          ),
+        );
+      }
     }
     effectiveTasteIds.forEach((tid) => {
       if (tid === "tastePhoto") {
