@@ -8,30 +8,17 @@ import type { AppAccountRole } from "@/lib/auth/app-role";
 import type { GuardianProfileStatus } from "@/lib/auth/guardian-profile-status";
 import { MypageGuardianDashboard } from "@/components/mypage/mypage-guardian-dashboard";
 import { MypageAvatarEditTrigger } from "@/components/mypage/mypage-avatar-edit-trigger";
+import { MypageHubSideNavigation } from "@/components/mypage/mypage-hub-side-navigation";
 import { MypageHubProvider } from "@/components/mypage/mypage-hub-context";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import type { MypageHubSnapshot } from "@/types/mypage-hub";
-import { ClipboardList, Coins, FileText, Heart, LayoutDashboard, Plane, Settings, Users } from "lucide-react";
 
 const MYPAGE_MODE_KEY = "safemate-mypage-mode";
 
 type HubMode = "traveler" | "guardian";
-
-const CORE_NAV: {
-  href: string;
-  labelKey: "navOverview" | "navJourneys" | "navRequests" | "navProfile" | "navPoints" | "navMatches";
-  Icon: typeof Plane;
-}[] = [
-  { href: "/mypage", labelKey: "navOverview", Icon: LayoutDashboard },
-  { href: "/mypage/journeys", labelKey: "navJourneys", Icon: Plane },
-  { href: "/mypage/requests", labelKey: "navRequests", Icon: ClipboardList },
-  { href: "/mypage/matches", labelKey: "navMatches", Icon: Users },
-  { href: "/mypage/points", labelKey: "navPoints", Icon: Coins },
-  { href: "/mypage/profile", labelKey: "navProfile", Icon: Settings },
-];
 
 type GuardianCtaLabel =
   | "guardianCtaNone"
@@ -131,19 +118,6 @@ export function MypageHubShell({
     }
   }, [hubMode, modeReady]);
 
-  const coreActive = (href: string) => {
-    if (href === "/mypage") return pathname === "/mypage" || pathname === "/mypage/";
-    if (href === "/mypage/journeys") return pathname === "/mypage/journeys" || pathname.startsWith("/mypage/journeys/");
-    if (href === "/mypage/requests") return pathname === "/mypage/requests" || pathname.startsWith("/mypage/requests/");
-    if (href === "/mypage/profile") return pathname === "/mypage/profile" || pathname.startsWith("/mypage/profile/");
-    if (href === "/mypage/points") return pathname === "/mypage/points" || pathname.startsWith("/mypage/points/");
-    if (href === "/mypage/matches")
-      return pathname === "/mypage/matches" || pathname.startsWith("/mypage/matches/");
-    return false;
-  };
-
-  const gActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
-
   const guardianPrimaryCta = (): { href: string; labelKey: GuardianCtaLabel } => {
     switch (guardianStatus) {
       case "none":
@@ -179,10 +153,6 @@ export function MypageHubShell({
     }
     return t("hubRoleSummaryTravelerOnly");
   };
-
-  const sideNavWrap = "border-border/60 lg:border-r lg:pr-8";
-  const segmentNavItem =
-    "flex min-h-11 items-center gap-3 rounded-[var(--radius-md)] px-4 py-3 text-[15px] font-medium transition-colors lg:min-h-12 lg:py-3.5";
 
   return (
     <MypageHubProvider value={{ appRole, guardianStatus, accountUserId, snapshot }}>
@@ -278,167 +248,25 @@ export function MypageHubShell({
 
         <div className="page-container flex flex-col gap-10 py-8 sm:py-10 md:gap-12 lg:flex-row lg:gap-14">
           <div className="lg:w-64 lg:shrink-0">
+            <MypageHubSideNavigation
+              hubMode={hubMode}
+              setHubMode={setHubMode}
+              approved={approved}
+              guardianStatus={guardianStatus}
+              primary={primary}
+            />
             {hubMode === "traveler" ? (
-              <div className={sideNavWrap}>
-                <nav aria-label={t("navAria")}>
-                  <ul className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] lg:flex-col lg:gap-1.5 lg:overflow-visible lg:pb-0 [&::-webkit-scrollbar]:hidden">
-                    {CORE_NAV.map(({ href, labelKey, Icon }) => {
-                      const active = coreActive(href);
-                      return (
-                        <li key={href} className="shrink-0 lg:shrink">
-                          <Link
-                            href={href}
-                            className={cn(
-                              segmentNavItem,
-                              active
-                                ? "bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] ring-1 ring-[color-mix(in_srgb,var(--brand-trust-blue)_22%,transparent)]"
-                                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                            )}
-                          >
-                            <Icon className="size-5 shrink-0 opacity-90" strokeWidth={1.75} aria-hidden />
-                            {t(labelKey)}
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </nav>
-                <div className="border-border/60 mt-6 rounded-xl border border-dashed bg-muted/20 p-4 lg:mt-8">
-                  <p className="text-muted-foreground text-xs leading-relaxed">{t("guardianApplyTeaser")}</p>
-                  <button
-                    type="button"
-                    onClick={() => setHubMode("guardian")}
-                    className="text-primary mt-3 inline-flex min-h-11 items-center text-sm font-semibold"
-                  >
-                    {t("guardianApplyCta")}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className={sideNavWrap}>
-                <nav
-                  className="border-border/60 rounded-xl border border-border/70 bg-card/70 p-4 shadow-[var(--shadow-sm)]"
-                  aria-label={t("guardianModeNavAria")}
-                >
-                  <p className="text-muted-foreground text-[10px] font-bold tracking-widest uppercase">
-                    {t("guardianStripTitle")}
-                  </p>
-                  <p className="text-muted-foreground mt-2 text-xs leading-snug">{t(`guardianStatus.${guardianStatus}`)}</p>
-                  <p className="text-muted-foreground/90 mt-2 text-[11px] leading-relaxed">{t("guardianNavMypageNote")}</p>
-
-                  <Button asChild className="mt-4 h-12 w-full rounded-[var(--radius-md)] font-semibold">
-                    <Link href={primary.href}>{t(primary.labelKey)}</Link>
-                  </Button>
-
-                  {guardianStatus === "submitted" ? (
-                    <p className="text-muted-foreground mt-3 text-xs leading-relaxed">{t("guardianCtaSubmittedHint")}</p>
-                  ) : null}
-                  {guardianStatus === "suspended" ? (
-                    <p className="text-muted-foreground mt-3 text-xs leading-relaxed">{t("guardianCtaSuspendedHint")}</p>
-                  ) : null}
-
-                  {approved ? (
-                    <ul className="mt-5 flex flex-col gap-1 border-t border-border/60 pt-4">
-                      <li>
-                        <Link
-                          href="/guardian/posts/new"
-                          className={cn(
-                            segmentNavItem,
-                            "min-h-10 py-2.5 text-sm",
-                            gActive("/guardian/posts/new")
-                              ? "bg-muted text-foreground"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                          )}
-                        >
-                          <FileText className="size-4 shrink-0 opacity-80" aria-hidden />
-                          {t("guardianNavNewPost")}
-                        </Link>
-                      </li>
-                      <li>
-                        <Link
-                          href="/guardian/posts"
-                          className={cn(
-                            segmentNavItem,
-                            "min-h-10 py-2.5 text-sm",
-                            gActive("/guardian/posts") ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                          )}
-                        >
-                          <FileText className="size-4 shrink-0 opacity-80" aria-hidden />
-                          {t("guardianNavPosts")}
-                        </Link>
-                      </li>
-                      <li>
-                        <Link
-                          href="/guardian/matches"
-                          className={cn(
-                            segmentNavItem,
-                            "min-h-10 py-2.5 text-sm",
-                            gActive("/guardian/matches")
-                              ? "bg-muted text-foreground"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                          )}
-                        >
-                          <Heart className="size-4 shrink-0 opacity-80" aria-hidden />
-                          {t("guardianNavMatches")}
-                        </Link>
-                      </li>
-                      <li>
-                        <Link
-                          href="/guardian/profile/edit"
-                          className={cn(
-                            segmentNavItem,
-                            "min-h-10 py-2.5 text-sm",
-                            gActive("/guardian/profile/edit")
-                              ? "bg-muted text-foreground"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                          )}
-                        >
-                          <Settings className="size-4 shrink-0 opacity-80" aria-hidden />
-                          {t("guardianNavEditProfile")}
-                        </Link>
-                      </li>
-                      <li>
-                        <Link
-                          href="/mypage/points"
-                          className={cn(
-                            segmentNavItem,
-                            "min-h-10 py-2.5 text-sm",
-                            coreActive("/mypage/points")
-                              ? "bg-muted text-foreground"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                          )}
-                        >
-                          <Coins className="size-4 shrink-0 opacity-80" aria-hidden />
-                          {t("navPoints")}
-                        </Link>
-                      </li>
-                      <li>
-                        <Link
-                          href="/guardian/profile"
-                          className={cn(
-                            segmentNavItem,
-                            "min-h-10 py-2.5 text-sm",
-                            gActive("/guardian/profile") && !gActive("/guardian/profile/edit")
-                              ? "bg-muted text-foreground"
-                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                          )}
-                        >
-                          <Users className="size-4 shrink-0 opacity-80" aria-hidden />
-                          {t("guardianNavProfile")}
-                        </Link>
-                      </li>
-                    </ul>
-                  ) : null}
-                </nav>
+              <div className="border-border/60 mt-6 rounded-xl border border-dashed bg-muted/20 p-4 lg:mt-8">
+                <p className="text-muted-foreground text-xs leading-relaxed">{t("guardianApplyTeaser")}</p>
                 <button
                   type="button"
-                  onClick={() => setHubMode("traveler")}
-                  className="text-muted-foreground hover:text-foreground mt-6 inline-flex min-h-11 items-center text-sm font-medium"
+                  onClick={() => setHubMode("guardian")}
+                  className="text-primary mt-3 inline-flex min-h-11 items-center text-sm font-semibold"
                 >
-                  ← {t("backToTravelerMode")}
+                  {t("guardianApplyCta")}
                 </button>
               </div>
-            )}
+            ) : null}
           </div>
 
           <div className="min-w-0 flex-1 pb-24 lg:pb-12">

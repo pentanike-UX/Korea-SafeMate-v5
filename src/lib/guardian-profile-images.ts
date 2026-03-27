@@ -6,6 +6,17 @@ import type { GuardianProfile } from "@/types/domain";
  */
 export const GUARDIAN_PROFILE_COVER_POSITION_CLASS = "object-cover object-top sm:object-center";
 
+export type GuardianImageSource = Pick<GuardianProfile, "user_id" | "photo_url"> & {
+  avatar_image_url?: string | null;
+  list_card_image_url?: string | null;
+  detail_hero_image_url?: string | null;
+};
+
+function trimUrl(s: string | null | undefined): string {
+  const t = s?.trim();
+  return t || "";
+}
+
 /**
  * 시드·프로필 경로에서 01–15 인덱스를 추출합니다. (`mg01` / `profile_03.jpg` 등)
  */
@@ -40,22 +51,52 @@ export function guardianProfileImageUrlsFromIndex(index: number): {
   };
 }
 
-/**
- * 가디언별 동일 번호 세트:
- * - `default` (profile_XX.jpg): 세로 비율 — /guardians 목록의 큰 카드 썸네일 등
- * - `landscape` (profile_XX_landscape.jpg): 가로 배너 — 상세(/guardians/[id]) 히어로 등
- * - `avatar` (profile_XX_avatar.jpg): 정사각형 — 상세 원형 아바타·작은 프로필 등
- * 인덱스를 알 수 없으면 `photo_url`로 세 타입에 동일 폴백.
- */
-export function guardianProfileImageUrls(g: Pick<GuardianProfile, "user_id" | "photo_url">): {
+function seedUrls(g: Pick<GuardianProfile, "user_id" | "photo_url">): {
   default: string;
   landscape: string;
   avatar: string;
 } {
   const idx = parseProfileImageIndex(g);
   if (idx == null) {
-    const fb = g.photo_url?.trim() || "";
+    const fb = trimUrl(g.photo_url);
     return { default: fb, landscape: fb, avatar: fb };
   }
   return guardianProfileImageUrlsFromIndex(idx);
+}
+
+/**
+ * 공개·목록·상세에서 쓰는 3종 URL.
+ * - `default`: 목록 카드(비교형) 주 이미지
+ * - `landscape`: 상세 히어로
+ * - `avatar`: 원형·작은 프로필
+ *
+ * Fallback (요청 스펙):
+ * - avatar: 아바타 전용 → 시드/photo 기반 아바타
+ * - default: 목록 전용 → 상세 히어로 → 시드 기본
+ * - landscape: 상세 전용 → 목록 → photo/시드
+ */
+export function guardianProfileImageUrls(g: GuardianImageSource): {
+  default: string;
+  landscape: string;
+  avatar: string;
+} {
+  const seed = seedUrls(g);
+  const listExplicit = trimUrl(g.list_card_image_url);
+  const detailExplicit = trimUrl(g.detail_hero_image_url);
+  const avatarExplicit = trimUrl(g.avatar_image_url);
+  const legacyPhoto = trimUrl(g.photo_url);
+
+  const avatar = avatarExplicit || seed.avatar;
+
+  const listCard =
+    listExplicit || detailExplicit || legacyPhoto || seed.default;
+
+  const landscape =
+    detailExplicit || listExplicit || legacyPhoto || seed.landscape;
+
+  return {
+    default: listCard,
+    landscape,
+    avatar,
+  };
 }

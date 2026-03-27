@@ -71,6 +71,11 @@ export async function MypageMatchesView({
       <div>
         <h2 className="text-text-strong text-xl font-semibold tracking-tight sm:text-2xl">{t("matchesPageTitle")}</h2>
         <p className="text-muted-foreground mt-2 max-w-2xl text-[15px] leading-relaxed">{t("matchesPageLead")}</p>
+        <p className="mt-3 text-sm">
+          <Link href="/mypage/requests" className="text-primary font-semibold underline-offset-4 hover:underline">
+            {t("matchesSeeTripRequests")}
+          </Link>
+        </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">

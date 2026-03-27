@@ -132,6 +132,10 @@ export interface GuardianProfile {
   approval_status: GuardianApprovalStatus;
   years_in_seoul: number;
   photo_url: string | null;
+  /** Optional overrides — see `guardianProfileImageUrls` fallbacks. */
+  avatar_image_url?: string | null;
+  list_card_image_url?: string | null;
+  detail_hero_image_url?: string | null;
   languages: GuardianLanguage[];
   primary_region_slug: string;
   /** Rolling MVP metrics — TODO(prod): compute from `content_posts` + `guardian_activity_logs`. */
