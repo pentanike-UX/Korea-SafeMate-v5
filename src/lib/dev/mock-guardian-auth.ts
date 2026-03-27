@@ -5,6 +5,7 @@ import { getGuardianSeedBundle } from "@/data/mock/guardian-seed-bundle";
 import type { GuardianLifecycleStatus, GuardianSeedRow } from "@/data/mock/guardian-seed-types";
 import { resolveGuardianDisplayName } from "@/data/mock/guardian-seed-display-names";
 import { GUARDIAN_SEED_ROWS } from "@/data/mock/guardians-seed";
+import { buildDetailMarketingForRow } from "@/data/mock/guardian-marketing-detail-seed";
 import { guardianProfileImageUrls, guardianProfileImageUrlsFromIndex } from "@/lib/guardian-profile-images";
 import type { GuardianProfile } from "@/types/domain";
 import type { GuardianMarketingProfile } from "@/types/guardian-marketing";
@@ -50,7 +51,14 @@ export function defaultMarketingFromGuardian(g: GuardianProfile): GuardianMarket
   const styleB = stylePool[(n + 1) % stylePool.length]!;
   const themeA = themePool[(n - 1) % themePool.length]!;
   const themeB = themePool[(n + 2) % themePool.length]!;
-  return {
+  const detail = row ? buildDetailMarketingForRow(row) : null;
+  const fallbackLong: GuardianMarketingProfile["long_bio"] = {
+    ko: [g.bio, `${g.headline} 중심으로 동선과 만남 장소를 짧게 정리해 드립니다.`, "요청 시 일정과 무드를 알려 주시면 맞춤 안내에 도움이 됩니다."].join(
+      "\n\n",
+    ),
+    en: [g.bio, `${g.headline} — practical meetups and moves.`, "Share timing and mood for a tailored reply."].join("\n\n"),
+  };
+  const base: GuardianMarketingProfile = {
     user_id: g.user_id,
     launch_area_slug: launch,
     // Keep explore filters connected to real option IDs (avoid accidental dead options).
@@ -60,7 +68,12 @@ export function defaultMarketingFromGuardian(g: GuardianProfile): GuardianMarket
     photo_url: urls.default,
     positioning: { ko: g.headline, en: g.headline },
     intro: { ko: g.bio, en: g.bio },
-    recommended_routes: [
+    short_bio: detail?.short_bio ?? { ko: g.headline, en: g.headline },
+    long_bio: detail?.long_bio ?? fallbackLong,
+    strength_items: detail?.strength_items,
+    trust_reason_items: detail?.trust_reason_items,
+    signature_style: detail?.signature_style ?? { ko: g.headline, en: g.headline },
+    recommended_routes: detail?.recommended_routes ?? [
       {
         title: { ko: `${g.primary_region_slug} 동선`, en: `${g.primary_region_slug} route` },
         blurb: { ko: g.headline, en: g.headline },
@@ -70,10 +83,11 @@ export function defaultMarketingFromGuardian(g: GuardianProfile): GuardianMarket
       { ko: "하루 동행", en: "Day companion" },
       { ko: "첫날 적응", en: "First-day" },
     ],
-    representative_post_ids: repIds,
-    response_note: { ko: "시드 데이터 기준", en: "Seed data" },
+    representative_post_ids: repIds.slice(0, 3),
+    response_note: detail?.response_note ?? { ko: "시드 데이터 기준", en: "Seed data" },
     review_count_display: Math.min(120, (g.posts_approved_last_30d ?? 0) * 3 + 12),
   };
+  return base;
 }
 
 export function getMockGuardianProfileForServer(id: string): GuardianProfile | null {

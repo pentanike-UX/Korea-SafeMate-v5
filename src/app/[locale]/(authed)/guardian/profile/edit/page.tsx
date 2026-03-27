@@ -79,6 +79,7 @@ export default async function GuardianProfileEditPage() {
       <div>
         <h1 className="text-text-strong text-2xl font-semibold tracking-tight">{t("pageTitle")}</h1>
         <p className="text-muted-foreground mt-2 max-w-xl text-[15px] leading-relaxed">{t("pageLead")}</p>
+        <p className="text-muted-foreground mt-2 max-w-xl text-sm leading-relaxed">{t("marketingCopyLead")}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Button asChild variant="outline" className="rounded-xl">
             <Link href="/guardian/onboarding">{t("openOnboarding")}</Link>
