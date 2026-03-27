@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { mockGuardians } from "@/data/mock";
 import { GuardianDetailView } from "@/components/guardians/guardian-detail-view";
 import { getPublicGuardianById } from "@/lib/guardian-public";
-import { getSupabaseAuthUserIdOnly } from "@/lib/supabase/server-user";
 import { BRAND } from "@/lib/constants";
 
 type Props = { params: Promise<{ locale: string; guardianId: string }> };
@@ -29,6 +28,5 @@ export default async function GuardianDetailPage({ params }: Props) {
   const { guardianId } = await params;
   const g = getPublicGuardianById(guardianId);
   if (!g) notFound();
-  const travelerSession = await getSupabaseAuthUserIdOnly();
-  return <GuardianDetailView guardian={g} allowTravelerMatchRequest={!!travelerSession} />;
+  return <GuardianDetailView guardian={g} />;
 }

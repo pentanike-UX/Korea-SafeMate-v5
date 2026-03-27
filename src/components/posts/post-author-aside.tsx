@@ -3,6 +3,10 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { ContentPost } from "@/types/domain";
 import { getPublicGuardianById } from "@/lib/guardian-public";
+import { getPostHeroImageUrl } from "@/lib/content-post-route";
+import { listPostsForGuardian } from "@/lib/posts-public";
+import { GuardianPostsExplorerSheet } from "@/components/guardians/guardian-posts-explorer-sheet";
+import { PostAuthorRequestCta } from "@/components/posts/post-author-request-cta";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,9 +18,19 @@ import { PostSampleBadge } from "@/components/posts/post-sample-badge";
 
 export async function PostAuthorAside({ post }: { post: ContentPost }) {
   const t = await getTranslations("Posts");
+  const tReq = await getTranslations("GuardianRequest");
   const tTier = await getTranslations("GuardianTier");
   const guardian = getPublicGuardianById(post.author_user_id);
   const imgs = guardian ? guardianProfileImageUrls(guardian) : null;
+  const authorApprovedPosts = guardian
+    ? listPostsForGuardian(guardian.user_id).filter((gp) => gp.status === "approved")
+    : [];
+  const postSheetItems = authorApprovedPosts.map((gp) => ({
+    id: gp.id,
+    title: gp.title,
+    summary: gp.summary,
+    imageUrl: getPostHeroImageUrl(gp),
+  }));
 
   return (
     <aside className="contents">
@@ -56,9 +70,20 @@ export async function PostAuthorAside({ post }: { post: ContentPost }) {
               <Button asChild className="w-full rounded-xl">
                 <Link href={`/guardians/${guardian.user_id}`}>{t("viewGuardian")}</Link>
               </Button>
-              <Button asChild variant="outline" className="w-full rounded-xl">
-                <Link href={`/book?guardian=${guardian.user_id}`}>{t("requestWithGuardian")}</Link>
-              </Button>
+              <ul className="text-muted-foreground list-inside list-disc space-y-1 text-xs leading-relaxed">
+                <li>{tReq("asideBulletHalfFull")}</li>
+                <li>{tReq("asideBulletRegion")}</li>
+                <li>{tReq("asideBulletTheme")}</li>
+                <li>{tReq("asideBulletFlexible")}</li>
+              </ul>
+              <PostAuthorRequestCta postId={post.id} postTitle={post.title} />
+              {postSheetItems.length > 0 ? (
+                <GuardianPostsExplorerSheet
+                  guardianDisplayName={guardian.display_name}
+                  posts={postSheetItems}
+                  triggerVariant="asideOutline"
+                />
+              ) : null}
             </>
           ) : (
             <p className="text-muted-foreground text-sm">{t("authorFallback")}</p>

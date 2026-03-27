@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import {
   mockContentCategories,
   mockContentPosts,
+  mockRegions,
   mockTravelerReviews,
   mockTravelerReviewQuotes,
 } from "@/data/mock";
@@ -14,12 +15,12 @@ import {
 } from "@/lib/content-post-route";
 import { isActiveLaunchArea, type PublicGuardian } from "@/lib/guardian-public";
 import { listPostsForGuardian } from "@/lib/posts-public";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrustBadgesServer } from "@/components/forty-two/trust-badges-server";
+import { GuardianPostsExplorerSheet } from "@/components/guardians/guardian-posts-explorer-sheet";
+import { GuardianRequestOpenTrigger, GuardianRequestSheetHost } from "@/components/guardians/guardian-request-sheet";
 import { GuardianStickyCta } from "@/components/guardians/guardian-sticky-cta";
-import { GuardianMatchRequestButton } from "@/components/guardians/guardian-match-request-button";
 import { guardianProfileImageUrls, GUARDIAN_PROFILE_COVER_POSITION_CLASS } from "@/lib/guardian-profile-images";
 import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
 import type { GuardianTrustBadgeId, LocalizedCopy } from "@/types/guardian-marketing";
@@ -37,15 +38,9 @@ const TRUST_ICONS: Record<GuardianTrustBadgeId, typeof CheckCircle2> = {
   fast_response: Zap,
 };
 
-export async function GuardianDetailView({
-  guardian: g,
-  allowTravelerMatchRequest = false,
-}: {
-  guardian: PublicGuardian;
-  allowTravelerMatchRequest?: boolean;
-}) {
+export async function GuardianDetailView({ guardian: g }: { guardian: PublicGuardian }) {
   const t = await getTranslations("GuardianDetail");
-  const tHub = await getTranslations("TravelerHub");
+  const tReq = await getTranslations("GuardianRequest");
   const tLaunch = await getTranslations("LaunchAreas");
   const tTier = await getTranslations("GuardianTier");
   const locale = await getLocale();
@@ -59,13 +54,18 @@ export async function GuardianDetailView({
     .slice(0, 3) as (typeof mockContentPosts)[0][];
 
   const authorApprovedPosts = listPostsForGuardian(g.user_id).filter((p) => p.status === "approved");
-  const showInsightsMore = authorApprovedPosts.length > insightPosts.length;
+  const postSheetItems = authorApprovedPosts.map((p) => ({
+    id: p.id,
+    title: p.title,
+    summary: p.summary,
+    imageUrl: getPostHeroImageUrl(p),
+  }));
 
   const reviews = mockTravelerReviews.filter((r) => r.guardian_user_id === g.user_id);
   const areaName = (tLaunch.raw(g.launch_area_slug) as { name: string }).name;
 
-  const requestBase = `/book?guardian=${g.user_id}`;
   const imgs = guardianProfileImageUrls(g);
+  const sheetRegion = mockRegions.some((r) => r.slug === g.primary_region_slug) ? g.primary_region_slug : null;
 
   const heroOneLiner = line(g.short_bio ?? g.positioning);
   const longBioParagraphs = line(g.long_bio)
@@ -125,7 +125,33 @@ export async function GuardianDetailView({
                 <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/95 drop-shadow-[0_1px_8px_rgba(0,0,0,0.85)] sm:mt-3 sm:text-base">
                   {heroOneLiner}
                 </p>
-                <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-black/25 px-3 py-2 text-xs font-medium text-white/90 shadow-inner backdrop-blur-sm sm:mt-4 sm:text-[13px]">
+                {g.avg_traveler_rating != null ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 sm:mt-3">
+                    <span className="inline-flex items-center gap-1.5 rounded-lg bg-black/30 px-2.5 py-1 text-sm text-white shadow-inner backdrop-blur-sm">
+                      <Star className="size-4 shrink-0 fill-amber-300 text-amber-200 drop-shadow-sm" aria-hidden />
+                      <span className="font-semibold tabular-nums drop-shadow-sm">{g.avg_traveler_rating.toFixed(1)}</span>
+                      <span className="text-white/75 text-xs font-medium drop-shadow-sm">
+                        ({g.review_count_display})
+                      </span>
+                    </span>
+                    <a
+                      href="#guardian-traveler-reviews"
+                      className="text-xs font-medium text-white/80 underline-offset-4 transition-colors drop-shadow-sm hover:text-white hover:underline"
+                    >
+                      {t("heroReviewsLink")}
+                    </a>
+                  </div>
+                ) : reviews.length > 0 ? (
+                  <div className="mt-3 sm:mt-3">
+                    <a
+                      href="#guardian-traveler-reviews"
+                      className="text-xs font-medium text-white/80 underline-offset-4 transition-colors drop-shadow-sm hover:text-white hover:underline"
+                    >
+                      {t("heroReviewsLink")}
+                    </a>
+                  </div>
+                ) : null}
+                <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-black/25 px-3 py-2 text-xs font-medium text-white/90 shadow-inner backdrop-blur-sm sm:mt-3 sm:text-[13px]">
                   <span className="drop-shadow-sm">{areaName}</span>
                   <span aria-hidden className="text-white/50">
                     ·
@@ -134,13 +160,12 @@ export async function GuardianDetailView({
                 </div>
               </div>
               <div className="hidden w-full shrink-0 sm:block sm:w-auto sm:min-w-[13rem]">
-                <Button
-                  asChild
+                <GuardianRequestOpenTrigger
                   size="lg"
                   className="w-full rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] sm:w-auto"
                 >
-                  <Link href={requestBase}>{t("ctaPrimary")}</Link>
-                </Button>
+                  {tReq("openCta")}
+                </GuardianRequestOpenTrigger>
                 <p className="text-center text-[11px] text-white/70 sm:mt-2 sm:text-left">{t("heroCtaHint")}</p>
               </div>
             </div>
@@ -162,20 +187,6 @@ export async function GuardianDetailView({
             </p>
             <p className="text-muted-foreground mt-3 text-sm leading-relaxed">{line(g.response_note)}</p>
           </section>
-
-          {areaLive ? (
-            <section className="border-border/60 bg-card rounded-2xl border p-5 shadow-[var(--shadow-sm)] sm:p-6">
-              <h2 className="text-text-strong text-lg font-semibold">{tHub("matchRequestSectionTitle")}</h2>
-              <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{tHub("matchRequestSectionLead")}</p>
-              <div className="mt-4">
-                <GuardianMatchRequestButton
-                  guardianUserId={g.user_id}
-                  guardianDisplayName={g.display_name}
-                  canRequest={allowTravelerMatchRequest}
-                />
-              </div>
-            </section>
-          ) : null}
 
           <section>
             <h2 className="text-text-strong text-lg font-semibold">{t("expertiseTitle")}</h2>
@@ -227,24 +238,18 @@ export async function GuardianDetailView({
                 <TrustBadgesServer ids={g.trust_badge_ids} />
               </div>
             )}
-            {g.avg_traveler_rating != null ? (
-              <p className="text-muted-foreground mt-3 flex flex-wrap items-center gap-1.5 text-sm">
-                <Star className="size-4 fill-amber-400 text-amber-500" aria-hidden />
-                <span className="font-medium text-foreground">{g.avg_traveler_rating.toFixed(1)}</span>
-                <span>
-                  ({g.review_count_display} {t("reviewCountHint")})
-                </span>
-              </p>
-            ) : null}
           </section>
 
           <section>
             <div className="flex flex-wrap items-end justify-between gap-2">
               <h2 className="text-text-strong text-lg font-semibold">{t("postsTitle")}</h2>
-              {showInsightsMore ? (
-                <Link href="/posts" className="text-primary text-xs font-semibold hover:underline">
-                  {t("insightsViewMore")}
-                </Link>
+              {postSheetItems.length > 0 ? (
+                <GuardianPostsExplorerSheet
+                  guardianDisplayName={g.display_name}
+                  posts={postSheetItems}
+                  triggerVariant="inlineText"
+                  className="shrink-0"
+                />
               ) : null}
             </div>
             <p className="text-muted-foreground mt-1 text-sm">{t("postsLead")}</p>
@@ -334,8 +339,14 @@ export async function GuardianDetailView({
             </ul>
           </section>
 
-          <section>
-            <h2 className="text-text-strong text-lg font-semibold">{t("reviewsTitle")}</h2>
+          <section
+            id="guardian-traveler-reviews"
+            className="scroll-mt-[4.75rem] sm:scroll-mt-[5.5rem]"
+            aria-labelledby="guardian-traveler-reviews-heading"
+          >
+            <h2 id="guardian-traveler-reviews-heading" className="text-text-strong text-lg font-semibold">
+              {t("reviewsTitle")}
+            </h2>
             <p className="text-muted-foreground mt-2 text-sm">{t("reviewSample")}</p>
             <div className="mt-4 space-y-3">
               {reviews.map((r) => {
@@ -362,26 +373,28 @@ export async function GuardianDetailView({
           <div className="border-border/60 bg-card lg:sticky lg:top-24 space-y-4 rounded-2xl border p-6 shadow-[var(--shadow-sm)]">
             <h2 className="text-text-strong text-lg font-semibold">{t("requestCardTitle")}</h2>
             <p className="text-muted-foreground text-sm leading-relaxed">{t("requestLead")}</p>
+            <ul className="text-muted-foreground list-inside list-disc space-y-1.5 text-xs leading-relaxed">
+              <li>{tReq("asideBulletHalfFull")}</li>
+              <li>{tReq("asideBulletRegion")}</li>
+              <li>{tReq("asideBulletTheme")}</li>
+              <li>{tReq("asideBulletFlexible")}</li>
+            </ul>
             <p className="text-muted-foreground text-xs leading-relaxed">{t("requestGuide")}</p>
-            <div className="flex flex-col gap-2">
-              <Button asChild size="lg" className="w-full rounded-2xl">
-                <Link href={requestBase}>{t("ctaPrimary")}</Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="w-full rounded-2xl">
-                <Link href={`${requestBase}&type=half`}>{t("ctaHalfDay")}</Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="w-full rounded-2xl">
-                <Link href={`${requestBase}&type=full`}>{t("ctaFullTrip")}</Link>
-              </Button>
-              <Button asChild size="lg" variant="secondary" className="w-full rounded-2xl">
-                <Link href={`${requestBase}&theme=1`}>{t("ctaTheme")}</Link>
-              </Button>
-            </div>
+            <GuardianRequestOpenTrigger size="lg" className="h-12 w-full rounded-2xl text-base font-semibold">
+              {tReq("openCta")}
+            </GuardianRequestOpenTrigger>
           </div>
         </aside>
       </div>
 
-      <GuardianStickyCta requestHref={requestBase} />
+      <GuardianRequestSheetHost
+        guardianUserId={g.user_id}
+        displayName={g.display_name}
+        headline={g.headline}
+        avatarUrl={imgs.avatar}
+        suggestedRegionSlug={sheetRegion}
+      />
+      <GuardianStickyCta />
     </div>
   );
 }

@@ -13,9 +13,13 @@ import {
   postHasRouteJourney,
 } from "@/lib/content-post-route";
 import { Badge } from "@/components/ui/badge";
+import { GuardianRequestSheetHost } from "@/components/guardians/guardian-request-sheet";
 import { PostAuthorAside } from "@/components/posts/post-author-aside";
 import { PostDetailStickyAside } from "@/components/posts/post-detail-sticky-aside";
 import { RoutePostDetailView } from "@/components/posts/route-post-detail-view";
+import { getPublicGuardianById } from "@/lib/guardian-public";
+import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
+import { mockRegions } from "@/data/mock";
 import { ArrowLeft, Calendar, Heart, MapPin } from "lucide-react";
 
 function heroGradient(post: ContentPost) {
@@ -32,6 +36,16 @@ export async function PostDetailView({ post }: { post: ContentPost }) {
   const related = relatedPostsFor(post, 4);
   const heroCover = getPostHeroImageUrl(post);
   const heroAlt = getPostHeroImageAlt(post);
+  const guardian = getPublicGuardianById(post.author_user_id);
+  const sheetAvatar = guardian ? guardianProfileImageUrls(guardian).avatar : heroCover;
+  const sheetHeadline = guardian?.headline ?? post.summary;
+  const sheetName = guardian?.display_name ?? post.author_display_name;
+  const sheetRegion =
+    guardian && mockRegions.some((r) => r.slug === guardian.primary_region_slug)
+      ? guardian.primary_region_slug
+      : mockRegions.some((r) => r.slug === post.region_slug)
+        ? post.region_slug
+        : null;
   const secondaryCover = getPostSecondaryImageUrl(post);
   const secondaryAlt = getPostSecondaryImageAlt(post);
   const showEnrichedPair = !postHasOwnVisualMedia(post) && secondaryCover;
@@ -44,6 +58,13 @@ export async function PostDetailView({ post }: { post: ContentPost }) {
 
   return (
     <article className="bg-[var(--bg-page)] pb-16">
+      <GuardianRequestSheetHost
+        guardianUserId={post.author_user_id}
+        displayName={sheetName}
+        headline={sheetHeadline.length > 180 ? `${sheetHeadline.slice(0, 177)}…` : sheetHeadline}
+        avatarUrl={sheetAvatar}
+        suggestedRegionSlug={sheetRegion}
+      />
       <div className="mx-auto max-w-6xl px-4 pt-6 sm:px-6">
         <Link
           href="/posts"

@@ -270,6 +270,11 @@
     @apply font-sans;
     color-scheme: light dark;
   }
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
 }
 
 /* Shared page rhythm: use on major public layouts for consistent mobile breathing room */
@@ -351,5 +356,22 @@
     animation-name: home-hero-progress;
     animation-timing-function: linear;
     animation-fill-mode: forwards;
+  }
+
+  @keyframes guardian-review-target-pulse {
+    0% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 38%, transparent);
+    }
+    45% {
+      box-shadow: 0 0 0 5px color-mix(in srgb, var(--primary) 22%, transparent);
+    }
+    100% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+
+  #guardian-traveler-reviews:target {
+    animation: guardian-review-target-pulse 1.35s ease-out 1;
+    border-radius: 0.75rem;
   }
 }

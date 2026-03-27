@@ -1,6 +1,10 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { ContentPost } from "@/types/domain";
+import { getPostHeroImageUrl } from "@/lib/content-post-route";
+import { getPublicGuardianById } from "@/lib/guardian-public";
+import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
+import { mockRegions } from "@/data/mock";
 import { relatedPostsFor } from "@/lib/posts-public";
 import { PostAuthorAside } from "@/components/posts/post-author-aside";
 import { PostDetailStickyAside } from "@/components/posts/post-detail-sticky-aside";
@@ -10,6 +14,16 @@ import { ArrowLeft } from "lucide-react";
 export async function RoutePostDetailView({ post }: { post: ContentPost }) {
   const t = await getTranslations("Posts");
   const related = relatedPostsFor(post, 4);
+  const guardian = getPublicGuardianById(post.author_user_id);
+  const sheetAvatar = guardian ? guardianProfileImageUrls(guardian).avatar : getPostHeroImageUrl(post);
+  const sheetHeadline = guardian?.headline ?? post.summary;
+  const sheetName = guardian?.display_name ?? post.author_display_name;
+  const sheetRegion =
+    guardian && mockRegions.some((r) => r.slug === guardian.primary_region_slug)
+      ? guardian.primary_region_slug
+      : mockRegions.some((r) => r.slug === post.region_slug)
+        ? post.region_slug
+        : null;
 
   return (
     <article className="bg-[var(--bg-page)] pb-16">
@@ -25,7 +39,16 @@ export async function RoutePostDetailView({ post }: { post: ContentPost }) {
 
       <div className="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 sm:py-6 lg:grid-cols-12 lg:gap-12">
         <div className="lg:col-span-8">
-          <RoutePostDetailClient post={post} />
+          <RoutePostDetailClient
+            post={post}
+            requestHost={{
+              guardianUserId: post.author_user_id,
+              displayName: sheetName,
+              headline: sheetHeadline.length > 180 ? `${sheetHeadline.slice(0, 177)}…` : sheetHeadline,
+              avatarUrl: sheetAvatar,
+              suggestedRegionSlug: sheetRegion,
+            }}
+          />
         </div>
         <PostDetailStickyAside variant="route">
           <PostAuthorAside post={post} />

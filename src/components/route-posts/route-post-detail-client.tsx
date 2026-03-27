@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import type { ContentPost, RouteSpot } from "@/types/domain";
 import { RouteMapPreview } from "@/components/maps/route-map-preview";
 import { RouteStickyLocalNav } from "@/components/route-posts/route-sticky-local-nav";
@@ -13,6 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { PostSampleBadge } from "@/components/posts/post-sample-badge";
+import {
+  GuardianRequestOpenTrigger,
+  GuardianRequestSheetHost,
+  type GuardianRequestSheetHostProps,
+} from "@/components/guardians/guardian-request-sheet";
 import { postCoverImageUrl, getSpotDisplayImageAlt, getSpotDisplayImageUrl } from "@/lib/content-post-route";
 import { buildLocalPostVisualPlan, localHeroAlt, type LocalPostVisualPlan } from "@/lib/post-local-images";
 import { cn } from "@/lib/utils";
@@ -90,9 +94,16 @@ function SpotDetailBody({
   );
 }
 
-export function RoutePostDetailClient({ post }: { post: ContentPost }) {
+export function RoutePostDetailClient({
+  post,
+  requestHost,
+}: {
+  post: ContentPost;
+  requestHost: GuardianRequestSheetHostProps;
+}) {
   const t = useTranslations("RoutePosts");
   const tPosts = useTranslations("Posts");
+  const tReq = useTranslations("GuardianRequest");
   const journey = post.route_journey!;
   const meta = journey.metadata;
   const spots = useMemo(() => [...journey.spots].sort((a, b) => a.order - b.order), [journey.spots]);
@@ -197,6 +208,7 @@ export function RoutePostDetailClient({ post }: { post: ContentPost }) {
 
   return (
     <>
+      <GuardianRequestSheetHost {...requestHost} />
       {showStickyNav && spots.length > 0 ? (
         <RouteStickyLocalNav
           spots={spots}
@@ -358,9 +370,19 @@ export function RoutePostDetailClient({ post }: { post: ContentPost }) {
       <div className="border-border/50 mt-12 rounded-2xl border bg-gradient-to-br from-[var(--brand-primary-soft)] to-white p-8 text-center shadow-[var(--shadow-sm)]">
         <p className="text-text-strong text-lg font-semibold">{t("bottomCtaTitle")}</p>
         <p className="text-muted-foreground mx-auto mt-2 max-w-md text-sm leading-relaxed">{t("bottomCtaLead")}</p>
-        <Button asChild size="lg" className="mt-6 rounded-2xl px-10">
-          <Link href={`/book?guardian=${post.author_user_id}`}>{t("ctaRequestGuardian")}</Link>
-        </Button>
+        <ul className="text-muted-foreground mx-auto mt-4 max-w-md list-inside list-disc space-y-1 text-left text-xs leading-relaxed">
+          <li>{tReq("asideBulletHalfFull")}</li>
+          <li>{tReq("asideBulletRegion")}</li>
+          <li>{tReq("asideBulletTheme")}</li>
+          <li>{tReq("asideBulletFlexible")}</li>
+        </ul>
+        <GuardianRequestOpenTrigger
+          size="lg"
+          className="mt-6 rounded-2xl px-10"
+          postContext={{ postId: post.id, postTitle: post.title }}
+        >
+          {tReq("openCta")}
+        </GuardianRequestOpenTrigger>
       </div>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
