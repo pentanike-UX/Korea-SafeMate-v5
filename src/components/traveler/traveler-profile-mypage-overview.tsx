@@ -75,10 +75,10 @@ export async function TravelerProfileMypageOverview({ model }: { model: ProfileO
 
       <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
         <Button asChild className="h-11 rounded-xl font-semibold sm:min-w-[10rem]">
-          <Link href="/mypage/profile#mypage-profile-edit">{th("profileEditCta")}</Link>
+          <Link href="/mypage/profile?mode=profile">{th("profileEditCta")}</Link>
         </Button>
         <Button asChild variant="outline" className="h-11 rounded-xl font-medium sm:min-w-[10rem]">
-          <Link href="/mypage/profile#profile-image-field">{th("profileImageChangeCta")}</Link>
+          <Link href="/mypage/profile?mode=image">{th("profileImageChangeCta")}</Link>
         </Button>
       </div>
     </div>

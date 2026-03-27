@@ -8,12 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MypageMatchesEmpty } from "@/components/mypage/mypage-matches-empty";
 import { MypageMatchRowActions } from "@/components/mypage/mypage-match-row-actions";
-
-function statusVariant(s: StoredMatchRequest["status"]): "default" | "secondary" | "outline" {
-  if (s === "completed") return "secondary";
-  if (s === "accepted") return "default";
-  return "outline";
-}
+import { matchStatusChipClass } from "@/lib/mypage-status-badge";
 
 export async function MypageMatchesView({
   appRole,
@@ -79,7 +74,7 @@ export async function MypageMatchesView({
         <h2 className="text-text-strong text-xl font-semibold tracking-tight sm:text-2xl">{t("matchesPageTitle")}</h2>
         <p className="text-muted-foreground mt-2 max-w-2xl text-[15px] leading-relaxed">{t("matchesPageLead")}</p>
         <p className="mt-3 text-sm">
-          <Link href="/mypage/requests" className="text-primary font-semibold underline-offset-4 hover:underline">
+          <Link href="/mypage/requests" className="text-primary inline-flex items-center gap-1 font-semibold underline-offset-4 hover:underline">
             {t("matchesSeeTripRequests")}
           </Link>
         </p>
@@ -182,7 +177,7 @@ function MatchSection({
                     <p className="text-foreground font-medium">
                       {r.guardian_display_name || r.guardian_user_id}
                     </p>
-                    <Badge variant={statusVariant(r.status)} className="text-[10px] font-semibold">
+                    <Badge variant="outline" className={`text-[10px] font-semibold ${matchStatusChipClass(r.status)}`}>
                       {t(`matchStatus.${r.status}`)}
                     </Badge>
                   </div>

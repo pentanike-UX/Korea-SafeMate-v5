@@ -6,6 +6,7 @@ import type { StoredMatchRequest } from "@/lib/traveler-match-requests";
 import { Button } from "@/components/ui/button";
 import { TravelerMatchCompleteButton } from "@/components/mypage/match-request-row-actions";
 import { TravelerReviewSubmitSheet } from "@/components/mypage/traveler-review-submit-sheet";
+import { MypageGuardianProfileSheetTrigger } from "@/components/mypage/mypage-guardian-profile-sheet-trigger";
 
 export function MypageMatchRowActions({
   row,
@@ -26,9 +27,15 @@ export function MypageMatchRowActions({
       <Button asChild variant="outline" size="sm" className="h-9 rounded-lg">
         <Link href={`/mypage/matches/${row.id}`}>{t("matchViewDetail")}</Link>
       </Button>
-      <Button asChild variant="outline" size="sm" className="h-9 rounded-lg">
-        <Link href={`/guardians/${row.guardian_user_id}`}>{t("openGuardian")}</Link>
-      </Button>
+      <MypageGuardianProfileSheetTrigger
+        guardian={{
+          user_id: row.guardian_user_id,
+          display_name: row.guardian_display_name || row.guardian_user_id,
+          headline: t("matchesPageLead"),
+          photo_url: null,
+        }}
+        triggerLabel={t("openGuardian")}
+      />
       {showComplete && row.status === "accepted" ? <TravelerMatchCompleteButton matchId={row.id} /> : null}
       {row.status === "completed" ? (
         <TravelerReviewSubmitSheet

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrustBadgesServer } from "@/components/forty-two/trust-badges-server";
 import { BRAND } from "@/lib/constants";
+import { MypageGuardianProfileSheetTrigger } from "@/components/mypage/mypage-guardian-profile-sheet-trigger";
 import { Star } from "lucide-react";
 
 export async function generateMetadata() {
@@ -67,9 +68,21 @@ export default async function TravelerSavedGuardiansPage() {
                       </p>
                     ) : null}
                     <div className="border-border/50 mt-auto flex flex-col gap-2 border-t border-dashed pt-4 sm:flex-row sm:flex-wrap">
-                      <Button asChild size="sm" className="h-10 w-full rounded-xl font-semibold sm:min-w-0 sm:flex-1">
-                        <Link href={`/guardians/${g.user_id}`}>{t("openProfile")}</Link>
-                      </Button>
+                      <MypageGuardianProfileSheetTrigger
+                        guardian={{
+                          user_id: g.user_id,
+                          display_name: g.display_name,
+                          headline: g.headline,
+                          primary_region_slug: g.primary_region_slug,
+                          guardian_tier: g.guardian_tier,
+                          photo_url: g.photo_url,
+                          avatar_image_url: g.avatar_image_url,
+                          list_card_image_url: g.list_card_image_url,
+                          detail_hero_image_url: g.detail_hero_image_url,
+                        }}
+                        triggerLabel={t("openProfile")}
+                        className="h-10 w-full sm:min-w-0 sm:flex-1"
+                      />
                       <Button asChild size="sm" variant="outline" className="h-10 w-full rounded-xl sm:min-w-0 sm:flex-1">
                         <Link href={`/book?guardian=${g.user_id}`}>{t("request")}</Link>
                       </Button>

@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { getMockGuardianSeedPoints } from "@/lib/dev/mock-guardian-auth";
 import { fetchBalanceSnapshot, fetchLedgerForUser } from "@/lib/points/point-ledger-service";
+import { getActivePointPolicy } from "@/lib/points/point-policy-repository";
 import { BRAND } from "@/lib/constants";
 import { getSessionUserId } from "@/lib/supabase/server-user";
 import { PointsHistoryHeading } from "@/components/mypage/mypage-points-history-heading";
@@ -24,6 +25,15 @@ function formatPlainP(n: number) {
 function formatSignedP(n: number) {
   const sign = n >= 0 ? "+" : "−";
   return `${sign}${Math.abs(n).toLocaleString()}P`;
+}
+
+function eventTitle(t: Awaited<ReturnType<typeof getTranslations>>, ev: string) {
+  if (ev === "guardian_profile_reward") return t("evProfile");
+  if (ev === "post_publish_reward") return t("evPost");
+  if (ev === "post_reward_revoke") return t("evPostRevoke");
+  if (ev === "match_complete_reward") return t("evMatch");
+  if (ev === "manual_adjustment") return t("evManual");
+  return t("evOther");
 }
 
 export default async function TravelerPointsPage() {
@@ -60,7 +70,33 @@ export default async function TravelerPointsPage() {
     balance = mockSeedPoints;
     earned = mockSeedPoints;
     revoked = 0;
-    ledger = [];
+    const now = Date.now();
+    ledger = [
+      {
+        id: "mock-ledger-profile",
+        amount: 300,
+        event_type: "guardian_profile_reward",
+        reason: "프로필 등록 완료 보너스",
+        policy_version: "mock-v1",
+        occurred_at: new Date(now - 1000 * 60 * 60 * 24 * 13).toISOString(),
+      },
+      {
+        id: "mock-ledger-post",
+        amount: 150,
+        event_type: "post_publish_reward",
+        reason: "포스트 승인 등록",
+        policy_version: "mock-v1",
+        occurred_at: new Date(now - 1000 * 60 * 60 * 24 * 7).toISOString(),
+      },
+      {
+        id: "mock-ledger-match",
+        amount: 200,
+        event_type: "match_complete_reward",
+        reason: "매칭 완료",
+        policy_version: "mock-v1",
+        occurred_at: new Date(now - 1000 * 60 * 60 * 24 * 2).toISOString(),
+      },
+    ] as Awaited<ReturnType<typeof fetchLedgerForUser>>;
   } else {
     const [snap, ledgerFromDb] = await Promise.all([fetchBalanceSnapshot(userId), fetchLedgerForUser(userId, 100)]);
     balance = snap?.balance ?? 0;
@@ -68,6 +104,8 @@ export default async function TravelerPointsPage() {
     revoked = snap?.lifetime_revoked ?? 0;
     ledger = ledgerFromDb;
   }
+
+  const policy = await getActivePointPolicy();
 
   return (
     <div className="space-y-8">
@@ -109,6 +147,12 @@ export default async function TravelerPointsPage() {
           <div>
             <p className="text-foreground text-sm font-semibold">{t("spendComingTitle")}</p>
             <p className="text-muted-foreground mt-1 text-sm leading-relaxed">{t("spendComingBody")}</p>
+            {policy ? (
+              <p className="text-muted-foreground mt-2 text-xs leading-relaxed">
+                정책 기준 · 프로필 {policy.profile_signup_reward}P / 포스트 승인 {policy.post_publish_reward}P / 매칭 완료{" "}
+                {policy.match_complete_reward}P
+              </p>
+            ) : null}
           </div>
         </CardContent>
       </Card>
@@ -133,24 +177,12 @@ export default async function TravelerPointsPage() {
           <ul className="border-border/60 divide-border/60 divide-y overflow-hidden rounded-xl border bg-card">
             {ledger.map((row) => {
               const ev = row.event_type as string;
-              const labelKey =
-                ev === "guardian_profile_reward"
-                  ? "evProfile"
-                  : ev === "post_publish_reward"
-                    ? "evPost"
-                    : ev === "post_reward_revoke"
-                      ? "evPostRevoke"
-                      : ev === "match_complete_reward"
-                        ? "evMatch"
-                        : ev === "manual_adjustment"
-                          ? "evManual"
-                          : "evOther";
               return (
                 <li key={row.id} className="flex flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
                   <div className="min-w-0 flex-1">
-                    <p className="text-foreground text-sm font-medium">{t(labelKey)}</p>
-                    <p className="text-muted-foreground mt-1 font-mono text-[11px] leading-relaxed break-all">
-                      {row.reason ?? row.policy_version} · {new Date(row.occurred_at).toLocaleString()}
+                    <p className="text-foreground text-sm font-medium">{eventTitle(t, ev)}</p>
+                    <p className="text-muted-foreground mt-1 text-xs leading-relaxed break-all">
+                      {row.reason ?? "정책 반영"} · {new Date(row.occurred_at).toLocaleString()} · policy: {row.policy_version}
                     </p>
                   </div>
                   <p

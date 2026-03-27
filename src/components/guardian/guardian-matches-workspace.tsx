@@ -11,12 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { GUARDIAN_WORKSPACE } from "@/lib/mypage/guardian-workspace-routes";
 import type { StoredMatchRequest } from "@/lib/traveler-match-requests";
 import { getMatchRequestsForGuardian } from "@/lib/traveler-match-requests.server";
-
-function statusVariant(s: StoredMatchRequest["status"]): "default" | "secondary" | "outline" {
-  if (s === "completed") return "secondary";
-  if (s === "accepted") return "default";
-  return "outline";
-}
+import { matchStatusChipClass } from "@/lib/mypage-status-badge";
 
 export async function GuardianMatchesWorkspace({ guardianId }: { guardianId: string }) {
   const t = await getTranslations("TravelerHub");
@@ -81,7 +76,7 @@ export async function GuardianMatchesWorkspace({ guardianId }: { guardianId: str
                         {t("guardianMatchesTravelerLabel")} ·{" "}
                         <span className="font-mono text-xs break-all">{r.traveler_user_id}</span>
                       </p>
-                      <Badge variant={statusVariant(r.status)} className="text-[10px] font-semibold">
+                      <Badge variant="outline" className={`text-[10px] font-semibold ${matchStatusChipClass(r.status)}`}>
                         {t(`matchStatus.${r.status}`)}
                       </Badge>
                     </div>

@@ -1,15 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import {
-  Coins,
-  FolderOpen,
-  HeartHandshake,
-  Images,
-  LayoutDashboard,
-  PenSquare,
-  Plane,
-  Settings,
-  Users,
-} from "lucide-react";
+import { Coins, FolderOpen, HeartHandshake, Images, PenSquare, Plane, Settings, Users } from "lucide-react";
 
 export type HubNavLabelKey =
   | "navOverview"
@@ -51,8 +41,7 @@ function travelerMatchesMatch(p: string) {
 
 /** 여행자 허브 LNB — 요청·저장 흐름은 허브 요약·여정·매칭 화면에서 진입 (매칭과 역할 중복 방지). */
 export const TRAVELER_HUB_NAV: HubNavItem[] = [
-  { href: "/mypage", labelKey: "navOverview", Icon: LayoutDashboard, match: travelerOverviewMatch },
-  { href: "/mypage/journeys", labelKey: "navJourneys", Icon: Plane, match: travelerJourneysMatch },
+  { href: "/mypage", labelKey: "navJourneys", Icon: Plane, match: travelerOverviewMatch },
   { href: "/mypage/profile", labelKey: "navProfile", Icon: Settings, match: travelerProfileMatch },
   { href: "/mypage/points", labelKey: "navPoints", Icon: Coins, match: travelerPointsMatch },
   { href: "/mypage/matches", labelKey: "navMatches", Icon: Users, match: travelerMatchesMatch },

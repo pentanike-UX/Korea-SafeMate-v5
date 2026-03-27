@@ -24,7 +24,13 @@ function formatCreatedAt(iso: string | null, locale: string) {
   }
 }
 
-export default async function TravelerAccountPage() {
+export default async function TravelerAccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mode?: string }>;
+}) {
+  const sp = await searchParams;
+  const initialMode = sp.mode === "image" ? "image" : "profile";
   const t = await getTranslations("TravelerAccount");
   const locale = await getLocale();
   const userId = await getSessionUserId();
@@ -95,7 +101,7 @@ export default async function TravelerAccountPage() {
           <h3 className="text-foreground text-lg font-semibold">{t("sectionEditProfile")}</h3>
           <p className="text-muted-foreground mt-1 text-sm leading-relaxed">{t("pageLead")}</p>
         </div>
-        <TravelerAccountForm initial={initial} locale={locale} />
+        <TravelerAccountForm initial={initial} locale={locale} initialMode={initialMode} />
       </section>
     </div>
   );
