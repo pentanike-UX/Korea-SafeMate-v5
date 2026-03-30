@@ -2,12 +2,16 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { mockContentPosts } from "@/data/mock";
 import type { ContentPost } from "@/types/domain";
 import type { LaunchAreaSlug } from "@/types/launch-area";
 import { getPostHeroImageUrl, postHasRouteJourney } from "@/lib/content-post-route";
+import {
+  exploreGuardianFitLineKeyAtIndex,
+  type ExploreFitLineKey,
+} from "@/lib/explore-guardian-fit-line";
 import type { PublicGuardian } from "@/lib/guardian-public";
 import { listCardActionButtonClass } from "@/components/ui/action-variants";
 import { Badge } from "@/components/ui/badge";
@@ -547,10 +551,20 @@ function guardianLangsLine(g: PublicGuardian): string {
   return g.languages.map((l) => l.language_code.toUpperCase()).join(" · ");
 }
 
-function guardianPositioningLine(locale: string, g: PublicGuardian): string {
-  if (locale === "ko") return g.positioning.ko;
-  if (locale === "ja") return g.positioning.en;
-  return g.positioning.en;
+function translateExploreFitLine(t: ReturnType<typeof useTranslations<"ExploreJourney">>, key: ExploreFitLineKey): string {
+  switch (key) {
+    case "fitLineKpop":
+      return t("fitLineKpop");
+    case "fitLineGwanghwamun":
+      return t("fitLineGwanghwamun");
+    case "fitLineFirstVisit":
+      return t("fitLineFirstVisit");
+    case "fitLinePhoto":
+      return t("fitLinePhoto");
+    case "fitLineWalking":
+    default:
+      return t("fitLineWalking");
+  }
 }
 
 /** 결과 화면용 소형 포스트 카드 — 시트로 미리보기 */
@@ -636,7 +650,6 @@ export function ExploreResultsDashboard(props: {
   const tHub = useTranslations("TravelerHub");
   const tTier = useTranslations("GuardianTier");
   const tStyles = useTranslations("CompanionStyles");
-  const locale = useLocale();
   const [postsSheetOpen, setPostsSheetOpen] = useState(false);
 
   const { comingSoonArea, results, region, theme, pace, onEditConditions, onReRecommend, resultsSpinDisabled } = props;
@@ -694,7 +707,8 @@ export function ExploreResultsDashboard(props: {
                 {results.guardians.length > 0 ? (
                   <p className="text-muted-foreground mt-2 max-w-2xl text-xs leading-relaxed sm:text-sm">{t("dashDecisionHelperShort")}</p>
                 ) : null}
-                <p className="text-foreground mt-3 text-sm font-medium leading-snug">{criteriaLine}</p>
+                <p className="text-foreground mt-3 text-sm font-semibold leading-snug">{t("resultsReflectTitle")}</p>
+                <p className="text-muted-foreground mt-1 text-sm leading-relaxed">{criteriaLine}</p>
               </div>
               {results.guardians.length > 0 ? (
                 <Button
@@ -790,8 +804,10 @@ export function ExploreResultsDashboard(props: {
                               </div>
                             ) : null}
                             <div className="border-primary/20 bg-primary/5 mt-3 rounded-xl border px-3 py-2">
-                              <p className="text-primary text-[10px] font-bold tracking-wide uppercase">{t("dashGuardianWhyLabel")}</p>
-                              <p className="text-foreground mt-1 text-sm font-medium leading-snug">{guardianPositioningLine(locale, featured)}</p>
+                              <p className="text-foreground text-xs font-semibold leading-snug">{t("resultsReflectTitle")}</p>
+                              <p className="text-foreground mt-1 text-sm font-medium leading-snug">
+                                {translateExploreFitLine(t, exploreGuardianFitLineKeyAtIndex(region, theme, pace, 0))}
+                              </p>
                             </div>
                             <TrustBadgeRow ids={featured.trust_badge_ids} className="mt-3" size="sm" />
                           </div>
@@ -886,9 +902,9 @@ export function ExploreResultsDashboard(props: {
                                 </div>
                               ) : null}
                               <div className="border-border/60 bg-muted/20 mt-2 rounded-lg border border-dashed px-2.5 py-1.5">
-                                <p className="text-primary text-[9px] font-bold uppercase tracking-wide">{t("dashGuardianWhyLabel")}</p>
+                                <p className="text-foreground text-[10px] font-semibold leading-snug sm:text-xs">{t("resultsReflectTitle")}</p>
                                 <p className="text-foreground mt-0.5 line-clamp-2 text-xs font-medium leading-snug">
-                                  {guardianPositioningLine(locale, g)}
+                                  {translateExploreFitLine(t, exploreGuardianFitLineKeyAtIndex(region, theme, pace, idx + 1))}
                                 </p>
                               </div>
                               <TrustBadgeRow ids={g.trust_badge_ids} className="mt-2" size="sm" />

@@ -6,20 +6,24 @@ import { useTranslations } from "next-intl";
 import type { ContentPost, RouteSpot } from "@/types/domain";
 import { RouteMapPreview } from "@/components/maps/route-map-preview";
 import { RouteStickyLocalNav } from "@/components/route-posts/route-sticky-local-nav";
-import { RouteSummaryChips } from "@/components/route-posts/route-summary-chips";
+import { RouteSummaryCard } from "@/components/route-posts/route-summary-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { PostSampleBadge } from "@/components/posts/post-sample-badge";
+import { PostDetailHero } from "@/components/posts/post-detail-hero";
+import { PostDetailIntroPanel } from "@/components/posts/post-detail-intro-panel";
+import { PostGuardianAttributionRow } from "@/components/posts/post-guardian-attribution-row";
 import { GuardianRequestDefaultsPublisher } from "@/components/guardians/guardian-request-defaults-publisher";
 import { GuardianRequestIntakeBullets } from "@/components/guardians/guardian-request-intake-bullets";
 import { GuardianRequestOpenTrigger, type GuardianRequestSheetHostProps } from "@/components/guardians/guardian-request-sheet";
 import { postCoverImageUrl, getSpotDisplayImageAlt, getSpotDisplayImageUrl } from "@/lib/content-post-route";
 import { buildLocalPostVisualPlan, localHeroAlt, type LocalPostVisualPlan } from "@/lib/post-local-images";
-import { FILL_IMAGE_COVER_CARD_16_10, FILL_IMAGE_COVER_ROUTE_HERO } from "@/lib/ui/fill-image";
+import { FILL_IMAGE_COVER_CARD_16_10 } from "@/lib/ui/fill-image";
 import { cn } from "@/lib/utils";
-import { ArrowRight, Calendar, Heart, MapPin } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { resolvePostTypeLabelKey } from "@/lib/post-detail-type-label";
+import { splitPostBodyLeadRest } from "@/lib/post-detail-body-split";
 
 function SpotDetailBody({
   spot,
@@ -27,60 +31,73 @@ function SpotDetailBody({
   visualPlan,
   isLast,
   onNext,
+  layout,
 }: {
   spot: RouteSpot;
   post: ContentPost;
   visualPlan: LocalPostVisualPlan;
   isLast: boolean;
   onNext?: () => void;
+  /** `embedded`: 스팟 카드 헤더 아래 본문만. `sheet`: 바텀시트 전용(제목은 시트 헤더). */
+  layout: "embedded" | "sheet";
 }) {
   const t = useTranslations("RoutePosts");
   const img = getSpotDisplayImageUrl(spot, post, { plan: visualPlan });
   const imgAlt = getSpotDisplayImageAlt(spot, post, { plan: visualPlan });
+
+  const secondaryBlock = (
+    <div className="border-border/40 grid gap-3 rounded-xl border border-dashed bg-muted/10 p-3 sm:grid-cols-2 sm:p-4">
+      {spot.photo_tip ? (
+        <div className="rounded-lg border border-border/50 bg-background/80 p-3 text-sm">
+          <p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">{t("photoTip")}</p>
+          <p className="text-foreground mt-1 leading-relaxed">{spot.photo_tip}</p>
+        </div>
+      ) : null}
+      {spot.caution ? (
+        <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-3 text-sm">
+          <p className="text-amber-800 text-[10px] font-bold tracking-wide uppercase dark:text-amber-200">{t("caution")}</p>
+          <p className="text-foreground mt-1 leading-relaxed">{spot.caution}</p>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  const showSecondary = Boolean(spot.photo_tip || spot.caution);
 
   return (
     <div className="space-y-4">
       <div className="border-border/60 relative aspect-[16/10] overflow-hidden rounded-xl border sm:rounded-2xl">
         <Image src={img} alt={imgAlt} fill className={FILL_IMAGE_COVER_CARD_16_10} sizes="(max-width:768px) 100vw, 640px" />
       </div>
-      <div>
-        <p className="text-primary text-[10px] font-bold tracking-widest uppercase">{spot.place_name}</p>
-        {spot.address_line ? (
-          <p className="text-muted-foreground mt-1 text-xs leading-relaxed">{spot.address_line}</p>
-        ) : null}
-        <h3 className="text-text-strong mt-1 text-lg font-semibold">{spot.title}</h3>
-        <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{spot.short_description}</p>
-      </div>
+
+      {layout === "sheet" ? (
+        <div className="space-y-3">
+          <p className="text-muted-foreground text-xs font-medium">{spot.place_name}</p>
+          {spot.short_description ? (
+            <p className="text-foreground text-sm font-medium leading-relaxed">{spot.short_description}</p>
+          ) : null}
+          {spot.recommend_reason ? (
+            <Card className="rounded-xl border-primary/20 bg-primary/5 shadow-none">
+              <CardContent className="space-y-1 p-4">
+                <p className="text-primary text-xs font-semibold">{t("whyRecommend")}</p>
+                <p className="text-foreground text-sm leading-relaxed">{spot.recommend_reason}</p>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      ) : null}
+
       {spot.body ? (
-        <div className="text-foreground space-y-2 text-sm leading-relaxed">
+        <div className="text-foreground space-y-2 text-sm leading-relaxed sm:text-[15px]">
           {spot.body.split("\n").map((para, i) => (
             <p key={i}>{para}</p>
           ))}
         </div>
       ) : null}
-      {spot.recommend_reason ? (
-        <Card className="rounded-xl border-primary/15 bg-primary/5 shadow-none">
-          <CardContent className="space-y-1 p-4">
-            <p className="text-primary text-xs font-semibold">{t("whyRecommend")}</p>
-            <p className="text-foreground text-sm leading-relaxed">{spot.recommend_reason}</p>
-          </CardContent>
-        </Card>
-      ) : null}
-      <div className="grid gap-3 sm:grid-cols-2">
-        {spot.photo_tip ? (
-          <div className="rounded-xl border border-border/60 bg-white/80 p-3 text-sm">
-            <p className="text-muted-foreground text-[10px] font-bold tracking-wide uppercase">{t("photoTip")}</p>
-            <p className="text-foreground mt-1 leading-relaxed">{spot.photo_tip}</p>
-          </div>
-        ) : null}
-        {spot.caution ? (
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-sm">
-            <p className="text-amber-800 text-[10px] font-bold tracking-wide uppercase dark:text-amber-200">{t("caution")}</p>
-            <p className="text-foreground mt-1 leading-relaxed">{spot.caution}</p>
-          </div>
-        ) : null}
-      </div>
-      <p className="text-muted-foreground text-xs">
+
+      {showSecondary ? secondaryBlock : null}
+
+      <p className="text-muted-foreground border-border/30 border-t pt-3 text-xs">
         {t("stayDuration", { minutes: spot.stay_duration_minutes })}
       </p>
       {!isLast && onNext ? (
@@ -101,7 +118,6 @@ export function RoutePostDetailClient({
   requestHost: GuardianRequestSheetHostProps;
 }) {
   const t = useTranslations("RoutePosts");
-  const tPosts = useTranslations("Posts");
   const tReq = useTranslations("GuardianRequest");
   const journey = post.route_journey!;
   const meta = journey.metadata;
@@ -199,11 +215,12 @@ export function RoutePostDetailClient({
   const visualPlan = useMemo(() => buildLocalPostVisualPlan(post), [post]);
   const cover = postCoverImageUrl(post) ?? visualPlan.hero;
   const coverAlt = postCoverImageUrl(post) ? post.title : localHeroAlt(post, visualPlan);
-  const date = new Date(post.created_at).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  const { lead, rest } = useMemo(() => splitPostBodyLeadRest(post.body), [post.body]);
+  const goodForLine = useMemo(
+    () => meta.recommended_traveler_types.filter(Boolean).join(" · ") || null,
+    [meta.recommended_traveler_types],
+  );
+  const typeLabelKey = useMemo(() => resolvePostTypeLabelKey(post), [post]);
 
   return (
     <>

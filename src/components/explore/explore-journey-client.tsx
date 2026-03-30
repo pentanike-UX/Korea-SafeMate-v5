@@ -177,7 +177,7 @@ export function ExploreJourneyClient() {
       {step === 4 ? (
         <section className="border-border/60 border-b bg-card/95">
           <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
-            <ExploreResultsDecisionHeader region={region} theme={theme} />
+            <ExploreResultsDecisionHeader />
           </div>
         </section>
       ) : (
