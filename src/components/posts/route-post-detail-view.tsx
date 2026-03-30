@@ -53,7 +53,7 @@ export async function RoutePostDetailView({ post }: { post: ContentPost }) {
             }}
           />
         </div>
-        <PostDetailStickyAside variant="route">
+        <PostDetailStickyAside id="post-author-aside" variant="route">
           <SaveTravelerPostButton postId={post.id} />
           <PostAuthorAside post={post} />
         </PostDetailStickyAside>

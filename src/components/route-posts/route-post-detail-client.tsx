@@ -235,42 +235,18 @@ export function RoutePostDetailClient({
         />
       ) : null}
 
-      <header className="relative overflow-hidden rounded-[1.75rem] border border-border/60 shadow-[var(--shadow-md)]">
-        <div className="relative aspect-[21/11] max-h-[340px] min-h-[200px] overflow-hidden sm:aspect-[3/1]">
-          <Image src={cover} alt={coverAlt} fill className={FILL_IMAGE_COVER_ROUTE_HERO} sizes="100vw" priority />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0e1b3d]/80 via-[#0e1b3d]/35 to-transparent" />
-          <div className="absolute right-0 bottom-0 left-0 space-y-3 p-6 sm:p-10">
-            <div className="flex flex-wrap items-center gap-2">
-              {post.is_sample ? <PostSampleBadge variant="onImage" /> : null}
-              {post.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="rounded-full border-white/20 bg-white/15 font-medium text-white">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-            <h1 className="max-w-4xl text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">{post.title}</h1>
-            <p className="max-w-2xl text-base leading-relaxed text-white/90 sm:text-lg">{post.summary}</p>
-            <div className="flex flex-wrap items-center gap-3 text-sm text-white/80">
-              <span className="inline-flex items-center gap-1.5">
-                <Calendar className="size-4" aria-hidden />
-                {date}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin className="size-4" aria-hidden />
-                <span className="capitalize">{tPosts(`region.${post.region_slug}` as "region.seoul")}</span>
-              </span>
-              {post.helpful_rating != null ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <Heart className="size-4 fill-rose-300/90 text-rose-200" aria-hidden />
-                  {tPosts("helpfulShort", { rating: post.helpful_rating.toFixed(1) })}
-                </span>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      </header>
+      <PostDetailHero post={post} coverUrl={cover} coverAlt={coverAlt} typeLabelKey={typeLabelKey} />
 
       <div className="mt-8 space-y-5 sm:space-y-6">
+        <PostDetailIntroPanel variant="route" primary={lead} secondary={null} />
+        <PostGuardianAttributionRow
+          variant="route"
+          displayName={requestHost.displayName}
+          avatarUrl={requestHost.avatarUrl}
+        />
+
+        <RouteSummaryCard meta={meta} spotCount={spots.length} goodForLine={goodForLine} />
+
         <Card
           ref={mapCardRef}
           className="gap-0 overflow-hidden rounded-2xl border-border/60 py-0 shadow-[var(--shadow-md)]"
@@ -295,8 +271,6 @@ export function RoutePostDetailClient({
           </div>
         </Card>
 
-        <RouteSummaryChips meta={meta} tags={post.tags} spotCount={spots.length} />
-
         {post.route_highlights && post.route_highlights.length > 0 ? (
           <section className="rounded-2xl border border-border/60 bg-white/90 p-6 shadow-[var(--shadow-sm)]">
             <h2 className="text-text-strong text-lg font-semibold">{t("insightTitle")}</h2>
@@ -310,9 +284,9 @@ export function RoutePostDetailClient({
           </section>
         ) : null}
 
-        {post.body ? (
+        {rest ? (
           <div className="text-foreground space-y-3 text-[15px] leading-relaxed sm:text-base">
-            {post.body.split("\n").map((para, i) => (
+            {rest.split("\n").map((para, i) => (
               <p key={i}>{para}</p>
             ))}
           </div>
@@ -345,11 +319,22 @@ export function RoutePostDetailClient({
                 >
                   {index + 1}
                 </span>
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 space-y-2">
                   <h3 className="text-text-strong text-xl font-semibold">{spot.title}</h3>
-                  <p className="text-muted-foreground mt-1 text-sm">{spot.place_name}</p>
+                  <p className="text-muted-foreground text-sm font-medium">{spot.place_name}</p>
                   {spot.address_line ? (
-                    <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">{spot.address_line}</p>
+                    <p className="text-muted-foreground text-xs leading-relaxed">{spot.address_line}</p>
+                  ) : null}
+                  {spot.short_description ? (
+                    <p className="text-foreground text-sm leading-relaxed">{spot.short_description}</p>
+                  ) : null}
+                  {spot.recommend_reason ? (
+                    <Card className="rounded-xl border-primary/20 bg-primary/5 shadow-none">
+                      <CardContent className="space-y-1 p-3 sm:p-4">
+                        <p className="text-primary text-xs font-semibold">{t("whyRecommend")}</p>
+                        <p className="text-foreground text-sm leading-relaxed">{spot.recommend_reason}</p>
+                      </CardContent>
+                    </Card>
                   ) : null}
                   <Button
                     type="button"
@@ -370,6 +355,7 @@ export function RoutePostDetailClient({
                   post={post}
                   visualPlan={visualPlan}
                   isLast={isLast}
+                  layout="embedded"
                   onNext={isLast ? undefined : () => goNextFrom(spot.id)}
                 />
               </div>
@@ -417,6 +403,7 @@ export function RoutePostDetailClient({
                   post={post}
                   visualPlan={visualPlan}
                   isLast={selectedSpot.id === spots[spots.length - 1]?.id}
+                  layout="sheet"
                   onNext={() => goNextFrom(selectedSpot.id)}
                 />
               </div>

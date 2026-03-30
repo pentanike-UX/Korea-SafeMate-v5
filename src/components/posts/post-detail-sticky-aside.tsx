@@ -12,15 +12,18 @@ export function PostDetailStickyAside({
   children,
   className,
   variant = "default",
+  id,
 }: {
   children: ReactNode;
   className?: string;
   variant?: PostDetailStickyAsideVariant;
+  id?: string;
 }) {
   const topClass = variant === "route" ? "md:top-36 lg:top-[9.5rem]" : "md:top-20";
 
   return (
     <div
+      id={id}
       className={cn(
         "md:sticky md:z-0 md:self-start",
         topClass,

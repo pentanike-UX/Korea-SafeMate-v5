@@ -1,9 +1,7 @@
 import Image from "next/image";
-import { FILL_IMAGE_COVER_ROUTE_HERO } from "@/lib/ui/fill-image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { ContentPost } from "@/types/domain";
-import { PostSampleBadge } from "@/components/posts/post-sample-badge";
 import { relatedPostsForMerged } from "@/lib/posts-public-merged.server";
 import {
   getPostHeroImageAlt,
@@ -13,7 +11,6 @@ import {
   postHasOwnVisualMedia,
   postHasRouteJourney,
 } from "@/lib/content-post-route";
-import { Badge } from "@/components/ui/badge";
 import { RelatedPostsBrowseSheet } from "@/components/posts/related-posts-browse-sheet";
 import { GuardianRequestDefaultsPublisher } from "@/components/guardians/guardian-request-defaults-publisher";
 import { SaveTravelerPostButton } from "@/components/posts/save-traveler-post-button";
@@ -23,14 +20,14 @@ import { RoutePostDetailView } from "@/components/posts/route-post-detail-view";
 import { getPublicGuardianByIdMerged } from "@/lib/guardian-public-merged.server";
 import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
 import { mockRegions } from "@/data/mock";
-import { cn } from "@/lib/utils";
 import { clampSheetHeadline, resolveGuardianHeadlineWithPostFallback } from "@/lib/guardian-sheet-headline";
-import { ArrowLeft, Calendar, Heart, MapPin } from "lucide-react";
-
-function heroGradient(post: ContentPost) {
-  const hue = post.title.length * 17 + post.kind.length * 40;
-  return `linear-gradient(145deg, hsl(${hue % 360} 45% 92%) 0%, hsl(${(hue + 50) % 360} 40% 85%) 50%, #fff 100%)`;
-}
+import { splitPostBodyLeadRest } from "@/lib/post-detail-body-split";
+import { resolvePostTypeLabelKey } from "@/lib/post-detail-type-label";
+import { PostDetailHero } from "@/components/posts/post-detail-hero";
+import { PostDetailIntroPanel } from "@/components/posts/post-detail-intro-panel";
+import { PostGuardianAttributionRow } from "@/components/posts/post-guardian-attribution-row";
+import { FILL_IMAGE_COVER_CENTER } from "@/lib/ui/fill-image";
+import { ArrowLeft } from "lucide-react";
 
 export async function PostDetailView({ post }: { post: ContentPost }) {
   if (postHasRouteJourney(post)) {
@@ -56,11 +53,10 @@ export async function PostDetailView({ post }: { post: ContentPost }) {
   const secondaryAlt = getPostSecondaryImageAlt(post);
   const showEnrichedPair = !postHasOwnVisualMedia(post) && secondaryCover;
 
-  const date = new Date(post.created_at).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  const { lead, rest } = splitPostBodyLeadRest(post.body);
+  const articleIntro = lead.length > 0 && rest.length > 0;
+  const bodyText = articleIntro ? rest : post.body.trim();
+  const typeLabelKey = resolvePostTypeLabelKey(post);
 
   return (
     <article className="bg-[var(--bg-page)] pb-16">
@@ -81,76 +77,38 @@ export async function PostDetailView({ post }: { post: ContentPost }) {
         </Link>
       </div>
 
-      <header className="relative mx-auto max-w-6xl px-4 sm:px-6">
-        <div
-          className="border-border/60 relative overflow-hidden rounded-[1.75rem] border shadow-[var(--shadow-md)]"
-          style={{ background: heroGradient(post) }}
-        >
-          <div className="relative aspect-[21/10] max-h-[320px] min-h-[200px] overflow-hidden sm:aspect-[3/1]">
-            <Image
-              src={heroCover}
-              alt={heroAlt}
-              fill
-              className={cn(FILL_IMAGE_COVER_ROUTE_HERO, "opacity-35 mix-blend-multiply")}
-              sizes="100vw"
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-white via-white/70 to-transparent" />
-            <div className="absolute right-0 bottom-0 left-0 space-y-3 p-6 sm:p-10">
-              <div className="flex flex-wrap items-center gap-2">
-                {post.is_sample ? <PostSampleBadge /> : null}
-                {post.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="rounded-full font-medium">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-              <h1 className="text-text-strong max-w-4xl text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-                {post.title}
-              </h1>
-              <p className="text-muted-foreground max-w-2xl text-base leading-relaxed sm:text-lg">{post.summary}</p>
-              <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-sm">
-                <span className="inline-flex items-center gap-1.5">
-                  <Calendar className="size-4" aria-hidden />
-                  {date}
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <MapPin className="size-4" aria-hidden />
-                  <span className="capitalize">{t(`region.${post.region_slug}` as "region.seoul")}</span>
-                </span>
-                {post.helpful_rating != null ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Heart className="size-4 fill-rose-400/90 text-rose-400/90" aria-hidden />
-                    {t("helpfulShort", { rating: post.helpful_rating.toFixed(1) })}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PostDetailHero post={post} coverUrl={heroCover} coverAlt={heroAlt} typeLabelKey={typeLabelKey} />
 
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-12 lg:gap-12">
-        <div className="max-w-none lg:col-span-8">
+        <div className="max-w-none space-y-8 lg:col-span-8">
+          {articleIntro ? <PostDetailIntroPanel variant="article" primary={lead} /> : null}
+
+          {bodyText ? (
+            <div className="text-foreground space-y-4 text-[15px] leading-relaxed sm:text-base">
+              {bodyText.split("\n").map((para, i) => (
+                <p key={i}>{para}</p>
+              ))}
+            </div>
+          ) : null}
+
           {showEnrichedPair ? (
-            <figure className="border-border/60 relative mb-8 aspect-[16/10] overflow-hidden rounded-xl border sm:aspect-[21/9]">
+            <figure className="border-border/60 relative aspect-[16/10] overflow-hidden rounded-xl border sm:aspect-[21/9]">
               <Image
                 src={secondaryCover!}
                 alt={secondaryAlt ?? heroAlt}
                 fill
-                className="object-cover"
+                className={FILL_IMAGE_COVER_CENTER}
                 sizes="(max-width:1024px) 100vw, 66vw"
               />
             </figure>
           ) : null}
-          <div className="text-foreground space-y-4 text-[15px] leading-relaxed sm:text-base">
-            {post.body.split("\n").map((para, i) => (
-              <p key={i}>{para}</p>
-            ))}
-          </div>
+
+          {guardian ? (
+            <PostGuardianAttributionRow variant="article" displayName={sheetName} avatarUrl={sheetAvatar} />
+          ) : null}
         </div>
 
-        <PostDetailStickyAside>
+        <PostDetailStickyAside id="post-author-aside">
           <SaveTravelerPostButton postId={post.id} />
           <PostAuthorAside post={post} />
         </PostDetailStickyAside>

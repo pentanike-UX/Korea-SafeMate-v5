@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import type { ContentPost } from "@/types/domain";
 import { PostSampleBadge } from "@/components/posts/post-sample-badge";
 import { Badge } from "@/components/ui/badge";
-import { FILL_IMAGE_COVER_ROUTE_HERO } from "@/lib/ui/fill-image";
+import { FILL_IMAGE_COVER_HERO } from "@/lib/ui/fill-image";
 import { cn } from "@/lib/utils";
 import type { PostTypeLabelKey } from "@/lib/post-detail-type-label";
 import { Calendar, Heart, MapPin } from "lucide-react";
@@ -49,7 +49,7 @@ export function PostDetailHero({
             src={coverUrl}
             alt={coverAlt}
             fill
-            className={cn(FILL_IMAGE_COVER_ROUTE_HERO, "opacity-35 mix-blend-multiply")}
+              className={cn(FILL_IMAGE_COVER_HERO, "opacity-35 mix-blend-multiply")}
             sizes="100vw"
             priority
           />

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRef } from "react";
 import { useAboutParallaxShift } from "@/components/about/use-about-parallax";
 import { cn } from "@/lib/utils";
+import { FILL_IMAGE_COVER_CENTER } from "@/lib/ui/fill-image";
 
 type Props = {
   imageSrc: string;
@@ -35,7 +36,7 @@ export function AboutParallaxBand({
           className="absolute inset-[-12%] will-change-transform motion-reduce:transform-none"
           style={{ transform: `translate3d(0, ${shift}px, 0)` }}
         >
-          <Image src={imageSrc} alt={imageAlt} fill className="object-cover object-center" sizes="100vw" />
+          <Image src={imageSrc} alt={imageAlt} fill className={FILL_IMAGE_COVER_CENTER} sizes="100vw" />
         </div>
         <div className={cn("absolute inset-0 bg-gradient-to-r from-black/75 via-black/55 to-black/70", overlayClassName)} />
       </div>
