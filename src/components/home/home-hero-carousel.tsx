@@ -20,6 +20,18 @@ import {
   Users,
 } from "lucide-react";
 
+/**
+ * 홈 히어로 `scopeNoteDetail`(부 노트) 모바일 노출 — `HomeAuxiliaryNoteHero`의 `secondaryFromSm`에 전달.
+ *
+ * - `true`(현재): 뷰포트가 `sm` 미만이면 부 노트만 시각적으로 숨김(`hidden sm:block`). 주 노트(`scopeNote`)는 항상 표시.
+ * - `false`: 부 노트도 모바일에서 항상 표시 — 법적·필수 고지로 격상될 때 여기만 바꾸면 됨.
+ *
+ * 장단점(요약):
+ * - sm 이상만: 히어로 세로 리듬·밀도에 유리. 다만 `hidden`은 일부 AT에서 부가 노출이 약해질 수 있음.
+ * - 항상 노출: 고지·투명성에 유리, 모바일에서 CTA 위 공간·줄바꿈 증가(en/ja/ko 카피 길이에 따라).
+ */
+const HOME_HERO_SCOPE_NOTE_SECONDARY_FROM_SM = true;
+
 export function HomeHeroCarousel() {
   const t = useTranslations("Home");
   const viewer = useViewerRole();
@@ -223,8 +235,13 @@ export function HomeHeroCarousel() {
               </>
             ) : null}
           </div>
-          {/* 보조 노트: 주=항상 · 부=sm↑ (정책·예외는 home-auxiliary-note.tsx 상단 주석) */}
-          <HomeAuxiliaryNoteHero className="mt-5" primary={t("scopeNote")} secondary={t("scopeNoteDetail")} />
+          {/* 보조 노트: 주=항상 · 부 노출은 HOME_HERO_SCOPE_NOTE_SECONDARY_FROM_SM (세부는 home-auxiliary-note.tsx) */}
+          <HomeAuxiliaryNoteHero
+            className="mt-5"
+            primary={t("scopeNote")}
+            secondary={t("scopeNoteDetail")}
+            secondaryFromSm={HOME_HERO_SCOPE_NOTE_SECONDARY_FROM_SM}
+          />
         </div>
 
         {/* Bottom bar: progress + meta + dots + arrows */}

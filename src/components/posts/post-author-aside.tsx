@@ -44,7 +44,7 @@ export async function PostAuthorAside({ post }: { post: ContentPost }) {
   return (
     <aside className="contents">
       <Card className="border-border/60 overflow-hidden rounded-2xl py-0 shadow-[var(--shadow-sm)]">
-        <div className="relative aspect-[16/10]">
+        <div className="relative aspect-[16/10] overflow-hidden bg-muted">
           {guardian && imgs ? (
             <Image src={imgs.landscape} alt="" fill className={GUARDIAN_PROFILE_COVER_POSITION_CLASS} sizes="400px" />
           ) : (

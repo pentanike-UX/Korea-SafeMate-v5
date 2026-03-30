@@ -17,6 +17,7 @@ import { GuardianRequestIntakeBullets } from "@/components/guardians/guardian-re
 import { GuardianRequestOpenTrigger, type GuardianRequestSheetHostProps } from "@/components/guardians/guardian-request-sheet";
 import { postCoverImageUrl, getSpotDisplayImageAlt, getSpotDisplayImageUrl } from "@/lib/content-post-route";
 import { buildLocalPostVisualPlan, localHeroAlt, type LocalPostVisualPlan } from "@/lib/post-local-images";
+import { FILL_IMAGE_COVER_CARD_16_10, FILL_IMAGE_COVER_ROUTE_HERO } from "@/lib/ui/fill-image";
 import { cn } from "@/lib/utils";
 import { ArrowRight, Calendar, Heart, MapPin } from "lucide-react";
 
@@ -40,7 +41,7 @@ function SpotDetailBody({
   return (
     <div className="space-y-4">
       <div className="border-border/60 relative aspect-[16/10] overflow-hidden rounded-xl border sm:rounded-2xl">
-        <Image src={img} alt={imgAlt} fill className="object-cover" sizes="(max-width:768px) 100vw, 640px" />
+        <Image src={img} alt={imgAlt} fill className={FILL_IMAGE_COVER_CARD_16_10} sizes="(max-width:768px) 100vw, 640px" />
       </div>
       <div>
         <p className="text-primary text-[10px] font-bold tracking-widest uppercase">{spot.place_name}</p>
@@ -218,8 +219,8 @@ export function RoutePostDetailClient({
       ) : null}
 
       <header className="relative overflow-hidden rounded-[1.75rem] border border-border/60 shadow-[var(--shadow-md)]">
-        <div className="relative aspect-[21/11] max-h-[340px] min-h-[200px] sm:aspect-[3/1]">
-          <Image src={cover} alt={coverAlt} fill className="object-cover" sizes="100vw" priority />
+        <div className="relative aspect-[21/11] max-h-[340px] min-h-[200px] overflow-hidden sm:aspect-[3/1]">
+          <Image src={cover} alt={coverAlt} fill className={FILL_IMAGE_COVER_ROUTE_HERO} sizes="100vw" priority />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0e1b3d]/80 via-[#0e1b3d]/35 to-transparent" />
           <div className="absolute right-0 bottom-0 left-0 space-y-3 p-6 sm:p-10">
             <div className="flex flex-wrap items-center gap-2">

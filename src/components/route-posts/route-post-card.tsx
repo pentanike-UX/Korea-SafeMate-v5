@@ -10,6 +10,7 @@ import { GuardianMiniPreviewSheetTrigger } from "@/components/guardians/guardian
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { listCardActionButtonClass, listCardMetaBlockClass } from "@/components/ui/action-variants";
+import { FILL_IMAGE_COVER_CARD_16_10 } from "@/lib/ui/fill-image";
 import { cn } from "@/lib/utils";
 import { MapPin } from "lucide-react";
 
@@ -47,7 +48,7 @@ export function RoutePostCard({ post, regionLabel, className }: { post: ContentP
             src={cover}
             alt={coverAlt}
             fill
-            className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+            className={cn(FILL_IMAGE_COVER_CARD_16_10, "transition-transform duration-500 group-hover:scale-[1.02]")}
             sizes="(max-width:768px) 100vw, 33vw"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#0e1b3d]/60 via-transparent to-transparent" />

@@ -28,7 +28,11 @@ export function PostPreviewSheetPanel({
       <div className="space-y-4 px-4 pb-4 sm:px-6 sm:pb-6">
         <div className="border-border/60 relative aspect-[16/9] overflow-hidden rounded-xl border bg-muted">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={getPostHeroImageUrl(post)} alt="" className="size-full object-cover" />
+          <img
+            src={getPostHeroImageUrl(post)}
+            alt=""
+            className="size-full object-cover object-[center_42%] sm:object-center"
+          />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">{post.region_slug}</Badge>
@@ -77,13 +81,13 @@ export function PostPreviewSheetCardRoute({
         onClick={() => setOpen(true)}
         className="border-border/70 bg-card group flex w-full overflow-hidden rounded-2xl border text-left shadow-[var(--shadow-sm)] transition-all hover:border-primary/30 hover:shadow-[var(--shadow-md)]"
       >
-        <div className="relative aspect-square w-[6.25rem] max-[360px]:w-24 shrink-0 bg-muted sm:w-32">
+        <div className="relative aspect-square w-[6.25rem] max-[360px]:w-24 shrink-0 overflow-hidden bg-muted sm:w-32">
           {cover ? (
             <Image
               src={cover}
               alt=""
               fill
-              className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+              className="object-cover object-[center_40%] sm:object-center transition-transform duration-500 group-hover:scale-[1.03]"
               sizes="128px"
             />
           ) : null}
@@ -125,13 +129,13 @@ export function PostPreviewSheetCardArticle({ post }: { post: ContentPost }) {
         onClick={() => setOpen(true)}
         className="border-border/70 bg-card group w-full overflow-hidden rounded-2xl border text-left shadow-[var(--shadow-sm)] transition-all hover:border-primary/30"
       >
-        <div className="relative aspect-[16/9] bg-muted">
+        <div className="relative aspect-[16/9] overflow-hidden bg-muted">
           {cover ? (
             <Image
               src={cover}
               alt=""
               fill
-              className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              className="object-cover object-[center_42%] sm:object-center transition-transform duration-500 group-hover:scale-[1.02]"
               sizes="(max-width:768px) 100vw, 50vw"
             />
           ) : null}

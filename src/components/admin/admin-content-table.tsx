@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { mockRegions } from "@/data/mock/regions";
+import { useTranslations } from "next-intl";
 import type { ContentPost, ContentPostStatus } from "@/types/domain";
+import { regionDisplayLabelFromSlug } from "@/lib/mypage/region-label-i18n";
 import { ContentStatusBadge } from "@/components/admin/content-status-badge";
 import { AdminFilterBar, AdminFilterField, AdminSearchInput } from "@/components/admin/admin-filter-bar";
 import { Button } from "@/components/ui/button";
@@ -16,11 +17,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-function regionDisplayName(slug: string) {
-  return mockRegions.find((r) => r.slug === slug)?.name ?? slug;
-}
-
 export function AdminContentTable({ posts }: { posts: ContentPost[] }) {
+  const tRegion = useTranslations("TravelerHub");
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<ContentPostStatus | "all">("all");
 
@@ -89,7 +87,7 @@ export function AdminContentTable({ posts }: { posts: ContentPost[] }) {
                   {p.title}
                 </TableCell>
                 <TableCell className="text-muted-foreground px-4 py-3 text-sm whitespace-nowrap">
-                  {regionDisplayName(p.region_slug)}
+                  {regionDisplayLabelFromSlug(p.region_slug, (k) => tRegion(k))}
                 </TableCell>
                 <TableCell className="text-muted-foreground px-4 py-3 text-sm">{p.author_display_name}</TableCell>
                 <TableCell className="px-4 py-3">

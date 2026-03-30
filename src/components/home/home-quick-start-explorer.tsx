@@ -89,13 +89,13 @@ export function HomeQuickStartExplorer() {
               const desc = t(REGION_DESC_KEY[a.slug]);
 
               const media = (
-                <div className="relative aspect-[16/10]">
+                <div className="relative aspect-[16/10] overflow-hidden bg-muted">
                   <Image
                     src={a.imageUrl}
                     alt={copy.imageAlt}
                     fill
                     className={cn(
-                      "object-cover",
+                      "object-cover object-[center_42%] sm:object-center",
                       active && "transition duration-500 group-hover:scale-[1.02]",
                       !active && "brightness-[0.66] contrast-[0.94] saturate-[0.48]",
                     )}

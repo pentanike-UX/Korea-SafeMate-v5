@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { FILL_IMAGE_COVER_ROUTE_HERO } from "@/lib/ui/fill-image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { ContentPost } from "@/types/domain";
@@ -22,6 +23,7 @@ import { RoutePostDetailView } from "@/components/posts/route-post-detail-view";
 import { getPublicGuardianByIdMerged } from "@/lib/guardian-public-merged.server";
 import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
 import { mockRegions } from "@/data/mock";
+import { cn } from "@/lib/utils";
 import { clampSheetHeadline, resolveGuardianHeadlineWithPostFallback } from "@/lib/guardian-sheet-headline";
 import { ArrowLeft, Calendar, Heart, MapPin } from "lucide-react";
 
@@ -84,12 +86,12 @@ export async function PostDetailView({ post }: { post: ContentPost }) {
           className="border-border/60 relative overflow-hidden rounded-[1.75rem] border shadow-[var(--shadow-md)]"
           style={{ background: heroGradient(post) }}
         >
-          <div className="relative aspect-[21/10] max-h-[320px] min-h-[200px] sm:aspect-[3/1]">
+          <div className="relative aspect-[21/10] max-h-[320px] min-h-[200px] overflow-hidden sm:aspect-[3/1]">
             <Image
               src={heroCover}
               alt={heroAlt}
               fill
-              className="object-cover opacity-35 mix-blend-multiply"
+              className={cn(FILL_IMAGE_COVER_ROUTE_HERO, "opacity-35 mix-blend-multiply")}
               sizes="100vw"
               priority
             />

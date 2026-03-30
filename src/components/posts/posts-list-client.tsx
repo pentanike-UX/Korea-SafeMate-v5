@@ -7,6 +7,8 @@ import { Link } from "@/i18n/navigation";
 import type { ContentCategory } from "@/types/domain";
 import type { ContentPost } from "@/types/domain";
 import { getPostHeroImageAlt, getPostHeroImageUrl, postHasRouteJourney } from "@/lib/content-post-route";
+import { FILL_IMAGE_COVER_CARD_16_10 } from "@/lib/ui/fill-image";
+import { cn } from "@/lib/utils";
 import { ExplorationFilterSummaryBar, type ExplorationSummaryChip } from "@/components/listing/exploration-filter-summary-bar";
 import { StickyListingFiltersBar } from "@/components/listing/sticky-listing-filters-bar";
 import { SubpageHero } from "@/components/layout/subpage-hero";
@@ -357,7 +359,7 @@ export function PostsListClient({
                           src={coverUrl}
                           alt={coverAlt}
                           fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                          className={cn(FILL_IMAGE_COVER_CARD_16_10, "transition-transform duration-500 group-hover:scale-[1.02]")}
                           sizes="(max-width:768px) 100vw, 33vw"
                         />
                         <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-[#0e1b3d]/45 to-transparent" />

@@ -193,8 +193,14 @@ export function AboutLanding() {
               key={key}
               className="border-border/70 bg-card overflow-hidden rounded-[var(--radius-lg)] border shadow-[var(--shadow-sm)]"
             >
-              <div className="relative aspect-[16/10] w-full">
-                <Image src={src} alt="" fill className="object-cover" sizes="(max-width:1024px) 100vw, 33vw" />
+              <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted">
+                <Image
+                  src={src}
+                  alt=""
+                  fill
+                  className="object-cover object-[center_42%] sm:object-center"
+                  sizes="(max-width:1024px) 100vw, 33vw"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/35 to-transparent" aria-hidden />
               </div>
               <div className="p-5 sm:p-6">

@@ -458,7 +458,7 @@ export function GuardiansDiscoverClient({
                 <li key={g.user_id}>
                   <Card className="border-border/70 h-full overflow-hidden rounded-[var(--radius-md)] py-0 shadow-[var(--shadow-sm)] transition-all hover:border-[color-mix(in_srgb,var(--brand-trust-blue)_30%,var(--border))] hover:shadow-[var(--shadow-md)]">
                     <div className="flex h-full min-h-[9.5rem]">
-                      <div className="relative w-[30%] min-w-[6.75rem] max-w-[8.5rem] shrink-0 self-stretch bg-muted/40 sm:min-w-[7.25rem] sm:max-w-[9rem]">
+                      <div className="relative w-[30%] min-w-[6.75rem] max-w-[8.5rem] shrink-0 self-stretch overflow-hidden bg-muted sm:min-w-[7.25rem] sm:max-w-[9rem]">
                         <Image src={imgs.default} alt="" fill className={GUARDIAN_PROFILE_COVER_POSITION_CLASS} sizes="(max-width:640px) 32vw, 18vw" />
                         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/35 to-transparent" />
                       </div>
