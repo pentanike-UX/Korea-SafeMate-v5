@@ -1183,7 +1183,10 @@
     },
     "region": {
       "gwanghwamun": "Gwanghwamun",
-      "gangnam": "Gangnam"
+      "gangnam": "Gangnam",
+      "seoul": "Seoul",
+      "busan": "Busan",
+      "jeju": "Jeju"
     },
     "navPoints": "Points",
     "modeSegmentTraveler": "Traveler",

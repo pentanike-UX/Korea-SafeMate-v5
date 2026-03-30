@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { HOME_HERO_INTERVAL_MS, HOME_HERO_SLIDES } from "@/data/home-hero-slides";
 import { useViewerRole } from "@/hooks/use-viewer-role";
+import { HomeAuxiliaryNoteHero } from "@/components/home/home-auxiliary-note";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -222,10 +223,12 @@ export function HomeHeroCarousel() {
               </>
             ) : null}
           </div>
-          <div className="mt-5 max-w-md space-y-1">
-            <p className="text-[10px] leading-snug text-white/52 sm:text-[11px]">{t("scopeNote")}</p>
-            <p className="text-[10px] leading-snug text-white/38 sm:text-[11px]">{t("scopeNoteDetail")}</p>
-          </div>
+          <HomeAuxiliaryNoteHero
+            className="mt-5"
+            primary={t("scopeNote")}
+            secondary={t("scopeNoteDetail")}
+            secondaryFromSm
+          />
         </div>
 
         {/* Bottom bar: progress + meta + dots + arrows */}

@@ -135,6 +135,88 @@ export async function getPublicPostByIdMerged(id: string): Promise<ContentPost |
   return mock && mock.status === "approved" ? mock : null;
 }
 
+const mockApprovedById = (): Map<string, ContentPost> => {
+  const m = new Map<string, ContentPost>();
+  for (const p of mockContentPosts) {
+    if (p.status === "approved") m.set(p.id, p);
+  }
+  return m;
+};
+
+/**
+ * 대표 포스트 id들만 승인본으로 조회 — 전체 `listApprovedPostsMerged` 대신 카드/시트용.
+ * id 순서는 첫 인자 배열의 고유 순서를 따른다.
+ */
+export async function listApprovedPostsByIdsMerged(ids: string[]): Promise<ContentPost[]> {
+  const unique = [...new Set(ids.map((x) => x.trim()).filter(Boolean))];
+  if (unique.length === 0) return [];
+
+  const mockMap = mockApprovedById();
+  const sb = createServiceRoleSupabase();
+
+  if (!sb) {
+    return unique.map((id) => mockMap.get(id)).filter((p): p is ContentPost => Boolean(p));
+  }
+
+  const { data: rows, error } = await sb
+    .from("content_posts")
+    .select("*")
+    .in("id", unique)
+    .eq("status", "approved");
+
+  if (error) {
+    console.error("[listApprovedPostsByIdsMerged]", error);
+    return unique.map((id) => mockMap.get(id)).filter((p): p is ContentPost => Boolean(p));
+  }
+
+  const dbPosts = await mapRowsToPosts((rows ?? []) as RawPost[]);
+  const dbById = new Map(dbPosts.map((p) => [p.id, p]));
+
+  const out: ContentPost[] = [];
+  for (const id of unique) {
+    const fromDb = dbById.get(id);
+    if (fromDb) {
+      out.push(fromDb);
+      continue;
+    }
+    const fromMock = mockMap.get(id);
+    if (fromMock) out.push(fromMock);
+  }
+  return out;
+}
+
+/** 대표 id가 비었거나 승인 목록에 없을 때 — 해당 가디언의 최신 승인 포스트 1건 */
+export async function getLatestApprovedPostForGuardianMerged(authorUserId: string): Promise<ContentPost | null> {
+  if (!authorUserId.trim()) return null;
+  const mockApproved = mockContentPosts.filter((p) => p.status === "approved" && p.author_user_id === authorUserId);
+  const bestMock = mockApproved.sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  )[0];
+
+  const sb = createServiceRoleSupabase();
+  if (!sb) return bestMock ?? null;
+
+  const { data: row, error } = await sb
+    .from("content_posts")
+    .select("*")
+    .eq("author_user_id", authorUserId)
+    .eq("status", "approved")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[getLatestApprovedPostForGuardianMerged]", error);
+    return bestMock ?? null;
+  }
+
+  if (row) {
+    const mapped = await mapRowsToPosts([row as RawPost]);
+    if (mapped[0]) return mapped[0];
+  }
+  return bestMock ?? null;
+}
+
 export async function listApprovedRoutePostsMerged(): Promise<ContentPost[]> {
   const all = await listApprovedPostsMerged();
   return all.filter((p) => postHasRouteJourney(p));

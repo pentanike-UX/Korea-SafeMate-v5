@@ -1183,7 +1183,10 @@
     },
     "region": {
       "gwanghwamun": "光化門",
-      "gangnam": "カンナム"
+      "gangnam": "カンナム",
+      "seoul": "ソウル",
+      "busan": "釜山",
+      "jeju": "済州"
     },
     "navPoints": "ポイント",
     "modeSegmentTraveler": "旅行者",

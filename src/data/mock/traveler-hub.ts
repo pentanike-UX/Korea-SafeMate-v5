@@ -1,12 +1,14 @@
 /** MVP mock — 시드 가디언 ID·포스트 ID와 정합. */
 
+import type { TravelerHubRegionLabelKey } from "@/lib/mypage/traveler-hub-region-key";
+
 export type TravelerTripRequestStatus = "requested" | "reviewing" | "matched" | "declined";
 
 export interface MockTravelerTripRequest {
   id: string;
   guardian_user_id: string | null;
   guardian_name: string | null;
-  region_label_key: "gwanghwamun" | "gangnam";
+  region_label_key: TravelerHubRegionLabelKey;
   theme_slug: string;
   status: TravelerTripRequestStatus;
   created_at: string;
@@ -47,5 +49,15 @@ export const mockTravelerTripRequests: MockTravelerTripRequest[] = [
     status: "matched",
     created_at: "2026-03-10T09:00:00.000Z",
     note: "신촌 식사 코스, 부담 없는 일정",
+  },
+  {
+    id: "req-4",
+    guardian_user_id: "mg08",
+    guardian_name: "수아",
+    region_label_key: "busan",
+    theme_slug: "safe_solo",
+    status: "requested",
+    created_at: "2026-03-18T11:20:00.000Z",
+    note: "해운대 일대 동선 · 바람 강한 날 실내 위주",
   },
 ];

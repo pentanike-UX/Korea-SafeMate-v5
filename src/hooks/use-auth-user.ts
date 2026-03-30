@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { buildMockSupabaseUser, readMockGuardianIdFromDocumentCookie } from "@/lib/dev/mock-guardian-auth";
+import { invalidateClientPointsCache } from "@/lib/points/client-points-fetch-cache";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 
 /** `undefined` = 아직 확인 전, `null` = 비로그인 */
@@ -10,21 +11,35 @@ export function useAuthUser(): User | null | undefined {
   const [user, setUser] = useState<User | null | undefined>(undefined);
 
   useEffect(() => {
+    const prevUserIdRef = { current: undefined as string | null | undefined };
+
+    const applySessionUser = (next: User | null) => {
+      const nextId = next?.id ?? null;
+      const prev = prevUserIdRef.current;
+      if (prev !== undefined) {
+        if (nextId === null || (prev !== null && nextId !== prev)) {
+          invalidateClientPointsCache();
+        }
+      }
+      prevUserIdRef.current = nextId;
+      setUser(next);
+    };
+
     const mockId = readMockGuardianIdFromDocumentCookie();
     if (mockId) {
       const u = buildMockSupabaseUser(mockId);
-      setUser(u);
+      applySessionUser(u);
       return;
     }
 
     const sb = createSupabaseBrowserClient();
     if (!sb) {
-      setUser(null);
+      applySessionUser(null);
       return;
     }
 
     void sb.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
+      applySessionUser(data.session?.user ?? null);
     });
 
     const {
@@ -32,10 +47,10 @@ export function useAuthUser(): User | null | undefined {
     } = sb.auth.onAuthStateChange((_event, session) => {
       const mid = readMockGuardianIdFromDocumentCookie();
       if (mid) {
-        setUser(buildMockSupabaseUser(mid));
+        applySessionUser(buildMockSupabaseUser(mid));
         return;
       }
-      setUser(session?.user ?? null);
+      applySessionUser(session?.user ?? null);
     });
 
     return () => subscription.unsubscribe();

@@ -11,19 +11,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { actionDrawerTriggerButtonClass } from "@/components/ui/action-variants";
 import type { AttentionBlockKey } from "@/types/mypage-hub";
 import type { MypagePointsApiResponse } from "@/lib/points/types";
+import {
+  clearClientPointsCacheIfUserMismatch,
+  getClientPointsFetchCache,
+  setClientPointsFetchCache,
+} from "@/lib/points/client-points-fetch-cache";
 import { cn } from "@/lib/utils";
 import { ChevronDown, Info } from "lucide-react";
-
-const CLIENT_POINTS_CACHE_TTL_MS = 35_000;
-
-let clientPointsFetchCache: { userId: string; at: number; data: MypagePointsApiResponse } | null = null;
-
-function clearClientPointsCacheIfUserMismatch(userId: string | null) {
-  if (!clientPointsFetchCache) return;
-  if (!userId || clientPointsFetchCache.userId !== userId) {
-    clientPointsFetchCache = null;
-  }
-}
 
 function payloadSignature(p: MypagePointsApiResponse | null | undefined) {
   if (!p) return "";
@@ -118,7 +112,7 @@ export function MypagePointsDetailSheetTrigger({
     const json = (await res.json()) as MypagePointsApiResponse;
     setError(null);
     if (userId) {
-      clientPointsFetchCache = { userId, at: Date.now(), data: json };
+      setClientPointsFetchCache(userId, json);
     }
     return json;
   }, [t, userId]);
@@ -127,13 +121,7 @@ export function MypagePointsDetailSheetTrigger({
     if (!open) return;
     const cycle = ++openCycleRef.current;
 
-    const cached =
-      userId &&
-      clientPointsFetchCache &&
-      clientPointsFetchCache.userId === userId &&
-      Date.now() - clientPointsFetchCache.at < CLIENT_POINTS_CACHE_TTL_MS
-        ? clientPointsFetchCache.data
-        : null;
+    const cached = userId ? getClientPointsFetchCache(userId) : null;
 
     const mergedSeed = resolvedInitial ?? cached ?? dataRef.current;
     if (resolvedInitial) {

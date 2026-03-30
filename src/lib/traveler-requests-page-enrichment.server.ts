@@ -7,11 +7,12 @@ import type {
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role";
 import type { StoredMatchRequest } from "@/lib/traveler-match-requests";
 import type { PublicGuardian } from "@/lib/guardian-public";
+import { regionKeyFromSlug, type TravelerHubRegionLabelKey } from "@/lib/mypage/traveler-hub-region-key";
 
 export type RequestPageRequestType = "half_day" | "day" | "consult";
 
 export type MatchRequestRowEnrichment = {
-  region_label_key: "gwanghwamun" | "gangnam" | null;
+  region_label_key: TravelerHubRegionLabelKey | null;
   /** TravelerHub `region.*`에 없을 때 카드에 그대로 노출 */
   region_display: string;
   theme_slug: string;
@@ -60,24 +61,6 @@ function pickLatestIso(...candidates: (string | null | undefined)[]): string {
     }
   }
   return best ?? "";
-}
-
-function regionKeyFromSlug(slug: string): "gwanghwamun" | "gangnam" | null {
-  const s = slug.toLowerCase();
-  if (
-    s.includes("gwanghwamun") ||
-    s.includes("gyeongbok") ||
-    s.includes("jongno") ||
-    s.includes("bukchon") ||
-    s.includes("광화문") ||
-    s.includes("북촌")
-  ) {
-    return "gwanghwamun";
-  }
-  if (s.includes("gangnam") || s.includes("강남") || s.includes("nonhyeon") || s.includes("논현")) {
-    return "gangnam";
-  }
-  return null;
 }
 
 function formatRegionSlugForDisplay(slug: string) {

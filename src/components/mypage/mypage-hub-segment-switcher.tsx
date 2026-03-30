@@ -1,14 +1,19 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import {
+  attentionCountAccessibleLabel,
+  formatAttentionCountForDisplay,
+} from "@/lib/mypage/attention-badge-display";
 import { cn } from "@/lib/utils";
 
 function SegmentCountBadge({ count, ariaLabel }: { count: number; ariaLabel: string }) {
   if (count <= 0) return null;
-  const label = count > 99 ? "99+" : String(count);
+  const label = formatAttentionCountForDisplay(count);
   return (
     <span
-      aria-label={ariaLabel}
+      role="status"
+      aria-label={attentionCountAccessibleLabel(ariaLabel, count)}
       className="bg-[var(--brand-trust-blue)]/18 text-[var(--brand-trust-blue)] ml-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums"
     >
       {label}

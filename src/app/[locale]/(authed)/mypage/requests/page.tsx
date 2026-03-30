@@ -18,10 +18,15 @@ import {
 import { requestStatusChipClass, type RequestTimelineStatus } from "@/lib/mypage-status-badge";
 import { MypageGuardianProfileSheetTrigger } from "@/components/mypage/mypage-guardian-profile-sheet-trigger";
 import { listPublicGuardiansMerged } from "@/lib/guardian-public-merged.server";
-import { listApprovedPostsMerged } from "@/lib/posts-public-merged.server";
 import {
-  postContextFromGuardianRepresentative,
-  representativePostLinesForSheetPreview,
+  getLatestApprovedPostForGuardianMerged,
+  listApprovedPostsByIdsMerged,
+} from "@/lib/posts-public-merged.server";
+import {
+  collectRepresentativePostIds,
+  postContextFromGuardianRepresentativeWithFallback,
+  representativePostLinesForSheetPreviewWithFallback,
+  resolveRepresentativeContentPost,
 } from "@/lib/guardian-representative-post-context";
 import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
 import { Compass } from "lucide-react";
@@ -116,7 +121,7 @@ export default async function TravelerRequestsPage() {
   const tThemes = await getTranslations("ExperienceThemes");
   const locale = await getLocale();
   const travelerId = await getSupabaseAuthUserIdOnly();
-  const [guardians, approvedPosts] = await Promise.all([listPublicGuardiansMerged(), listApprovedPostsMerged()]);
+  const guardians = await listPublicGuardiansMerged();
   const useMock = !travelerId || isMockGuardianId(travelerId);
   const matchRows = travelerId && !useMock ? await getMatchRequestsForTraveler(travelerId) : [];
   const enrichMap = !useMock && matchRows.length > 0 ? await enrichMatchRowsForRequestsPage(matchRows) : new Map();
@@ -174,6 +179,18 @@ export default async function TravelerRequestsPage() {
         };
       });
 
+  const usedGuardianIds = new Set(rows.map((r) => r.guardian_user_id).filter(Boolean) as string[]);
+  const usedGuardians = guardians.filter((g) => usedGuardianIds.has(g.user_id));
+  const repIds = collectRepresentativePostIds(usedGuardians);
+  const repPosts = await listApprovedPostsByIdsMerged(repIds);
+  const needFallbackUserIds = [
+    ...new Set(usedGuardians.filter((g) => !resolveRepresentativeContentPost(g, repPosts)).map((g) => g.user_id)),
+  ];
+  const fallbackPairs = await Promise.all(
+    needFallbackUserIds.map(async (uid) => [uid, await getLatestApprovedPostForGuardianMerged(uid)] as const),
+  );
+  const fallbackByUserId = new Map(fallbackPairs);
+
   return (
     <div className="space-y-6">
       <div>
@@ -184,8 +201,9 @@ export default async function TravelerRequestsPage() {
         {rows.map((r) => {
           const g = r.guardian_user_id ? guardians.find((x) => x.user_id === r.guardian_user_id) : null;
           const avatar = g ? guardianProfileImageUrls(g).avatar : null;
-          const repPosts = g ? representativePostLinesForSheetPreview(g, approvedPosts) : [];
-          const repCtx = g ? postContextFromGuardianRepresentative(g, approvedPosts) : null;
+          const fb = g ? (fallbackByUserId.get(g.user_id) ?? null) : null;
+          const repPostLines = g ? representativePostLinesForSheetPreviewWithFallback(g, repPosts, fb) : [];
+          const repCtx = g ? postContextFromGuardianRepresentativeWithFallback(g, repPosts, fb) : null;
           const svc = serviceLabel(t, r.serviceCode);
           return (
             <li key={r.id}>
@@ -269,7 +287,7 @@ export default async function TravelerRequestsPage() {
                           avg_traveler_rating: g.avg_traveler_rating,
                           expertise_tags: g.expertise_tags,
                           companion_style_slugs: g.companion_style_slugs,
-                          ...(repPosts.length > 0 ? { representativePosts: repPosts } : {}),
+                          ...(repPostLines.length > 0 ? { representativePosts: repPostLines } : {}),
                         }}
                         triggerLabel={t("openGuardian")}
                         postContext={repCtx}

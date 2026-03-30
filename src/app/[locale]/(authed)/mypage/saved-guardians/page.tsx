@@ -3,10 +3,15 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { PublicGuardian } from "@/lib/guardian-public";
 import { listPublicGuardiansMerged } from "@/lib/guardian-public-merged.server";
-import { listApprovedPostsMerged } from "@/lib/posts-public-merged.server";
 import {
-  postContextFromGuardianRepresentative,
-  representativePostLinesForSheetPreview,
+  getLatestApprovedPostForGuardianMerged,
+  listApprovedPostsByIdsMerged,
+} from "@/lib/posts-public-merged.server";
+import {
+  collectRepresentativePostIds,
+  postContextFromGuardianRepresentativeWithFallback,
+  representativePostLinesForSheetPreviewWithFallback,
+  resolveRepresentativeContentPost,
 } from "@/lib/guardian-representative-post-context";
 import { guardianProfileImageUrls, GUARDIAN_PROFILE_COVER_POSITION_CLASS } from "@/lib/guardian-profile-images";
 import { getSessionUserId } from "@/lib/supabase/server-user";
@@ -31,13 +36,19 @@ export default async function TravelerSavedGuardiansPage() {
   const t = await getTranslations("TravelerHub");
   const tTier = await getTranslations("GuardianTier");
   const tReq = await getTranslations("GuardianRequest");
-  const [all, userId, approvedPosts] = await Promise.all([
-    listPublicGuardiansMerged(),
-    getSessionUserId(),
-    listApprovedPostsMerged(),
-  ]);
+  const [all, userId] = await Promise.all([listPublicGuardiansMerged(), getSessionUserId()]);
   const savedIds = await getTravelerSavedGuardianIdsUnified(userId);
   const saved = savedIds.map((id) => all.find((g) => g.user_id === id)).filter(Boolean) as PublicGuardian[];
+
+  const repIds = collectRepresentativePostIds(saved);
+  const repPosts = await listApprovedPostsByIdsMerged(repIds);
+  const needFallbackUserIds = [
+    ...new Set(saved.filter((g) => !resolveRepresentativeContentPost(g, repPosts)).map((g) => g.user_id)),
+  ];
+  const fallbackPairs = await Promise.all(
+    needFallbackUserIds.map(async (uid) => [uid, await getLatestApprovedPostForGuardianMerged(uid)] as const),
+  );
+  const fallbackByUserId = new Map(fallbackPairs);
 
   return (
     <div className="space-y-6">
@@ -57,8 +68,9 @@ export default async function TravelerSavedGuardiansPage() {
       <ul className="grid gap-4 sm:grid-cols-2">
         {saved.map((g) => {
           const imgs = guardianProfileImageUrls(g);
-          const repLines = representativePostLinesForSheetPreview(g, approvedPosts);
-          const repCtx = postContextFromGuardianRepresentative(g, approvedPosts);
+          const fb = fallbackByUserId.get(g.user_id) ?? null;
+          const repLines = representativePostLinesForSheetPreviewWithFallback(g, repPosts, fb);
+          const repCtx = postContextFromGuardianRepresentativeWithFallback(g, repPosts, fb);
           return (
             <li key={g.user_id}>
               <Card className="overflow-hidden rounded-2xl border-border/60 py-0 shadow-[var(--shadow-sm)]">

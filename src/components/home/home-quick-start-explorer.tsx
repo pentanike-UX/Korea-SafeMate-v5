@@ -7,6 +7,7 @@ import { Link } from "@/i18n/navigation";
 import { mockExperienceThemes, mockLaunchAreas } from "@/data/mock";
 import type { LaunchAreaSlug } from "@/types/launch-area";
 import { Button } from "@/components/ui/button";
+import { HomeAuxiliaryNoteSection } from "@/components/home/home-auxiliary-note";
 import { HomeMoodOptionCard } from "@/components/home/home-mood-option-card";
 import { Badge } from "@/components/ui/badge";
 import { useHomeExplorePreferences } from "@/components/home/home-explore-preferences";
@@ -284,12 +285,7 @@ export function HomeQuickStartExplorer() {
           </div>
         </div>
 
-        <p
-          className="text-muted-foreground mt-6 max-w-3xl border-border/50 border-l-2 pl-3 text-xs leading-relaxed sm:mt-7 sm:pl-3.5 sm:text-[13px]"
-          role="note"
-        >
-          {tHome("processClarity")}
-        </p>
+        <HomeAuxiliaryNoteSection>{tHome("processClarity")}</HomeAuxiliaryNoteSection>
       </div>
     </section>
   );

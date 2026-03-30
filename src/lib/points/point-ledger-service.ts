@@ -392,8 +392,17 @@ export async function fetchLedgerAttentionSignals(
     sb.from("point_ledger").select("id").eq("user_id", userId).order("occurred_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
-  if (countErr) console.error("[points] fetchLedgerAttentionSignals count", countErr);
-  if (headErr) console.error("[points] fetchLedgerAttentionSignals head", headErr);
+  if (countErr) {
+    console.error("[points] fetchLedgerAttentionSignals count query failed", countErr);
+  }
+  if (headErr) {
+    console.error("[points] fetchLedgerAttentionSignals latest-id head failed", headErr);
+  }
+  if (!countErr && count === null) {
+    console.warn(
+      "[points] fetchLedgerAttentionSignals: exact row count is null without error — check Supabase project settings / RLS / count+head behavior",
+    );
+  }
 
   return {
     recentCount: typeof count === "number" ? count : 0,

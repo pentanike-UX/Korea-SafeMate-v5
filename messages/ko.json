@@ -1183,7 +1183,10 @@
     },
     "region": {
       "gwanghwamun": "광화문",
-      "gangnam": "강남"
+      "gangnam": "강남",
+      "seoul": "서울",
+      "busan": "부산",
+      "jeju": "제주"
     },
     "navPoints": "포인트",
     "modeSegmentTraveler": "여행자",
