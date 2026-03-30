@@ -20,6 +20,7 @@ import { GuardianStickyCta } from "@/components/guardians/guardian-sticky-cta";
 import { GuardianTravelerReviewsList } from "@/components/guardians/guardian-traveler-reviews-list";
 import { clampSheetHeadline } from "@/lib/guardian-sheet-headline";
 import { filterIntroGalleryExcludingHero } from "@/lib/guardian-intro-gallery";
+import { resolveRepresentativeContentPosts } from "@/lib/guardian-representative-post-context";
 import { guardianProfileImageUrls, GUARDIAN_PROFILE_COVER_POSITION_CLASS } from "@/lib/guardian-profile-images";
 import { GuardianIntroGallery } from "@/components/guardians/guardian-intro-gallery";
 import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
@@ -55,10 +56,7 @@ export async function GuardianDetailView({
   const line = (copy: LocalizedCopy) => marketingLine(locale, copy);
 
   const areaLive = isActiveLaunchArea(g.launch_area_slug);
-  const insightPosts = g.representative_post_ids
-    .map((id) => mockContentPosts.find((p) => p.id === id))
-    .filter(Boolean)
-    .slice(0, 3) as (typeof mockContentPosts)[0][];
+  const insightPosts = resolveRepresentativeContentPosts(g, mockContentPosts, 3);
 
   const authorApprovedPosts = listPostsForGuardian(g.user_id).filter((p) => p.status === "approved");
   const postSheetItems = authorApprovedPosts.map((p) => ({

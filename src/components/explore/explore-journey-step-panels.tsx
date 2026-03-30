@@ -16,7 +16,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { TrustBadgeRow } from "@/components/forty-two/trust-badges";
 import { GuardianProfilePreviewSheetTrigger } from "@/components/guardians/guardian-profile-preview-sheet-trigger";
-import { GuardianRequestOpenTrigger, postContextFromContentPost } from "@/components/guardians/guardian-request-sheet";
+import { GuardianRequestOpenTrigger } from "@/components/guardians/guardian-request-sheet";
+import {
+  postContextFromGuardianRepresentative,
+  representativePostLinesForSheetPreview,
+} from "@/lib/guardian-representative-post-context";
 import { SaveGuardianButton } from "@/components/guardians/save-guardian-button";
 import { PostPreviewSheetCardArticle, PostPreviewSheetCardRoute } from "@/components/posts/post-preview-sheet";
 import { publicGuardianToSheetPreview } from "@/lib/guardian-profile-sheet-preview";
@@ -56,20 +60,6 @@ import {
 
 type LangPref = "en" | "ko" | "ja" | "any";
 type Pace = "calm" | "balanced" | "packed";
-
-function repPostsForSheetPreviewFromExplore(g: PublicGuardian): Pick<ContentPost, "id" | "title" | "summary">[] {
-  return g.representative_post_ids
-    .map((id) => mockContentPosts.find((p) => p.id === id))
-    .filter(Boolean)
-    .slice(0, 3)
-    .map((p) => ({ id: p!.id, title: p!.title, summary: p!.summary }));
-}
-
-function firstRepContentPostForExplore(g: PublicGuardian): ContentPost | null {
-  const id = g.representative_post_ids[0];
-  if (!id) return null;
-  return mockContentPosts.find((p) => p.id === id) ?? null;
-}
 
 function selectCardClass(selected: boolean) {
   return cn(
@@ -600,8 +590,7 @@ export function ExploreResultsDashboard(props: {
   const more = results.guardians.slice(1);
   const routePosts = results.posts.filter((p) => postHasRouteJourney(p));
   const articlePosts = results.posts.filter((p) => !postHasRouteJourney(p));
-  const featuredRepPost = featured ? firstRepContentPostForExplore(featured) : null;
-  const featuredRepCtx = featuredRepPost ? postContextFromContentPost(featuredRepPost) : null;
+  const featuredRepCtx = featured ? postContextFromGuardianRepresentative(featured, mockContentPosts) : null;
 
   const reasons = useMemo(() => {
     const lines: string[] = [];
@@ -867,7 +856,10 @@ export function ExploreResultsDashboard(props: {
                             </GuardianRequestOpenTrigger>
                             <div className="grid grid-cols-2 gap-2 sm:max-w-[14rem] sm:shrink-0">
                               <GuardianProfilePreviewSheetTrigger
-                                guardian={publicGuardianToSheetPreview(featured, repPostsForSheetPreviewFromExplore(featured))}
+                                guardian={publicGuardianToSheetPreview(
+                                  featured,
+                                  representativePostLinesForSheetPreview(featured, mockContentPosts),
+                                )}
                                 triggerLabel={t("dashCtaDetail")}
                                 triggerVariant="outline"
                                 className={cn(listCardActionButtonClass, "w-full")}
@@ -892,8 +884,7 @@ export function ExploreResultsDashboard(props: {
                   <h3 className="text-foreground font-semibold">{t("dashMoreGuardians")}</h3>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {more.map((g) => {
-                      const repPostFull = firstRepContentPostForExplore(g);
-                      const repCtx = repPostFull ? postContextFromContentPost(repPostFull) : null;
+                      const repCtx = postContextFromGuardianRepresentative(g, mockContentPosts);
                       return (
                       <Card key={g.user_id} className="overflow-hidden rounded-2xl border-border/70 py-0 shadow-[var(--shadow-sm)]">
                         <CardContent className="p-4 sm:p-5">
@@ -941,7 +932,10 @@ export function ExploreResultsDashboard(props: {
                                 </GuardianRequestOpenTrigger>
                                 <div className="grid grid-cols-2 gap-2 sm:max-w-[11rem] sm:shrink-0">
                                   <GuardianProfilePreviewSheetTrigger
-                                    guardian={publicGuardianToSheetPreview(g, repPostsForSheetPreviewFromExplore(g))}
+                                    guardian={publicGuardianToSheetPreview(
+                                      g,
+                                      representativePostLinesForSheetPreview(g, mockContentPosts),
+                                    )}
                                     triggerLabel={t("dashCtaDetail")}
                                     triggerVariant="outline"
                                     size="sm"

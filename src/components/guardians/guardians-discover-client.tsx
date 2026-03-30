@@ -15,7 +15,12 @@ import { TrustBadgeRow } from "@/components/forty-two/trust-badges";
 import { guardianProfileImageUrls, GUARDIAN_PROFILE_COVER_POSITION_CLASS } from "@/lib/guardian-profile-images";
 import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
 import { GuardianProfilePreviewSheetTrigger } from "@/components/guardians/guardian-profile-preview-sheet-trigger";
-import { GuardianRequestOpenTrigger, postContextFromContentPost } from "@/components/guardians/guardian-request-sheet";
+import { GuardianRequestOpenTrigger } from "@/components/guardians/guardian-request-sheet";
+import {
+  postContextFromGuardianRepresentative,
+  representativePostLinesForSheetPreview,
+  resolveRepresentativeContentPost,
+} from "@/lib/guardian-representative-post-context";
 import { SaveGuardianButton } from "@/components/guardians/save-guardian-button";
 import { publicGuardianToSheetPreview } from "@/lib/guardian-profile-sheet-preview";
 import { ExplorationFilterSummaryBar, type ExplorationSummaryChip } from "@/components/listing/exploration-filter-summary-bar";
@@ -38,20 +43,6 @@ type SortMode = "recommended" | "rating" | "reviews" | "fast";
 const LANGS = ["en", "ko", "ja", "es"] as const;
 const THEMES = ["k_drama_romance", "k_pop_day", "seoul_night", "movie_location", "safe_solo", "photo_route"] as const;
 const STYLES = ["calm", "planner", "energetic", "trendy", "friendly", "flexible"] as const;
-
-function repPostFor(g: PublicGuardian, approvedPosts: ContentPost[]) {
-  const id = g.representative_post_ids[0];
-  if (!id) return null;
-  return approvedPosts.find((p) => p.id === id) ?? null;
-}
-
-function repPostsForSheetPreview(g: PublicGuardian, approvedPosts: ContentPost[]) {
-  return g.representative_post_ids
-    .map((id) => approvedPosts.find((p) => p.id === id))
-    .filter(Boolean)
-    .slice(0, 3)
-    .map((p) => ({ id: p!.id, title: p!.title, summary: p!.summary }));
-}
 
 export function GuardiansDiscoverClient({
   guardians,
@@ -453,8 +444,8 @@ export function GuardiansDiscoverClient({
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2 sm:gap-3.5 xl:grid-cols-3 2xl:grid-cols-4">
             {filtered.map((g) => {
-              const rep = repPostFor(g, approvedPosts);
-              const repCtx = rep ? postContextFromContentPost(rep) : null;
+              const rep = resolveRepresentativeContentPost(g, approvedPosts);
+              const repCtx = postContextFromGuardianRepresentative(g, approvedPosts);
               const areaName = (tLaunch.raw(g.launch_area_slug) as { name: string }).name;
               const imgs = guardianProfileImageUrls(g);
               const styleSummary = g.companion_style_slugs
@@ -541,7 +532,10 @@ export function GuardiansDiscoverClient({
                           </GuardianRequestOpenTrigger>
                           <div className="grid grid-cols-2 gap-2">
                             <GuardianProfilePreviewSheetTrigger
-                              guardian={publicGuardianToSheetPreview(g, repPostsForSheetPreview(g, approvedPosts))}
+                              guardian={publicGuardianToSheetPreview(
+                                g,
+                                representativePostLinesForSheetPreview(g, approvedPosts),
+                              )}
                               triggerLabel={t("cardCtaCompareDetail")}
                               triggerVariant="outline"
                               size="sm"

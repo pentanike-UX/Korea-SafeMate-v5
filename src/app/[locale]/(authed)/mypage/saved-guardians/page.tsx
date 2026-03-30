@@ -3,6 +3,11 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import type { PublicGuardian } from "@/lib/guardian-public";
 import { listPublicGuardiansMerged } from "@/lib/guardian-public-merged.server";
+import { listApprovedPostsMerged } from "@/lib/posts-public-merged.server";
+import {
+  postContextFromGuardianRepresentative,
+  representativePostLinesForSheetPreview,
+} from "@/lib/guardian-representative-post-context";
 import { guardianProfileImageUrls, GUARDIAN_PROFILE_COVER_POSITION_CLASS } from "@/lib/guardian-profile-images";
 import { getSessionUserId } from "@/lib/supabase/server-user";
 import { getTravelerSavedGuardianIdsUnified } from "@/lib/traveler-saved-unified.server";
@@ -25,8 +30,12 @@ export async function generateMetadata() {
 export default async function TravelerSavedGuardiansPage() {
   const t = await getTranslations("TravelerHub");
   const tTier = await getTranslations("GuardianTier");
-  const all = await listPublicGuardiansMerged();
-  const userId = await getSessionUserId();
+  const tReq = await getTranslations("GuardianRequest");
+  const [all, userId, approvedPosts] = await Promise.all([
+    listPublicGuardiansMerged(),
+    getSessionUserId(),
+    listApprovedPostsMerged(),
+  ]);
   const savedIds = await getTravelerSavedGuardianIdsUnified(userId);
   const saved = savedIds.map((id) => all.find((g) => g.user_id === id)).filter(Boolean) as PublicGuardian[];
 
@@ -48,6 +57,8 @@ export default async function TravelerSavedGuardiansPage() {
       <ul className="grid gap-4 sm:grid-cols-2">
         {saved.map((g) => {
           const imgs = guardianProfileImageUrls(g);
+          const repLines = representativePostLinesForSheetPreview(g, approvedPosts);
+          const repCtx = postContextFromGuardianRepresentative(g, approvedPosts);
           return (
             <li key={g.user_id}>
               <Card className="overflow-hidden rounded-2xl border-border/60 py-0 shadow-[var(--shadow-sm)]">
@@ -82,19 +93,22 @@ export default async function TravelerSavedGuardiansPage() {
                           avatar_image_url: g.avatar_image_url,
                           list_card_image_url: g.list_card_image_url,
                           detail_hero_image_url: g.detail_hero_image_url,
+                          ...(repLines.length > 0 ? { representativePosts: repLines } : {}),
                         }}
                         triggerLabel={t("openProfile")}
                         className="h-10 w-full sm:min-w-0 sm:flex-1"
+                        postContext={repCtx}
                       />
                       <SavedGuardianRequestButton
                         className="h-10 w-full rounded-xl sm:min-w-0 sm:flex-1"
-                        label={t("request")}
+                        label={tReq("openCta")}
                         openDetail={{
                           guardianUserId: g.user_id,
                           displayName: g.display_name,
                           headline: g.headline,
                           avatarUrl: imgs.avatar,
                           suggestedRegionSlug: g.primary_region_slug,
+                          ...(repCtx ?? {}),
                         }}
                       />
                     </div>

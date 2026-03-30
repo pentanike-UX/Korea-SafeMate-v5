@@ -11,7 +11,11 @@ import { guardianProfileImageUrls, GUARDIAN_PROFILE_COVER_POSITION_CLASS } from 
 import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
 import { cn } from "@/lib/utils";
 import { GuardianProfilePreviewSheetTrigger } from "@/components/guardians/guardian-profile-preview-sheet-trigger";
-import { GuardianRequestOpenTrigger, postContextFromContentPost } from "@/components/guardians/guardian-request-sheet";
+import { GuardianRequestOpenTrigger } from "@/components/guardians/guardian-request-sheet";
+import {
+  postContextFromGuardianRepresentative,
+  representativePostLinesForSheetPreview,
+} from "@/lib/guardian-representative-post-context";
 import { SaveGuardianButton } from "@/components/guardians/save-guardian-button";
 import { listCardActionButtonClass } from "@/components/ui/action-variants";
 import { Badge } from "@/components/ui/badge";
@@ -20,24 +24,10 @@ import { TextActionLink } from "@/components/ui/text-action";
 import { publicGuardianToSheetPreview } from "@/lib/guardian-profile-sheet-preview";
 import { TrustBadgeRow } from "@/components/forty-two/trust-badges";
 import { useHomeExplorePreferences } from "@/components/home/home-explore-preferences";
-import type { ContentPost, GuardianTier } from "@/types/domain";
+import type { GuardianTier } from "@/types/domain";
 
 const TRUST_BADGE_MAX = 4;
 const TAG_MAX = 3;
-
-function repPostsForSheetPreview(g: PublicGuardian): Pick<ContentPost, "id" | "title" | "summary">[] {
-  return g.representative_post_ids
-    .map((id) => mockContentPosts.find((p) => p.id === id))
-    .filter(Boolean)
-    .slice(0, 3)
-    .map((p) => ({ id: p!.id, title: p!.title, summary: p!.summary }));
-}
-
-function firstRepContentPost(g: PublicGuardian): ContentPost | null {
-  const id = g.representative_post_ids[0];
-  if (!id) return null;
-  return mockContentPosts.find((p) => p.id === id) ?? null;
-}
 
 export function HomeRecommendedGuardiansSection() {
   const { area, theme } = useHomeExplorePreferences();
@@ -104,8 +94,7 @@ export function HomeRecommendedGuardiansSection() {
         <div className="mx-auto grid max-w-5xl gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
           {picks.map((g) => {
             const imgs = guardianProfileImageUrls(g);
-            const repPostFull = firstRepContentPost(g);
-            const repCtx = repPostFull ? postContextFromContentPost(repPostFull) : null;
+            const repCtx = postContextFromGuardianRepresentative(g, mockContentPosts);
             return (
               <article
                 key={g.user_id}
@@ -169,7 +158,7 @@ export function HomeRecommendedGuardiansSection() {
                   </GuardianRequestOpenTrigger>
                   <div className="grid grid-cols-2 gap-2">
                     <GuardianProfilePreviewSheetTrigger
-                      guardian={publicGuardianToSheetPreview(g, repPostsForSheetPreview(g))}
+                      guardian={publicGuardianToSheetPreview(g, representativePostLinesForSheetPreview(g, mockContentPosts))}
                       triggerLabel={t("recommendedCtaDetail")}
                       triggerVariant="outline"
                       size="sm"

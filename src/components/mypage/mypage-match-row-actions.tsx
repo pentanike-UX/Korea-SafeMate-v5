@@ -30,6 +30,7 @@ export function MypageMatchRowActions({
         canWriteTravelerReview={canWriteTravelerReview}
         className="h-9 rounded-lg"
       />
+      {/* postContext 없음: 매칭 행에는 포스트 id/요약이 없어 의도적 */}
       <MypageGuardianProfileSheetTrigger
         guardian={{
           user_id: row.guardian_user_id,

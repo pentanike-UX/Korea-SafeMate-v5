@@ -222,7 +222,10 @@ export function HomeHeroCarousel() {
               </>
             ) : null}
           </div>
-          <p className="mt-5 max-w-md text-[10px] leading-snug text-white/45 sm:text-[11px]">{t("scopeNote")}</p>
+          <div className="mt-5 max-w-md space-y-1">
+            <p className="text-[10px] leading-snug text-white/52 sm:text-[11px]">{t("scopeNote")}</p>
+            <p className="text-[10px] leading-snug text-white/38 sm:text-[11px]">{t("scopeNoteDetail")}</p>
+          </div>
         </div>
 
         {/* Bottom bar: progress + meta + dots + arrows */}

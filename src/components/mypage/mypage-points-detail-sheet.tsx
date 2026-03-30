@@ -18,6 +18,13 @@ const CLIENT_POINTS_CACHE_TTL_MS = 35_000;
 
 let clientPointsFetchCache: { userId: string; at: number; data: MypagePointsApiResponse } | null = null;
 
+function clearClientPointsCacheIfUserMismatch(userId: string | null) {
+  if (!clientPointsFetchCache) return;
+  if (!userId || clientPointsFetchCache.userId !== userId) {
+    clientPointsFetchCache = null;
+  }
+}
+
 function payloadSignature(p: MypagePointsApiResponse | null | undefined) {
   if (!p) return "";
   return `${p.balance.balance}:${p.balance.lifetime_earned}:${p.ledger[0]?.id ?? ""}:${p.ledger.length}`;
@@ -64,6 +71,7 @@ export function MypagePointsDetailSheetTrigger({
   const dataRef = useRef<MypagePointsApiResponse | null>(null);
   dataRef.current = data;
   const openCycleRef = useRef(0);
+  const prevAccountUserIdRef = useRef<string | null | undefined>(undefined);
 
   const pointsPageHref = pathname.includes("/mypage/guardian") ? "/mypage/guardian/points" : "/mypage/points";
   const userId = ctx?.accountUserId ?? null;
@@ -77,6 +85,24 @@ export function MypagePointsDetailSheetTrigger({
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
   }, []);
+
+  useEffect(() => {
+    clearClientPointsCacheIfUserMismatch(userId);
+  }, [userId]);
+
+  useEffect(() => {
+    if (prevAccountUserIdRef.current === undefined) {
+      prevAccountUserIdRef.current = userId;
+      return;
+    }
+    if (prevAccountUserIdRef.current !== userId) {
+      prevAccountUserIdRef.current = userId;
+      openCycleRef.current += 1;
+      setData(resolvedInitial ?? null);
+      setError(null);
+      setLoading(false);
+    }
+  }, [userId, resolvedInitial, resolvedSig]);
 
   useEffect(() => {
     if (!resolvedInitial) return;

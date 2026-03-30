@@ -283,6 +283,13 @@ export function HomeQuickStartExplorer() {
             </div>
           </div>
         </div>
+
+        <p
+          className="text-muted-foreground mt-6 max-w-3xl border-border/50 border-l-2 pl-3 text-xs leading-relaxed sm:mt-7 sm:pl-3.5 sm:text-[13px]"
+          role="note"
+        >
+          {tHome("processClarity")}
+        </p>
       </div>
     </section>
   );

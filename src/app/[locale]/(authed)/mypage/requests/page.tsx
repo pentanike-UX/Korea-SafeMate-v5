@@ -19,6 +19,10 @@ import { requestStatusChipClass, type RequestTimelineStatus } from "@/lib/mypage
 import { MypageGuardianProfileSheetTrigger } from "@/components/mypage/mypage-guardian-profile-sheet-trigger";
 import { listPublicGuardiansMerged } from "@/lib/guardian-public-merged.server";
 import { listApprovedPostsMerged } from "@/lib/posts-public-merged.server";
+import {
+  postContextFromGuardianRepresentative,
+  representativePostLinesForSheetPreview,
+} from "@/lib/guardian-representative-post-context";
 import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
 import { Compass } from "lucide-react";
 
@@ -180,9 +184,8 @@ export default async function TravelerRequestsPage() {
         {rows.map((r) => {
           const g = r.guardian_user_id ? guardians.find((x) => x.user_id === r.guardian_user_id) : null;
           const avatar = g ? guardianProfileImageUrls(g).avatar : null;
-          const repPosts = g
-            ? approvedPosts.filter((p) => p.author_user_id === g.user_id).slice(0, 3).map((p) => ({ id: p.id, title: p.title, summary: p.summary }))
-            : [];
+          const repPosts = g ? representativePostLinesForSheetPreview(g, approvedPosts) : [];
+          const repCtx = g ? postContextFromGuardianRepresentative(g, approvedPosts) : null;
           const svc = serviceLabel(t, r.serviceCode);
           return (
             <li key={r.id}>
@@ -266,9 +269,10 @@ export default async function TravelerRequestsPage() {
                           avg_traveler_rating: g.avg_traveler_rating,
                           expertise_tags: g.expertise_tags,
                           companion_style_slugs: g.companion_style_slugs,
-                          representativePosts: repPosts,
+                          ...(repPosts.length > 0 ? { representativePosts: repPosts } : {}),
                         }}
                         triggerLabel={t("openGuardian")}
+                        postContext={repCtx}
                       />
                     ) : null}
                     <Button asChild size="sm" className="rounded-xl">

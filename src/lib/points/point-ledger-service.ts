@@ -1,3 +1,4 @@
+import { cache } from "react";
 import {
   idempotencyGuardianProfileReward,
   idempotencyMatchReward,
@@ -371,7 +372,36 @@ export async function fetchLedgerForUser(userId: string, limit = 50) {
   return data ?? [];
 }
 
-export async function fetchBalanceSnapshot(userId: string) {
+/**
+ * 마이페이지 attention·배지용 — 전체 원장 row를 가져오지 않고 집계 + 최신 1건 id만 조회.
+ * (이전: fetchLedgerForUser(80) 후 클라이언트식 필터 — 초고빈도 시 80건 상한으로 과소계 가능했음)
+ */
+export async function fetchLedgerAttentionSignals(
+  userId: string,
+  sinceIso: string,
+): Promise<{ recentCount: number; latestEntryId: string }> {
+  const sb = createServiceRoleSupabase();
+  if (!sb) return { recentCount: 0, latestEntryId: "" };
+
+  const [{ count, error: countErr }, { data: headRow, error: headErr }] = await Promise.all([
+    sb
+      .from("point_ledger")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("occurred_at", sinceIso),
+    sb.from("point_ledger").select("id").eq("user_id", userId).order("occurred_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
+
+  if (countErr) console.error("[points] fetchLedgerAttentionSignals count", countErr);
+  if (headErr) console.error("[points] fetchLedgerAttentionSignals head", headErr);
+
+  return {
+    recentCount: typeof count === "number" ? count : 0,
+    latestEntryId: headRow && typeof headRow.id === "string" ? headRow.id : "",
+  };
+}
+
+async function fetchBalanceSnapshotUncached(userId: string) {
   const sb = createServiceRoleSupabase();
   if (!sb) return null;
 
@@ -382,3 +412,6 @@ export async function fetchBalanceSnapshot(userId: string) {
   }
   return data;
 }
+
+/** 동일 RSC 요청에서 허브 스냅샷·포인트 번들이 각각 호출해도 DB 1회로 합쳐진다. */
+export const fetchBalanceSnapshot = cache(fetchBalanceSnapshotUncached);

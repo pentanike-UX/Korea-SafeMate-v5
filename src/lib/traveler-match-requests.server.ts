@@ -46,6 +46,7 @@ type DbMatchRow = {
   guardian_user_id: string;
   booking_id: string | null;
   created_at: string;
+  updated_at?: string | null;
   traveler_confirmed_at: string | null;
   guardian_confirmed_at: string | null;
   completion_confirmed_at: string | null;
@@ -98,7 +99,7 @@ async function getDbMatchRequests(params: {
   const base = sb
     .from("matches")
     .select(
-      "id, traveler_user_id, guardian_user_id, booking_id, created_at, traveler_confirmed_at, guardian_confirmed_at, completion_confirmed_at",
+      "id, traveler_user_id, guardian_user_id, booking_id, created_at, updated_at, traveler_confirmed_at, guardian_confirmed_at, completion_confirmed_at",
     )
     .order("created_at", { ascending: false })
     .limit(50);
@@ -113,19 +114,22 @@ async function getDbMatchRequests(params: {
   const { data, error } = await query;
   if (error || !data) return [];
 
-  const mapped: StoredMatchRequest[] = (data as DbMatchRow[]).map((r) => ({
-    id: r.id,
-    traveler_user_id: r.traveler_user_id,
-    guardian_user_id: r.guardian_user_id,
-    guardian_display_name: null,
-    status: deriveMatchStatusFromDbRow(r),
-    created_at: r.created_at,
-    updated_at: r.created_at,
-    booking_id: r.booking_id,
-    traveler_confirmed_at: r.traveler_confirmed_at,
-    guardian_confirmed_at: r.guardian_confirmed_at,
-    completion_confirmed_at: r.completion_confirmed_at,
-  }));
+  const mapped: StoredMatchRequest[] = (data as DbMatchRow[]).map((r) => {
+    const touch = typeof r.updated_at === "string" && r.updated_at.trim() ? r.updated_at : r.created_at;
+    return {
+      id: r.id,
+      traveler_user_id: r.traveler_user_id,
+      guardian_user_id: r.guardian_user_id,
+      guardian_display_name: null,
+      status: deriveMatchStatusFromDbRow(r),
+      created_at: r.created_at,
+      updated_at: touch,
+      booking_id: r.booking_id,
+      traveler_confirmed_at: r.traveler_confirmed_at,
+      guardian_confirmed_at: r.guardian_confirmed_at,
+      completion_confirmed_at: r.completion_confirmed_at,
+    };
+  });
 
   await enrichGuardianDisplayNames(sb, mapped);
   return mapped;

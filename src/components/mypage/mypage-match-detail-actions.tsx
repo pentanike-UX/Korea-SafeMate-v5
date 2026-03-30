@@ -19,6 +19,7 @@ export function MypageMatchDetailActions({
 
   return (
     <div className="flex flex-wrap gap-2 pt-1">
+      {/* postContext 없음: 매칭 상세에는 연결 포스트 맥락 미보유 시 의도적 */}
       <MypageGuardianProfileSheetTrigger
         guardian={{
           user_id: row.guardian_user_id,

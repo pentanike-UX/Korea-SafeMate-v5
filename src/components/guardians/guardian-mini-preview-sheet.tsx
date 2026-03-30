@@ -31,6 +31,7 @@ export function GuardianMiniPreviewSheetTrigger({
   size?: "default" | "sm" | "lg";
 }) {
   const t = useTranslations("TravelerHub");
+  const tReq = useTranslations("GuardianRequest");
   const [open, setOpen] = useState(false);
   const [side, setSide] = useState<"right" | "bottom">("bottom");
 
@@ -88,7 +89,7 @@ export function GuardianMiniPreviewSheetTrigger({
                 );
               }}
             >
-              {t("request")}
+              {tReq("openCta")}
             </Button>
           </div>
         </div>

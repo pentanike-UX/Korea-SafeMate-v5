@@ -4,7 +4,7 @@ import { mockTravelerTripRequests } from "@/data/mock/traveler-hub";
 import type { AppAccountRole } from "@/lib/auth/app-role";
 import type { GuardianProfileStatus } from "@/lib/auth/guardian-profile-status";
 import { isMockGuardianId } from "@/lib/dev/mock-guardian-auth";
-import { fetchBalanceSnapshot, fetchLedgerForUser } from "@/lib/points/point-ledger-service";
+import { fetchBalanceSnapshot, fetchLedgerAttentionSignals } from "@/lib/points/point-ledger-service";
 import { getMatchRequestsForGuardian, getMatchRequestsForTraveler } from "@/lib/traveler-match-requests.server";
 import { getTravelerSavedGuardianIdsUnified, getTravelerSavedPostIdsUnified } from "@/lib/traveler-saved-unified.server";
 import { getSubmittedTravelerReviewsFromCookie } from "@/lib/traveler-submitted-reviews.server";
@@ -44,11 +44,6 @@ function emptyGuardianWorkspaceNav(): Record<GuardianWorkspaceNavBadgeKey, numbe
     },
     {} as Record<GuardianWorkspaceNavBadgeKey, number>,
   );
-}
-
-function countLedgerSinceIso(rows: { occurred_at: string }[], sinceIso: string): number {
-  const since = new Date(sinceIso).getTime();
-  return rows.filter((r) => new Date(r.occurred_at).getTime() >= since).length;
 }
 
 function emptyTravelerNavSignatures(): Record<TravelerNavBadgeKey, string> {
@@ -191,9 +186,9 @@ export async function getMypageHubSnapshot(
   if (userId && !isMockGuardianId(userId)) {
     const since = new Date();
     since.setUTCDate(since.getUTCDate() - RECENT_LEDGER_DAYS);
-    const ledger = await fetchLedgerForUser(userId, 80);
-    pointsRecentLedgerCount = countLedgerSinceIso(ledger, since.toISOString());
-    pointsLedgerHeadId = ledger[0]?.id ?? "";
+    const signals = await fetchLedgerAttentionSignals(userId, since.toISOString());
+    pointsRecentLedgerCount = signals.recentCount;
+    pointsLedgerHeadId = signals.latestEntryId;
   }
 
   const travelerNavBadges = emptyTravelerNav();
