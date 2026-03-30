@@ -2,6 +2,7 @@
   "name": "korea-safemate",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@10.33.0",
   "author": "pentanike-UX (https://github.com/pentanike-UX)",
   "repository": {
     "type": "git",
