@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { BRAND } from "@/lib/constants";
 import { ThemeProvider } from "@/components/theme/theme-provider";
@@ -41,6 +42,7 @@ export default function RootLayout({
       </head>
       <body className="bg-background text-foreground flex min-h-full flex-col transition-colors duration-300 ease-out">
         <ThemeProvider>{children}</ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
