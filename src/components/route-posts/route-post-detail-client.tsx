@@ -12,11 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { PostSampleBadge } from "@/components/posts/post-sample-badge";
-import {
-  GuardianRequestOpenTrigger,
-  GuardianRequestSheetHost,
-  type GuardianRequestSheetHostProps,
-} from "@/components/guardians/guardian-request-sheet";
+import { GuardianRequestDefaultsPublisher } from "@/components/guardians/guardian-request-defaults-publisher";
+import { GuardianRequestOpenTrigger, type GuardianRequestSheetHostProps } from "@/components/guardians/guardian-request-sheet";
 import { postCoverImageUrl, getSpotDisplayImageAlt, getSpotDisplayImageUrl } from "@/lib/content-post-route";
 import { buildLocalPostVisualPlan, localHeroAlt, type LocalPostVisualPlan } from "@/lib/post-local-images";
 import { cn } from "@/lib/utils";
@@ -208,7 +205,7 @@ export function RoutePostDetailClient({
 
   return (
     <>
-      <GuardianRequestSheetHost {...requestHost} />
+      <GuardianRequestDefaultsPublisher {...requestHost} />
       {showStickyNav && spots.length > 0 ? (
         <RouteStickyLocalNav
           spots={spots}

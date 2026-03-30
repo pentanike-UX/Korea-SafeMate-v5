@@ -6,6 +6,7 @@ import { Link } from "@/i18n/navigation";
 import type { ContentPost } from "@/types/domain";
 import { getContentPostFormat, getPostHeroImageAlt, getPostHeroImageUrl } from "@/lib/content-post-route";
 import { PostSampleBadge } from "@/components/posts/post-sample-badge";
+import { GuardianMiniPreviewSheetTrigger } from "@/components/guardians/guardian-mini-preview-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -68,32 +69,43 @@ export function RoutePostCard({ post, regionLabel, className }: { post: ContentP
             </span>
           </div>
         </div>
-        <div className="p-5 pb-2">
+        <div className="px-4 pb-1 pt-4 sm:px-5 sm:pb-2 sm:pt-5">
           <p className="text-primary text-[10px] font-bold tracking-widest uppercase">{post.tags.slice(0, 3).join(" · ")}</p>
-          <h2 className="text-foreground mt-2 line-clamp-2 font-semibold leading-snug group-hover:text-primary">{post.title}</h2>
-          <p className="text-muted-foreground mt-2 line-clamp-2 text-sm">{post.summary}</p>
+          <h2 className="text-foreground mt-1.5 line-clamp-2 text-[15px] font-semibold leading-snug group-hover:text-primary sm:mt-2 sm:text-base">
+            {post.title}
+          </h2>
+          <p className="text-muted-foreground mt-1.5 line-clamp-2 text-sm leading-snug sm:mt-2">{post.summary}</p>
         </div>
       </Link>
-      <div className="flex flex-1 flex-col px-5 pb-5">
-        <p className="text-muted-foreground text-xs leading-relaxed">
-          <span className="text-foreground font-medium">{t("cardSpots", { count: journey.spots.length })}</span>
-          <span aria-hidden> · </span>
-          <span>{t("chipDistance", { km: meta.estimated_total_distance_km.toFixed(1) })}</span>
-          <span aria-hidden> · </span>
-          <span>{transportLabel}</span>
-        </p>
-        <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-2 text-xs">
-          <span>{post.author_display_name}</span>
-          <span aria-hidden>·</span>
-          <span className="capitalize">{regionLabel}</span>
+      <div className="flex flex-1 flex-col gap-3 px-4 pb-4 pt-1 sm:px-5 sm:pb-5 sm:pt-2">
+        <div className="text-muted-foreground space-y-1 text-xs leading-snug">
+          <p>
+            <span className="text-foreground font-medium">{t("cardSpots", { count: journey.spots.length })}</span>
+            <span aria-hidden> · </span>
+            <span>{t("chipDistance", { km: meta.estimated_total_distance_km.toFixed(1) })}</span>
+            <span aria-hidden> · </span>
+            <span>{transportLabel}</span>
+          </p>
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className="text-foreground/90 font-medium">{post.author_display_name}</span>
+            <span aria-hidden className="text-muted-foreground/80">
+              ·
+            </span>
+            <span className="capitalize">{regionLabel}</span>
+          </p>
         </div>
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-          <Button asChild size="sm" className="flex-1 rounded-xl">
+        <div className="mt-auto flex flex-col gap-2 sm:flex-row sm:items-stretch">
+          <Button asChild size="sm" className="h-9 min-h-9 flex-1 rounded-xl px-3 text-xs font-semibold sm:text-sm">
             <Link href={`/posts/${post.id}`}>{t("ctaViewRoute")}</Link>
           </Button>
-          <Button asChild size="sm" variant="outline" className="flex-1 rounded-xl">
-            <Link href={`/guardians/${post.author_user_id}`}>{t("ctaChooseGuardian")}</Link>
-          </Button>
+          <GuardianMiniPreviewSheetTrigger
+            guardianUserId={post.author_user_id}
+            displayName={post.author_display_name}
+            subtitle={post.summary}
+            triggerLabel={t("ctaChooseGuardian")}
+            triggerClassName="h-9 min-h-9 flex-1 px-3 text-xs font-semibold sm:text-sm"
+            size="sm"
+          />
         </div>
       </div>
     </div>

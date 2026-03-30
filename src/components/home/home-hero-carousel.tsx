@@ -21,7 +21,6 @@ import {
 
 export function HomeHeroCarousel() {
   const t = useTranslations("Home");
-  const tBrand = useTranslations("Brand");
   const viewer = useViewerRole();
   const heroGuest = viewer == null;
   const heroGuardian = viewer === "guardian";
@@ -125,13 +124,12 @@ export function HomeHeroCarousel() {
           <h1 className="mt-4 text-3xl font-semibold tracking-tight text-balance text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)] sm:text-4xl md:text-[2.35rem] md:leading-[1.12]">
             {t("heroTitle")}
           </h1>
-          <p className="mt-4 text-[15px] leading-relaxed text-white/88">{t("heroLead")}</p>
-          <p className="mt-2 text-sm font-medium text-white/65">{tBrand("tagline")}</p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-nowrap sm:items-stretch sm:gap-4">
+          <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-white/90 sm:text-[16px]">{t("heroLead")}</p>
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-nowrap sm:items-stretch sm:gap-4">
             <Button
               asChild
               size="lg"
-              className="h-auto min-h-12 w-full gap-2.5 rounded-[var(--radius-md)] border-0 bg-white px-8 py-3.5 text-base font-semibold text-zinc-900 shadow-lg shadow-black/25 hover:bg-white/95 sm:w-auto"
+              className="h-auto min-h-12 w-full gap-2.5 rounded-[var(--radius-md)] border-0 bg-white px-8 py-3.5 text-base font-semibold text-zinc-900 shadow-xl shadow-black/35 ring-2 ring-white/25 hover:bg-white/95 sm:w-auto"
             >
               <Link
                 href={
@@ -181,31 +179,41 @@ export function HomeHeroCarousel() {
               </Link>
             </Button>
           </div>
-          {heroTraveler ? (
-            <Link
-              href="/mypage/saved-posts"
-              className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-white/75 underline-offset-4 transition-colors hover:text-white hover:underline"
-            >
-              {t("heroPolicyTravelerRecentPosts")}
-            </Link>
-          ) : null}
-          {heroGuardian ? (
-            <Link
-              href="/mypage/points"
-              className="mt-4 inline-flex min-h-11 items-center text-sm font-medium text-white/75 underline-offset-4 transition-colors hover:text-white hover:underline"
-            >
-              {t("heroPolicyGuardianPoints")}
-            </Link>
-          ) : null}
-          {heroGuest ? (
-            <Link
-              href="/guardians/apply"
-              className="mt-3 inline-flex min-h-11 items-center text-sm font-medium text-white/65 underline-offset-4 transition-colors hover:text-white/90 hover:underline"
-            >
-              {t("heroPolicyGuestGuardianApply")}
-            </Link>
-          ) : null}
-          <p className="mt-6 text-xs leading-relaxed text-white/55">{t("scopeNote")}</p>
+          <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+            {heroTraveler ? (
+              <Link
+                href="/mypage/saved-posts"
+                className="inline-flex min-h-9 items-center text-xs font-medium text-white/72 underline-offset-4 transition-colors hover:text-white hover:underline sm:text-sm"
+              >
+                {t("heroPolicyTravelerRecentPosts")}
+              </Link>
+            ) : null}
+            {heroGuardian ? (
+              <Link
+                href="/mypage/points"
+                className="inline-flex min-h-9 items-center text-xs font-medium text-white/72 underline-offset-4 transition-colors hover:text-white hover:underline sm:text-sm"
+              >
+                {t("heroPolicyGuardianPoints")}
+              </Link>
+            ) : null}
+            {heroGuest ? (
+              <>
+                <Link
+                  href="/guardians/apply"
+                  className="inline-flex min-h-9 items-center text-xs font-medium text-white/65 underline-offset-4 transition-colors hover:text-white/90 hover:underline sm:text-sm"
+                >
+                  {t("heroPolicyGuestGuardianApply")}
+                </Link>
+                <Link
+                  href="/about"
+                  className="inline-flex min-h-9 items-center text-xs font-medium text-white/55 underline-offset-4 transition-colors hover:text-white/80 hover:underline sm:text-sm"
+                >
+                  {t("heroLinkStory")}
+                </Link>
+              </>
+            ) : null}
+          </div>
+          <p className="mt-5 max-w-md text-[10px] leading-snug text-white/45 sm:text-[11px]">{t("scopeNote")}</p>
         </div>
 
         {/* Bottom bar: progress + meta + dots + arrows */}

@@ -70,15 +70,15 @@ export function HomeQuickStartExplorer() {
 
   return (
     <section className="border-border/40 border-b bg-[var(--bg-quick-start)]">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-5 sm:py-14 md:py-16">
-        <div className="mb-8 max-w-2xl sm:mb-10">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-5 sm:py-11 md:py-12">
+        <div className="mb-6 max-w-2xl sm:mb-8">
           <p className="text-[var(--brand-trust-blue)] text-[11px] font-semibold tracking-[0.18em] uppercase">{t("eyebrow")}</p>
-          <h2 className="text-text-strong mt-2 text-xl font-semibold tracking-tight sm:mt-3 sm:text-2xl md:text-3xl">{t("title")}</h2>
-          <p className="text-muted-foreground mt-3 text-sm leading-relaxed sm:text-[15px]">{t("lead")}</p>
+          <h2 className="text-text-strong mt-2 text-lg font-semibold tracking-tight sm:mt-2.5 sm:text-2xl md:text-[1.65rem]">{t("title")}</h2>
+          <p className="text-muted-foreground mt-2.5 text-sm leading-relaxed sm:mt-3 sm:text-[15px]">{t("lead")}</p>
         </div>
 
         {/* 1. Regions */}
-        <div className="mb-10 sm:mb-12">
+        <div className="mb-8 sm:mb-10">
           <h3 className="text-foreground mb-3 text-sm font-semibold tracking-tight sm:mb-4 sm:text-base">{t("step1Title")}</h3>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {mockLaunchAreas.map((a) => {
@@ -207,7 +207,7 @@ export function HomeQuickStartExplorer() {
         </div>
 
         {/* 2. Moods */}
-        <div className="mb-10 sm:mb-12">
+        <div className="mb-8 sm:mb-10">
           <h3 className="text-foreground mb-4 text-sm font-semibold tracking-tight sm:mb-5 sm:text-base">{t("step2Title")}</h3>
           <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
             {mockExperienceThemes.map((th) => {
@@ -232,7 +232,7 @@ export function HomeQuickStartExplorer() {
         </div>
 
         {/* Summary + CTA */}
-        <div className="border-border/60 bg-card rounded-[var(--radius-lg)] border p-5 shadow-[var(--shadow-sm)] sm:p-7">
+        <div className="border-border/60 bg-card rounded-[var(--radius-lg)] border p-4 shadow-[var(--shadow-sm)] sm:p-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0 flex-1">
               <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase">

@@ -1,15 +1,20 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { mockTravelerSavedPostIds, mockTravelerTripRequests } from "@/data/mock";
+import { getTravelerSavedPostIds } from "@/lib/traveler-saved-posts-cookie";
 import { getTravelerSavedGuardianIds } from "@/lib/traveler-saved-guardians-cookie";
 import { mockGuardians } from "@/data/mock";
 import { isMockGuardianId } from "@/lib/dev/mock-guardian-auth";
 import { TravelerOverviewStatGrid } from "@/components/mypage/mypage-traveler-overview-stat-grid";
+import { TravelerMatchDetailSheetTrigger } from "@/components/mypage/traveler-match-detail-sheet";
+import { TravelerTripRequestDetailSheetTrigger } from "@/components/mypage/traveler-trip-request-detail-sheet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BRAND } from "@/lib/constants";
+import { resolveMypageSessionRole } from "@/lib/mypage-account.server";
 import { getServerSupabaseForUser, getSessionUserId, getSupabaseAuthUserIdOnly } from "@/lib/supabase/server-user";
 import { getMatchRequestsForTraveler } from "@/lib/traveler-match-requests.server";
+import { getSubmittedTravelerReviewsFromCookie } from "@/lib/traveler-submitted-reviews.server";
 import { ArrowRight, HeartHandshake, Sparkles, UserRound, Users } from "lucide-react";
 
 export async function generateMetadata() {
@@ -40,15 +45,24 @@ export default async function TravelerOverviewPage() {
   const openRequests = mockTravelerTripRequests.filter((r) => r.status === "requested" || r.status === "reviewing");
   const savedGuardianIds = await getTravelerSavedGuardianIds();
   const savedG = savedGuardianIds.length;
-  const savedP = mockTravelerSavedPostIds.length;
 
   const travelerAuthId = await getSupabaseAuthUserIdOnly();
   const useMockTrips = !travelerAuthId || isMockGuardianId(travelerAuthId);
+  const savedPostIds = useMockTrips ? mockTravelerSavedPostIds : await getTravelerSavedPostIds();
+  const savedP = savedPostIds.length;
   const openRequestsCount = useMockTrips ? openRequests.length : 0;
   const matchRows = travelerAuthId ? await getMatchRequestsForTraveler(travelerAuthId) : [];
   const matchActive = matchRows.filter((m) => m.status === "accepted").length;
   const matchPending = matchRows.filter((m) => m.status === "requested").length;
   const recentMatches = matchRows.slice(0, 2);
+  const { appRole } = await resolveMypageSessionRole();
+  const submittedReviews = await getSubmittedTravelerReviewsFromCookie();
+  const reviewedMatchIds = new Set<string>();
+  for (const s of submittedReviews) {
+    if (s.booking_id) reviewedMatchIds.add(s.booking_id);
+    if (s.id) reviewedMatchIds.add(s.id);
+  }
+  const canWriteTravelerReview = appRole !== "guardian";
 
   return (
     <div className="space-y-8">
@@ -126,9 +140,13 @@ export default async function TravelerOverviewPage() {
                       <p className="text-sm font-medium">{m.guardian_display_name || m.guardian_user_id}</p>
                       <p className="text-muted-foreground text-xs">{t(`matchStatus.${m.status}`)}</p>
                     </div>
-                    <Button asChild variant="outline" size="sm" className="rounded-xl shrink-0">
-                      <Link href="/mypage/matches">{t("details")}</Link>
-                    </Button>
+                    <TravelerMatchDetailSheetTrigger
+                      row={m}
+                      triggerLabel={t("details")}
+                      alreadyReviewed={reviewedMatchIds.has(m.id)}
+                      canWriteTravelerReview={canWriteTravelerReview}
+                      className="rounded-xl shrink-0"
+                    />
                   </CardContent>
                 </Card>
               </li>
@@ -156,9 +174,12 @@ export default async function TravelerOverviewPage() {
                         {g?.display_name ?? t("noGuardianYet")} · {t(`region.${r.region_label_key}`)}
                       </p>
                     </div>
-                    <Button asChild variant="outline" size="sm" className="rounded-xl shrink-0">
-                      <Link href="/mypage/requests">{t("details")}</Link>
-                    </Button>
+                    <TravelerTripRequestDetailSheetTrigger
+                      request={r}
+                      guardianLine={r.guardian_name ?? g?.display_name ?? t("noGuardianYet")}
+                      regionLabel={t(`region.${r.region_label_key}`)}
+                      triggerLabel={t("details")}
+                    />
                   </CardContent>
                 </Card>
               </li>

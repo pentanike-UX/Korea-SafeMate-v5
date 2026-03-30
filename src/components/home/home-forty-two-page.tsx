@@ -8,6 +8,9 @@ import { HomeDualCtaSection } from "@/components/home/home-dual-cta-section";
 import { HomeExploreBundle } from "@/components/home/home-explore-bundle";
 import { FileText, Languages, MessageCircle, ShieldCheck, Star, Zap } from "lucide-react";
 
+const POSTS_PREVIEW = 4;
+const REVIEWS_PREVIEW = 2;
+
 export async function HomeFortyTwoPage() {
   const t = await getTranslations("Home");
   const tHub = await getTranslations("TravelerHub");
@@ -17,29 +20,89 @@ export async function HomeFortyTwoPage() {
   const seoulPosts = mockContentPosts
     .filter((p) => p.status === "approved" && p.region_slug === "seoul")
     .sort((a, b) => b.popular_score - a.popular_score)
-    .slice(0, 6);
+    .slice(0, POSTS_PREVIEW);
 
-  const reviews = mockTravelerReviewsHomeSpotlight();
+  const reviews = mockTravelerReviewsHomeSpotlight().slice(0, REVIEWS_PREVIEW);
+
+  const trustItems = [
+    ["trust42CardVerified", "trust42CardVerifiedDesc", ShieldCheck],
+    ["trust42CardLanguage", "trust42CardLanguageDesc", Languages],
+    ["trust42CardReviews", "trust42CardReviewsDesc", MessageCircle],
+    ["trust42CardFast", "trust42CardFastDesc", Zap],
+  ] as const;
 
   return (
     <div className="bg-[var(--bg-page)]">
       <HomeHeroCarousel />
 
-      <HomeExploreBundle />
+      {/* 신뢰 + 후기 — 설득 우선, 한 블록으로 압축 */}
+      <section className="border-border/50 border-y bg-card" aria-labelledby="home-credibility-heading">
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-5 sm:py-14 md:py-16">
+          <div className="mb-8 max-w-2xl sm:mb-9">
+            <h2 id="home-credibility-heading" className="text-text-strong text-xl font-semibold tracking-tight sm:text-2xl md:text-3xl">
+              {t("credibilityTitle")}
+            </h2>
+            <p className="text-muted-foreground mt-2 text-sm leading-relaxed sm:text-[15px]">{t("credibilityLead")}</p>
+          </div>
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-start lg:gap-10">
+            <div className="grid grid-cols-2 gap-2 sm:gap-3">
+              {trustItems.map(([title, body, Icon]) => (
+                <Card key={title} className="border-border/60 rounded-[var(--radius-md)] border bg-[var(--bg-surface-subtle)] shadow-none">
+                  <CardContent className="p-3 sm:p-4">
+                    <span className="text-[var(--brand-trust-blue)] mb-2 flex size-8 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-trust-blue-soft)] sm:mb-2.5 sm:size-9">
+                      <Icon className="size-4 sm:size-[18px]" strokeWidth={1.75} aria-hidden />
+                    </span>
+                    <h3 className="text-foreground text-sm font-semibold leading-tight">{t(title)}</h3>
+                    <p className="text-muted-foreground mt-1 text-xs leading-relaxed sm:text-[13px]">{t(body)}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+              {reviews.map((r) => {
+                const text = isKo ? (r.comment ?? "") : (r.comment_en ?? r.comment ?? "");
+                const timeLabel =
+                  locale === "ko"
+                    ? r.time_label_ko
+                    : locale === "ja"
+                      ? (r.time_label_ja ?? r.time_label_en ?? r.time_label_ko)
+                      : r.time_label_en;
+                const who = r.reviewer_display_name ?? tHub("reviewsAnonymous");
+                const meta = [who, timeLabel].filter(Boolean).join(" · ");
+                return (
+                  <Card key={r.id} className="border-border/70 rounded-[var(--radius-md)] border bg-card/95">
+                    <CardContent className="flex flex-col gap-2.5 p-4 sm:p-5">
+                      <div className="flex items-center gap-0.5 text-amber-500">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star key={i} className={i < r.rating ? "size-3.5 fill-current sm:size-4" : "size-3.5 sm:size-4"} aria-hidden />
+                        ))}
+                      </div>
+                      <p className="text-foreground text-sm leading-relaxed">&ldquo;{text}&rdquo;</p>
+                      <p className="text-muted-foreground text-[11px] font-medium sm:text-xs">{meta}</p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </section>
 
-      {/* Recommended posts / routes */}
-      <section className="bg-muted/30">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-5 sm:py-16 md:py-20">
-          <div className="mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
+      {/* 루트·포스트 증거 — CTA 전에 콘텐츠 신뢰 */}
+      <section className="bg-muted/30" aria-labelledby="home-posts-heading">
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-5 sm:py-14 md:py-16">
+          <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-xl">
-              <h2 className="text-text-strong text-xl font-semibold tracking-tight sm:text-2xl md:text-3xl">{t("postsSectionTitle")}</h2>
+              <h2 id="home-posts-heading" className="text-text-strong text-xl font-semibold tracking-tight sm:text-2xl md:text-3xl">
+                {t("postsSectionTitle")}
+              </h2>
               <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{t("postsSectionLead")}</p>
             </div>
             <TextActionLink href="/posts" className="shrink-0 self-start sm:self-end">
               {t("postsCta")}
             </TextActionLink>
           </div>
-          <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-2">
             {seoulPosts.map((p) => (
               <Link
                 key={p.id}
@@ -58,85 +121,7 @@ export async function HomeFortyTwoPage() {
         </div>
       </section>
 
-      {/* Trust */}
-      <section className="border-border/50 border-y bg-card">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-5 sm:py-16 md:py-20">
-          <div className="mb-8 max-w-xl sm:mb-10">
-            <h2 className="text-text-strong text-xl font-semibold tracking-tight sm:text-2xl md:text-3xl">{t("trust42Title")}</h2>
-            <p className="text-muted-foreground mt-3 text-sm leading-relaxed">{t("trust42Lead")}</p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
-            {(
-              [
-                ["trust42CardVerified", "trust42CardVerifiedDesc", ShieldCheck],
-                ["trust42CardLanguage", "trust42CardLanguageDesc", Languages],
-                ["trust42CardReviews", "trust42CardReviewsDesc", MessageCircle],
-                ["trust42CardFast", "trust42CardFastDesc", Zap],
-              ] as const
-            ).map(([title, body, Icon]) => (
-              <Card key={title} className="border-border/70 rounded-[var(--radius-md)] border bg-[var(--bg-surface-subtle)] shadow-none">
-                <CardContent className="p-4 sm:p-5">
-                  <span className="text-[var(--brand-trust-blue)] mb-3 flex size-9 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--brand-trust-blue-soft)]">
-                    <Icon className="size-[18px]" strokeWidth={1.75} aria-hidden />
-                  </span>
-                  <h3 className="text-foreground font-semibold">{t(title)}</h3>
-                  <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{t(body)}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Reviews */}
-      <section className="bg-gradient-to-b from-[var(--brand-trust-blue-soft)]/50 to-transparent dark:from-[var(--brand-trust-blue-soft)]/20">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-5 sm:py-16 md:py-20">
-          <div className="mb-8 max-w-xl sm:mb-10">
-            <h2 className="text-text-strong text-xl font-semibold tracking-tight sm:text-2xl md:text-3xl">{t("reviewsSectionTitle")}</h2>
-            <p className="text-muted-foreground mt-2 text-sm">{t("reviewsSectionLead")}</p>
-          </div>
-          <div className="grid gap-3 sm:gap-4 md:grid-cols-3">
-            {reviews.map((r) => {
-              const text = isKo ? (r.comment ?? "") : (r.comment_en ?? r.comment ?? "");
-              const timeLabel =
-                locale === "ko"
-                  ? r.time_label_ko
-                  : locale === "ja"
-                    ? (r.time_label_ja ?? r.time_label_en ?? r.time_label_ko)
-                    : r.time_label_en;
-              const who = r.reviewer_display_name ?? tHub("reviewsAnonymous");
-              const meta = [who, timeLabel].filter(Boolean).join(" · ");
-              return (
-                <Card key={r.id} className="border-border/70 rounded-[var(--radius-md)] border bg-card/95">
-                  <CardContent className="flex flex-col gap-3 p-5 sm:p-6">
-                    <div className="flex items-center gap-1 text-amber-500">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className={i < r.rating ? "size-4 fill-current" : "size-4"} aria-hidden />
-                      ))}
-                    </div>
-                    <p className="text-foreground text-sm leading-relaxed">&ldquo;{text}&rdquo;</p>
-                    <p className="text-muted-foreground text-xs font-medium">{meta}</p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* About */}
-      <section className="bg-card">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-5 sm:py-16 md:py-20">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-text-strong text-xl font-semibold tracking-tight sm:text-2xl md:text-3xl">{t("aboutSectionTitle")}</h2>
-            <p className="text-muted-foreground mt-4 text-sm leading-relaxed sm:text-base">{t("aboutSectionLead")}</p>
-            <p className="text-muted-foreground mt-4 text-sm leading-relaxed">{t("aboutSectionBody")}</p>
-            <div className="mt-8 flex justify-center">
-              <TextActionLink href="/about">{isKo ? "자세히 보기" : "Learn more"}</TextActionLink>
-            </div>
-          </div>
-        </div>
-      </section>
+      <HomeExploreBundle />
 
       <HomeDualCtaSection />
     </div>

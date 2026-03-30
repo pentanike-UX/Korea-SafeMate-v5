@@ -21,6 +21,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { HeaderAttentionDot } from "@/components/mypage/mypage-attention-primitives";
+import { MYPAGE_ATTENTION_UPDATED_EVENT } from "@/lib/mypage-attention-events";
 import type { GuardianWorkspaceNavBadgeKey, TravelerNavBadgeKey } from "@/types/mypage-hub";
 import { ChevronDown, Coins, FileText, Heart, LayoutDashboard, Plane, Shield, UserRound, Users } from "lucide-react";
 
@@ -170,6 +171,14 @@ export function HeaderAccountMenu({
     void load();
   }, [load, authUser.id]);
 
+  useEffect(() => {
+    const onAttention = () => {
+      void load();
+    };
+    window.addEventListener(MYPAGE_ATTENTION_UPDATED_EVENT, onAttention);
+    return () => window.removeEventListener(MYPAGE_ATTENTION_UPDATED_EVENT, onAttention);
+  }, [load]);
+
   const publicHomeHref = locale === routing.defaultLocale ? "/" : `/${locale}`;
 
   const isProtectedPath = (p: string) =>
@@ -208,7 +217,7 @@ export function HeaderAccountMenu({
   const role = me?.user?.app_role ?? "traveler";
 
   const triggerClassBase =
-    "inline-flex h-10 min-w-0 items-center gap-2 rounded-[var(--radius-md)] border text-left text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50";
+    "inline-flex h-9 min-h-9 min-w-0 items-center gap-1.5 rounded-[var(--radius-md)] border text-left text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50";
 
   const triggerClassDesktop = cn(
     triggerClassBase,
@@ -220,7 +229,7 @@ export function HeaderAccountMenu({
 
   const triggerClassMobile = cn(
     triggerClassBase,
-    "max-w-[min(100%,7.25rem)] px-2 max-[360px]:max-w-10 max-[360px]:justify-center max-[360px]:gap-0 max-[360px]:px-1.5",
+    "max-w-[min(100%,10.5rem)] px-2 sm:max-w-[min(100%,12rem)]",
     onDarkSurface
       ? "border-white/25 bg-white/10 text-white hover:bg-white/16"
       : "border-border/80 bg-background hover:bg-muted/80",
@@ -265,15 +274,12 @@ export function HeaderAccountMenu({
         ) : null}
       </span>
       <span
-        className={cn(
-          "min-w-0 flex-1 truncate text-xs max-[360px]:hidden",
-          onDarkSurface ? "text-white" : "text-foreground",
-        )}
+        className={cn("min-w-0 flex-1 truncate text-xs", onDarkSurface ? "text-white" : "text-foreground")}
         title={mobLabel}
       >
         {mobLabel}
       </span>
-      <ChevronDown className={cn("size-4 shrink-0 opacity-70 max-[360px]:ml-0", onDarkSurface ? "text-white" : "")} aria-hidden />
+      <ChevronDown className={cn("size-4 shrink-0 opacity-70", onDarkSurface ? "text-white" : "")} aria-hidden />
     </>
   );
 

@@ -1,6 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { mockTravelerSavedPostIds } from "@/data/mock";
+import { isMockGuardianId } from "@/lib/dev/mock-guardian-auth";
+import { getTravelerSavedPostIds } from "@/lib/traveler-saved-posts-cookie";
+import { getSupabaseAuthUserIdOnly } from "@/lib/supabase/server-user";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BRAND } from "@/lib/constants";
@@ -15,7 +18,10 @@ export async function generateMetadata() {
 export default async function TravelerSavedPostsPage() {
   const t = await getTranslations("TravelerHub");
   const approved = await listApprovedPostsMerged();
-  const posts = mockTravelerSavedPostIds
+  const travelerAuthId = await getSupabaseAuthUserIdOnly();
+  const useMockSaved = !travelerAuthId || isMockGuardianId(travelerAuthId);
+  const savedIds = useMockSaved ? mockTravelerSavedPostIds : await getTravelerSavedPostIds();
+  const posts = savedIds
     .map((id) => approved.find((p) => p.id === id && p.status === "approved"))
     .filter(Boolean) as typeof approved;
 

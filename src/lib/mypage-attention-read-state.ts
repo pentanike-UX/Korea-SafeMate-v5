@@ -5,6 +5,7 @@ import type { AttentionMenuKey, MypageHubAttentionView, MypageHubSnapshot } from
 import { GUARDIAN_WORKSPACE_NAV_BADGE_KEYS, TRAVELER_NAV_BADGE_KEYS } from "@/types/mypage-hub";
 import { computeMypageAttentionViewFromSnapshot } from "@/lib/mypage-attention-unread";
 import { sameOriginApiUrl } from "@/lib/api-origin";
+import { emitMypageAttentionUpdated } from "@/lib/mypage-attention-events";
 
 const STORAGE_PREFIX = "safemate-mypage-attention-seen-v1";
 
@@ -12,8 +13,10 @@ function storageKey(userId: string | null, menuKey: AttentionMenuKey) {
   return `${STORAGE_PREFIX}:${userId ?? "anon"}:${menuKey}`;
 }
 
-function menuFromPathname(pathname: string): AttentionMenuKey | null {
-  if (pathname === "/mypage" || pathname === "/mypage/") return "navOverview";
+function menuFromPathname(pathname: string, hubMode: "traveler" | "guardian"): AttentionMenuKey | null {
+  if (pathname === "/mypage" || pathname === "/mypage/") {
+    return hubMode === "guardian" ? "guardianNavHome" : "navJourneys";
+  }
   if (pathname.startsWith("/mypage/journeys")) return "navJourneys";
   if (pathname.startsWith("/mypage/profile")) return "navProfile";
   if (pathname.startsWith("/mypage/points")) return "navPoints";
@@ -22,6 +25,8 @@ function menuFromPathname(pathname: string): AttentionMenuKey | null {
   if (pathname.startsWith("/mypage/guardian/posts/new")) return "guardianNavNewPost";
   if (pathname.startsWith("/mypage/guardian/posts")) return "guardianNavPosts";
   if (pathname.startsWith("/mypage/guardian/matches")) return "guardianNavMatches";
+  if (pathname.startsWith("/mypage/guardian/points")) return "guardianNavPoints";
+  if (pathname.startsWith("/mypage/guardian/settings")) return "guardianNavSettings";
   return null;
 }
 
@@ -49,6 +54,7 @@ export function useMypageAttentionView(
   snapshot: MypageHubSnapshot,
   pathname: string,
   userId: string | null,
+  hubMode: "traveler" | "guardian",
 ): MypageHubAttentionView {
   const [seenMap, setSeenMap] = useState<Partial<Record<AttentionMenuKey, string>>>({});
   const prevMenuRef = useRef<AttentionMenuKey | null>(null);
@@ -57,7 +63,7 @@ export function useMypageAttentionView(
     () => ({ ...snapshot.travelerNavSignatures, ...snapshot.guardianWorkspaceNavSignatures }),
     [snapshot],
   );
-  const currentMenu = useMemo(() => menuFromPathname(pathname), [pathname]);
+  const currentMenu = useMemo(() => menuFromPathname(pathname, hubMode), [pathname, hubMode]);
 
   useEffect(() => {
     if (!userId) {
@@ -83,7 +89,10 @@ export function useMypageAttentionView(
           }
         }
 
-        if (!cancelled) setSeenMap(next);
+        if (!cancelled) {
+          setSeenMap(next);
+          emitMypageAttentionUpdated();
+        }
       } catch {
         if (!cancelled) setSeenMap({});
       }
@@ -102,6 +111,7 @@ export function useMypageAttentionView(
       if (sig) {
         void postAttentionSeen(prev, sig);
         setSeenMap((old) => ({ ...old, [prev]: sig }));
+        emitMypageAttentionUpdated();
       }
     }
     prevMenuRef.current = currentMenu;
@@ -112,6 +122,7 @@ export function useMypageAttentionView(
       if (!sig) return;
       void postAttentionSeen(leaving, sig);
       setSeenMap((old) => ({ ...old, [leaving]: sig }));
+      emitMypageAttentionUpdated();
     };
   }, [currentMenu, signatures, userId]);
 

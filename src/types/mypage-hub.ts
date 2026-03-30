@@ -20,21 +20,18 @@ export type GuardianOpsSnapshot = {
 };
 
 /** LNB 여행자 메뉴 키 — `mypage-hub-nav-items` TRAVELER_HUB_NAV.labelKey 와 동일 */
-export const TRAVELER_NAV_BADGE_KEYS = [
-  "navOverview",
-  "navJourneys",
-  "navProfile",
-  "navPoints",
-  "navMatches",
-] as const;
+export const TRAVELER_NAV_BADGE_KEYS = ["navJourneys", "navProfile", "navPoints", "navMatches"] as const;
 export type TravelerNavBadgeKey = (typeof TRAVELER_NAV_BADGE_KEYS)[number];
 
 /** 가디언 워크스페이스 LNB — GUARDIAN_WORKSPACE_NAV.labelKey */
 export const GUARDIAN_WORKSPACE_NAV_BADGE_KEYS = [
+  "guardianNavHome",
   "guardianNavProfile",
   "guardianNavNewPost",
   "guardianNavPosts",
   "guardianNavMatches",
+  "guardianNavPoints",
+  "guardianNavSettings",
 ] as const;
 export type GuardianWorkspaceNavBadgeKey = (typeof GUARDIAN_WORKSPACE_NAV_BADGE_KEYS)[number];
 
@@ -49,6 +46,10 @@ export type TravelerBlockAttention = {
   };
   /** 최근 7일 포인트 원장 건수(실제 DB); mock 계정은 0 */
   pointsRecentLedgerCount: number;
+  /** 저장 가디언 수 — 시그니처·블록 배지용 (쿠키/샘플) */
+  savedGuardianCount: number;
+  /** 저장 포스트 수 — 시그니처·블록 배지용 (샘플 또는 추후 DB) */
+  savedPostCount: number;
 };
 
 export type GuardianWorkspaceBlockAttention = {

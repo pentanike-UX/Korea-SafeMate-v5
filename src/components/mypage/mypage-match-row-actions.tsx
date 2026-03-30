@@ -1,12 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 import type { StoredMatchRequest } from "@/lib/traveler-match-requests";
-import { Button } from "@/components/ui/button";
 import { TravelerMatchCompleteButton } from "@/components/mypage/match-request-row-actions";
 import { TravelerReviewSubmitSheet } from "@/components/mypage/traveler-review-submit-sheet";
 import { MypageGuardianProfileSheetTrigger } from "@/components/mypage/mypage-guardian-profile-sheet-trigger";
+import { TravelerMatchDetailSheetTrigger } from "@/components/mypage/traveler-match-detail-sheet";
 
 export function MypageMatchRowActions({
   row,
@@ -24,9 +23,13 @@ export function MypageMatchRowActions({
 
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2">
-      <Button asChild variant="outline" size="sm" className="h-9 rounded-lg">
-        <Link href={`/mypage/matches/${row.id}`}>{t("matchViewDetail")}</Link>
-      </Button>
+      <TravelerMatchDetailSheetTrigger
+        row={row}
+        triggerLabel={t("matchViewDetail")}
+        alreadyReviewed={already}
+        canWriteTravelerReview={canWriteTravelerReview}
+        className="h-9 rounded-lg"
+      />
       <MypageGuardianProfileSheetTrigger
         guardian={{
           user_id: row.guardian_user_id,

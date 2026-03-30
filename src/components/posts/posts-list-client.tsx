@@ -165,19 +165,19 @@ export function PostsListClient({
   }, [q, category, region, sort, contentFilter, categories, t]);
 
   const filterPanel = (
-    <div className="space-y-5 sm:space-y-6">
+    <div className="flex flex-col gap-6 sm:gap-7">
       <div className="relative">
         <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-[1.125rem] -translate-y-1/2" aria-hidden />
         <Input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={t("searchPlaceholder")}
-          className="h-10 pl-11 sm:h-11"
+          className="h-10 pl-11"
           aria-label={t("searchPlaceholder")}
         />
       </div>
-      <div className="grid gap-6 sm:gap-7">
-        <div className="min-w-0 space-y-2.5">
+      <div className="flex flex-col gap-6 sm:gap-7">
+        <div className="min-w-0 space-y-2">
           <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
             <Tag className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
             {t("filterCategory")}
@@ -206,7 +206,7 @@ export function PostsListClient({
             ))}
           </div>
         </div>
-        <div className="min-w-0 space-y-2.5">
+        <div className="min-w-0 space-y-2 border-border/40 border-t pt-6 sm:pt-7">
           <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
             <MapPin className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
             {t("filterRegion")}
@@ -226,7 +226,7 @@ export function PostsListClient({
             ))}
           </div>
         </div>
-        <div className="min-w-0 space-y-2.5">
+        <div className="min-w-0 space-y-2 border-border/40 border-t pt-6 sm:pt-7">
           <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
             <ArrowDownWideNarrow className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
             {t("sort")}
@@ -246,7 +246,7 @@ export function PostsListClient({
             ))}
           </div>
         </div>
-        <div className="min-w-0 space-y-2.5">
+        <div className="min-w-0 space-y-2 border-border/40 border-t pt-6 sm:pt-7">
           <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
             <Layers className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
             {t("filterContent")}
@@ -305,24 +305,24 @@ export function PostsListClient({
           showCloseButton
           className={
             desktopFilterDrawer
-              ? "h-dvh w-full max-w-[34rem] gap-0 overflow-hidden px-0 pt-2 pb-0 sm:max-w-[36rem]"
-              : "max-h-[min(90dvh,720px)] gap-0 overflow-hidden rounded-t-2xl px-0 pt-2 pb-6 sm:max-h-[min(85dvh,800px)]"
+              ? "h-dvh w-full max-w-[34rem] gap-0 overflow-hidden px-0 pt-0 pb-0 sm:max-w-[36rem]"
+              : "max-h-[min(90dvh,720px)] gap-0 overflow-hidden rounded-t-2xl px-0 pt-0 pb-6 sm:max-h-[min(85dvh,800px)]"
           }
         >
-          <SheetHeader className="border-border/60 shrink-0 border-b px-5 pb-4 text-left sm:px-6">
-            <SheetTitle>{t("filterSheetTitle")}</SheetTitle>
+          <SheetHeader className="border-border/60 shrink-0 space-y-1 border-b pt-4 pr-14 pb-3 pl-5 text-left sm:pt-5 sm:pr-16 sm:pb-4 sm:pl-6">
+            <SheetTitle className="pr-1">{t("filterSheetTitle")}</SheetTitle>
             <p className="text-muted-foreground text-sm tabular-nums">{t("listResultsCount", { count: filtered.length })}</p>
           </SheetHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">{filterPanel}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6 sm:py-6">{filterPanel}</div>
           <SheetFooter className="border-border/60 shrink-0 border-t px-5 py-3 sm:px-6">
-            <div className="flex w-full items-center justify-end gap-2">
-              <Button type="button" variant="ghost" className="h-10" onClick={resetFilters}>
+            <div className="flex w-full flex-wrap items-center justify-end gap-2">
+              <Button type="button" variant="ghost" className="h-9 px-3 text-xs font-semibold sm:h-10 sm:px-4 sm:text-sm" onClick={resetFilters}>
                 {t("resetFilters")}
               </Button>
-              <Button type="button" variant="outline" className="h-10" onClick={() => setFilterSheetOpen(false)}>
+              <Button type="button" variant="outline" className="h-9 px-3 text-xs font-semibold sm:h-10 sm:px-4 sm:text-sm" onClick={() => setFilterSheetOpen(false)}>
                 {t("filterClose")}
               </Button>
-              <Button type="button" className="h-10" onClick={() => setFilterSheetOpen(false)}>
+              <Button type="button" className="h-9 px-4 text-xs font-semibold sm:h-10 sm:text-sm" onClick={() => setFilterSheetOpen(false)}>
                 {t("filterApply")}
               </Button>
             </div>

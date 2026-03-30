@@ -42,11 +42,13 @@ export function ExplorationFilterSummaryBar({
   chipClearLabel: (label: string) => string;
 }) {
   return (
-    <div className="flex min-h-11 flex-nowrap items-center gap-2 sm:min-h-12 sm:gap-2.5" aria-label={summaryAriaLabel}>
+    <div
+      className="flex min-h-10 flex-wrap items-center gap-x-2 gap-y-2 sm:min-h-11 sm:gap-x-2.5 sm:gap-y-2"
+      aria-label={summaryAriaLabel}
+    >
       <div
         className={cn(
-          "border-border/60 bg-muted/35 flex min-h-10 min-w-0 flex-1 items-center gap-1.5 overflow-x-auto rounded-[var(--radius-md)] border px-2 py-1.5 sm:min-h-11 sm:gap-2 sm:px-2.5 sm:py-2",
-          "[-ms-overflow-style:none] [scrollbar-width:none] touch-pan-x overscroll-x-contain [&::-webkit-scrollbar]:hidden",
+          "border-border/60 bg-muted/35 flex min-h-9 min-w-0 flex-1 flex-wrap content-center items-center gap-1.5 rounded-[var(--radius-md)] border px-2 py-1.5 sm:min-h-10 sm:gap-2 sm:px-2.5 sm:py-2",
         )}
       >
         {chips.length === 0 ? (
@@ -60,8 +62,8 @@ export function ExplorationFilterSummaryBar({
               aria-label={chipClearLabel(c.label)}
               className={cn(
                 "border-primary/20 bg-primary text-primary-foreground shadow-sm",
-                "inline-flex h-8 max-w-[min(240px,70vw)] shrink-0 items-center gap-1 rounded-full border px-2.5 pl-3 text-[11px] font-semibold",
-                "active:scale-[0.98] sm:h-8 sm:max-w-[min(260px,40vw)] sm:text-xs",
+                "inline-flex h-8 max-w-full min-w-0 items-center gap-1 rounded-full border px-2.5 pl-3 text-[11px] font-semibold sm:max-w-[min(280px,42vw)] sm:text-xs",
+                "active:scale-[0.98]",
               )}
             >
               <span className="min-w-0 truncate">{c.label}</span>
@@ -70,7 +72,7 @@ export function ExplorationFilterSummaryBar({
           ))
         )}
       </div>
-      <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:gap-2">
         <span
           className="text-muted-foreground tabular-nums text-[11px] font-semibold sm:hidden"
           title={resultSummary}
@@ -81,7 +83,7 @@ export function ExplorationFilterSummaryBar({
           {resultSummary}
         </span>
         {showReset ? (
-          <Button type="button" variant="ghost" size="sm" className="h-9 px-2 text-xs font-semibold" onClick={onReset}>
+          <Button type="button" variant="ghost" size="sm" className="h-9 min-h-9 px-2.5 text-xs font-semibold" onClick={onReset}>
             {resetLabel}
           </Button>
         ) : null}
@@ -89,10 +91,10 @@ export function ExplorationFilterSummaryBar({
           type="button"
           variant="outline"
           size="sm"
-          className="border-border/80 bg-background h-9 shrink-0 gap-1.5 rounded-[var(--radius-md)] px-2.5 text-xs font-semibold shadow-sm sm:px-3"
+          className="border-border/80 bg-background h-9 min-h-9 shrink-0 gap-1.5 rounded-[var(--radius-md)] px-3 text-xs font-semibold shadow-sm"
           onClick={onOpenFilters}
         >
-          <SlidersHorizontal className="text-muted-foreground size-3.5" aria-hidden />
+          <SlidersHorizontal className="text-muted-foreground size-3.5 shrink-0" aria-hidden />
           {openFiltersLabel}
         </Button>
       </div>

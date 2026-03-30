@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "@/i18n/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { GUARDIAN_WORKSPACE } from "@/lib/mypage/guardian-workspace-routes";
 import type { AppAccountRole } from "@/lib/auth/app-role";
@@ -56,6 +56,7 @@ export function MypageHubShell({
   snapshot: MypageHubSnapshot;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const t = useTranslations("TravelerHub");
   const [hubMode, setHubMode] = useState<HubMode>("traveler");
   const [modeReady, setModeReady] = useState(false);
@@ -109,7 +110,7 @@ export function MypageHubShell({
       case "submitted":
         return { href: "/guardian/profile", labelKey: "guardianCtaSubmitted" };
       case "approved":
-        return { href: GUARDIAN_WORKSPACE.posts, labelKey: "guardianCtaApproved" };
+        return { href: "/mypage", labelKey: "guardianCtaApproved" };
       case "rejected":
         return { href: "/guardian/profile", labelKey: "guardianCtaRejected" };
       case "suspended":
@@ -123,10 +124,44 @@ export function MypageHubShell({
   const primary = guardianPrimaryCta();
   const showGuardianDashboard = hubMode === "guardian" && (pathname === "/mypage" || pathname === "/mypage/");
   const guardianWorkspaceWide =
-    pathname.startsWith("/mypage/guardian/posts") || pathname.startsWith("/mypage/guardian/matches");
+    hubMode === "guardian" &&
+    approved &&
+    (pathname.startsWith("/mypage/guardian/posts") ||
+      pathname.startsWith("/mypage/guardian/matches") ||
+      pathname.startsWith("/mypage/guardian/profile") ||
+      pathname.startsWith("/mypage/guardian/settings") ||
+      pathname.startsWith("/mypage/guardian/points"));
   const guardianTabMuted = !snapshot.guardianSegmentUnlocked;
   const showIdentityHero = shouldShowMypageIdentityHero(pathname, hubMode);
-  const attention = useMypageAttentionView(snapshot, pathname, accountUserId);
+  const attention = useMypageAttentionView(snapshot, pathname, accountUserId, hubMode);
+
+  useEffect(() => {
+    if (!modeReady) return;
+    if (hubMode !== "guardian" || !approved) return;
+    const p = pathname;
+    if (p.startsWith("/mypage/guardian")) return;
+    if (p === "/mypage" || p === "/mypage/") return;
+
+    const travelerRoots = ["/mypage/journeys", "/mypage/requests", "/mypage/saved-guardians", "/mypage/saved-posts", "/mypage/messages"];
+    for (const root of travelerRoots) {
+      if (p === root || p.startsWith(`${root}/`)) {
+        router.replace("/mypage");
+        return;
+      }
+    }
+    if (p.startsWith("/mypage/matches")) {
+      router.replace("/mypage");
+      return;
+    }
+    if (p.startsWith("/mypage/profile")) {
+      router.replace("/mypage/guardian/profile/edit");
+      return;
+    }
+    if (p.startsWith("/mypage/points")) {
+      router.replace("/mypage/guardian/points");
+      return;
+    }
+  }, [modeReady, hubMode, approved, pathname, router]);
 
   const mainPadding = cn(
     "w-full min-w-0 flex-1",
@@ -140,6 +175,7 @@ export function MypageHubShell({
           className={cn(
             "border-border/60 bg-muted/15 flex w-full shrink-0 flex-col border-b md:w-72 md:border-r md:border-b-0 md:bg-muted/20",
             "md:sticky md:top-0 md:h-[100dvh] md:overflow-y-auto",
+            hubMode === "guardian" && approved && "md:border-border/80 md:bg-card/90",
           )}
         >
           <div className="border-border/40 shrink-0 border-b px-4 py-4 md:px-5 md:py-5">
@@ -162,7 +198,7 @@ export function MypageHubShell({
               travelerNavBadges={attention.unreadTravelerNavBadges}
               guardianWorkspaceNavBadges={attention.unreadGuardianWorkspaceNavBadges}
             />
-            {hubMode === "traveler" ? (
+            {hubMode === "traveler" && !snapshot.guardianSegmentUnlocked ? (
               <div className="border-border/60 mt-auto rounded-xl border border-dashed bg-muted/25 p-4">
                 <p className="text-muted-foreground text-xs leading-relaxed">{t("guardianApplyTeaser")}</p>
                 <button

@@ -56,8 +56,8 @@ export function AboutLanding() {
         imageSrc={IMG.hero}
         imageAlt=""
         priority
-        parallaxMax={72}
-        overlayClassName="from-black/65 via-zinc-900/45"
+        parallaxMax={88}
+        overlayClassName="from-black/72 via-zinc-900/48"
       >
         <div className="page-container flex min-h-[min(100dvh,52rem)] max-w-6xl flex-col justify-end px-4 pb-16 pt-28 sm:px-6 sm:pb-20 sm:pt-32 md:pb-24">
           <p className="text-[11px] font-semibold tracking-[0.22em] text-white/80 uppercase">{BRAND.name}</p>
@@ -118,6 +118,22 @@ export function AboutLanding() {
         </div>
       </SectionShell>
 
+      <AboutParallaxBand
+        imageSrc={IMG.benefit1}
+        imageAlt=""
+        parallaxMax={56}
+        minHeightClass="min-h-[17rem] md:min-h-[23rem]"
+        overlayClassName="from-zinc-950/88 via-zinc-900/50 to-zinc-950/80"
+      >
+        <div className="page-container relative z-[1] flex max-w-3xl flex-col justify-center px-4 py-12 sm:px-6 sm:py-16 md:min-h-[23rem] md:py-20">
+          <p className="text-[11px] font-semibold tracking-[0.22em] text-white/72 uppercase">{t("landing.bridgeOne.kicker")}</p>
+          <h2 className="mt-3 text-2xl font-semibold tracking-tight text-balance text-white sm:text-3xl md:text-4xl md:leading-tight">
+            {t("landing.bridgeOne.title")}
+          </h2>
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-white/84 sm:text-lg">{t("landing.bridgeOne.lead")}</p>
+        </div>
+      </AboutParallaxBand>
+
       <section className="border-border/60 border-y bg-[color-mix(in_srgb,var(--muted)_45%,var(--bg-page))] py-16 sm:py-20 md:py-24">
         <div className="page-container max-w-6xl px-4 sm:px-6">
           <div className="max-w-2xl">
@@ -142,6 +158,22 @@ export function AboutLanding() {
           </ol>
         </div>
       </section>
+
+      <AboutParallaxBand
+        imageSrc={IMG.benefit2}
+        imageAlt=""
+        parallaxMax={48}
+        minHeightClass="min-h-[16rem] md:min-h-[22rem]"
+        overlayClassName="from-black/78 via-zinc-900/48 to-black/80"
+      >
+        <div className="page-container relative z-[1] flex max-w-3xl flex-col justify-center px-4 py-11 sm:px-6 sm:py-14 md:min-h-[22rem] md:py-16">
+          <p className="text-[11px] font-semibold tracking-[0.22em] text-white/72 uppercase">{t("landing.bridgeTwo.kicker")}</p>
+          <h2 className="mt-3 text-xl font-semibold tracking-tight text-balance text-white sm:text-2xl md:text-3xl">
+            {t("landing.bridgeTwo.title")}
+          </h2>
+          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-white/82 sm:text-base">{t("landing.bridgeTwo.lead")}</p>
+        </div>
+      </AboutParallaxBand>
 
       <SectionShell className="page-container max-w-6xl px-4 py-16 sm:px-6 sm:py-20 md:py-24">
         <p className="text-primary text-[11px] font-semibold tracking-[0.2em] uppercase">{t("landing.traveler.kicker")}</p>

@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TrustBadgesServer } from "@/components/forty-two/trust-badges-server";
 import { BRAND } from "@/lib/constants";
 import { MypageGuardianProfileSheetTrigger } from "@/components/mypage/mypage-guardian-profile-sheet-trigger";
+import { SavedGuardianRequestButton } from "@/components/mypage/saved-guardian-request-button";
 import { Star } from "lucide-react";
 
 export async function generateMetadata() {
@@ -83,9 +84,17 @@ export default async function TravelerSavedGuardiansPage() {
                         triggerLabel={t("openProfile")}
                         className="h-10 w-full sm:min-w-0 sm:flex-1"
                       />
-                      <Button asChild size="sm" variant="outline" className="h-10 w-full rounded-xl sm:min-w-0 sm:flex-1">
-                        <Link href={`/book?guardian=${g.user_id}`}>{t("request")}</Link>
-                      </Button>
+                      <SavedGuardianRequestButton
+                        className="h-10 w-full rounded-xl sm:min-w-0 sm:flex-1"
+                        label={t("request")}
+                        openDetail={{
+                          guardianUserId: g.user_id,
+                          displayName: g.display_name,
+                          headline: g.headline,
+                          avatarUrl: imgs.avatar,
+                          suggestedRegionSlug: g.primary_region_slug,
+                        }}
+                      />
                     </div>
                   </CardContent>
                 </div>

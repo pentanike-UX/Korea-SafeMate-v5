@@ -5,6 +5,7 @@ import { Link } from "@/i18n/navigation";
 import type { GuardianProfileStatus } from "@/lib/auth/guardian-profile-status";
 import { GUARDIAN_WORKSPACE } from "@/lib/mypage/guardian-workspace-routes";
 import { useMypageHubContext } from "@/components/mypage/mypage-hub-context";
+import { BlockAttentionBadge } from "@/components/mypage/mypage-attention-primitives";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -112,6 +113,7 @@ export function MypageGuardianDashboard({ status }: { status: GuardianProfileSta
     const completedBookings = ops?.completedBookings ?? 0;
     const openPool = ops?.openPoolCount ?? 0;
     const pointsLabel = ops?.points != null ? String(ops.points) : "—";
+    const unreadG = hub?.attention.unreadGuardianWorkspaceNavBadges;
 
     return (
       <div className="space-y-6">
@@ -135,20 +137,57 @@ export function MypageGuardianDashboard({ status }: { status: GuardianProfileSta
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {(
-                [
-                  ["guardianDashStatPostsPending", String(pendingPosts + draftPosts), FileText],
-                  ["guardianDashStatMatching", String(inProgressBookings), Heart],
-                  ["guardianDashStatReviewQueue", String(reviewingBookings), Shield],
-                  ["guardianDashStatPoints", pointsLabel, Wallet],
-                ] as const
-              ).map(([key, val, Icon]) => (
-                <div key={key} className="border-border/60 bg-muted/20 flex flex-col gap-2 rounded-xl border px-4 py-4">
-                  <Icon className="text-[var(--brand-trust-blue)] size-5 opacity-90" strokeWidth={1.75} aria-hidden />
-                  <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t(key)}</p>
-                  <p className="text-text-strong text-2xl font-semibold tabular-nums">{val}</p>
+              <div className="border-border/60 bg-muted/20 flex flex-col gap-2 rounded-xl border px-4 py-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <FileText className="text-[var(--brand-trust-blue)] size-5 opacity-90" strokeWidth={1.75} aria-hidden />
+                  {(unreadG?.guardianNavPosts ?? 0) > 0 && pendingPosts + draftPosts > 0 ? (
+                    <BlockAttentionBadge
+                      count={pendingPosts + draftPosts}
+                      ariaLabel={t("attentionGuardianDashPosts")}
+                    />
+                  ) : null}
                 </div>
-              ))}
+                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                  {t("guardianDashStatPostsPending")}
+                </p>
+                <p className="text-text-strong text-2xl font-semibold tabular-nums">{pendingPosts + draftPosts}</p>
+              </div>
+              <div className="border-border/60 bg-muted/20 flex flex-col gap-2 rounded-xl border px-4 py-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Heart className="text-[var(--brand-trust-blue)] size-5 opacity-90" strokeWidth={1.75} aria-hidden />
+                  {(unreadG?.guardianNavMatches ?? 0) > 0 && inProgressBookings > 0 ? (
+                    <BlockAttentionBadge count={inProgressBookings} ariaLabel={t("attentionGuardianDashMatching")} />
+                  ) : null}
+                </div>
+                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                  {t("guardianDashStatMatching")}
+                </p>
+                <p className="text-text-strong text-2xl font-semibold tabular-nums">{inProgressBookings}</p>
+              </div>
+              <div className="border-border/60 bg-muted/20 flex flex-col gap-2 rounded-xl border px-4 py-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Shield className="text-[var(--brand-trust-blue)] size-5 opacity-90" strokeWidth={1.75} aria-hidden />
+                  {(unreadG?.guardianNavMatches ?? 0) > 0 && reviewingBookings > 0 ? (
+                    <BlockAttentionBadge count={reviewingBookings} ariaLabel={t("attentionGuardianDashReviewQueue")} />
+                  ) : null}
+                </div>
+                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                  {t("guardianDashStatReviewQueue")}
+                </p>
+                <p className="text-text-strong text-2xl font-semibold tabular-nums">{reviewingBookings}</p>
+              </div>
+              <div className="border-border/60 bg-muted/20 flex flex-col gap-2 rounded-xl border px-4 py-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Wallet className="text-[var(--brand-trust-blue)] size-5 opacity-90" strokeWidth={1.75} aria-hidden />
+                  {(unreadG?.guardianNavPoints ?? 0) > 0 ? (
+                    <BlockAttentionBadge count={1} ariaLabel={t("attentionGuardianDashPoints")} />
+                  ) : null}
+                </div>
+                <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+                  {t("guardianDashStatPoints")}
+                </p>
+                <p className="text-text-strong text-2xl font-semibold tabular-nums">{pointsLabel}</p>
+              </div>
             </div>
             {openPool > 0 ? (
               <p className="text-muted-foreground mt-4 text-xs leading-relaxed">
@@ -166,7 +205,12 @@ export function MypageGuardianDashboard({ status }: { status: GuardianProfileSta
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-3">
             <div className="border-border/60 rounded-xl border bg-card/80 px-4 py-4">
-              <p className="text-muted-foreground text-xs font-semibold uppercase">{t("guardianDashPipelineNew")}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="text-muted-foreground text-xs font-semibold uppercase">{t("guardianDashPipelineNew")}</p>
+                {(unreadG?.guardianNavMatches ?? 0) > 0 && reviewingBookings > 0 ? (
+                  <BlockAttentionBadge count={reviewingBookings} ariaLabel={t("attentionGuardianDashReviewQueue")} />
+                ) : null}
+              </div>
               <p className="text-text-strong mt-2 text-2xl font-semibold tabular-nums">{reviewingBookings}</p>
               <Button asChild variant="link" className="mt-1 h-auto px-0 text-sm font-semibold">
                 <Link href={GUARDIAN_WORKSPACE.matches}>{t("guardianDashPipelineCta")}</Link>

@@ -39,7 +39,7 @@ export function LanguageSwitcher({
     <div
       className={cn(
         "inline-flex items-center rounded-[var(--radius-md)] border",
-        onDark ? "gap-0.5 p-0.5" : "gap-0.5 p-0.5 sm:gap-1 sm:p-1",
+        onDark ? "h-10 min-h-10 gap-0.5 p-0.5" : "gap-0.5 p-0.5 sm:gap-1 sm:p-1",
         onDark
           ? "border-white/20 bg-white/10 backdrop-blur-sm"
           : "border-border/70 bg-[color-mix(in_srgb,var(--brand-primary-soft)_35%,var(--muted))]",
@@ -58,7 +58,7 @@ export function LanguageSwitcher({
           title={t(FLAG_ARIA_KEY[code])}
           className={cn(
             "flex items-center justify-center rounded-[var(--radius-sm)] leading-none transition-[box-shadow,background-color,opacity] duration-200",
-            onDark ? "size-10 text-[1.375rem]" : "size-10 text-[1.375rem] sm:size-11 sm:text-[1.5rem]",
+            onDark ? "size-9 min-h-9 min-w-9 text-[1.25rem]" : "size-10 text-[1.375rem] sm:size-11 sm:text-[1.5rem]",
             locale === code
               ? onDark
                 ? "bg-white shadow-sm ring-2 ring-white/50"

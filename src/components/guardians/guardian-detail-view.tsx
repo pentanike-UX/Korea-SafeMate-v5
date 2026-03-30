@@ -12,8 +12,10 @@ import { listPostsForGuardian } from "@/lib/posts-public";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrustBadgesServer } from "@/components/forty-two/trust-badges-server";
+import { GuardianInsightPostSheetRow } from "@/components/guardians/guardian-insight-post-sheet-row";
 import { GuardianPostsExplorerSheet } from "@/components/guardians/guardian-posts-explorer-sheet";
-import { GuardianRequestOpenTrigger, GuardianRequestSheetHost } from "@/components/guardians/guardian-request-sheet";
+import { GuardianRequestDefaultsPublisher } from "@/components/guardians/guardian-request-defaults-publisher";
+import { GuardianRequestOpenTrigger } from "@/components/guardians/guardian-request-sheet";
 import { GuardianStickyCta } from "@/components/guardians/guardian-sticky-cta";
 import { GuardianTravelerReviewsList } from "@/components/guardians/guardian-traveler-reviews-list";
 import { filterIntroGalleryExcludingHero } from "@/lib/guardian-intro-gallery";
@@ -80,7 +82,6 @@ export async function GuardianDetailView({
   const introGalleryUrls = filterIntroGalleryExcludingHero(imgs.landscape, g.intro_gallery_image_urls);
   const sheetRegion = mockRegions.some((r) => r.slug === g.primary_region_slug) ? g.primary_region_slug : null;
 
-  const heroOneLiner = line(g.short_bio ?? g.positioning);
   const longBioParagraphs = line(g.long_bio)
     .split(/\n\n/)
     .map((p) => p.trim())
@@ -90,6 +91,13 @@ export async function GuardianDetailView({
 
   return (
     <div className="bg-[var(--bg-page)] pb-28 md:pb-12">
+      <GuardianRequestDefaultsPublisher
+        guardianUserId={g.user_id}
+        displayName={g.display_name}
+        headline={g.headline}
+        avatarUrl={imgs.avatar}
+        suggestedRegionSlug={sheetRegion}
+      />
       {!areaLive ? (
         <div className="border-b border-amber-500/25 bg-amber-500/10">
           <p className="text-foreground mx-auto max-w-6xl px-4 py-3 text-center text-sm sm:px-6">{t("areaSoon")}</p>
@@ -136,7 +144,7 @@ export async function GuardianDetailView({
                   </div>
                 </div>
                 <p className="mt-3 max-w-2xl text-sm leading-relaxed text-white/95 drop-shadow-[0_1px_8px_rgba(0,0,0,0.85)] sm:mt-3 sm:text-base">
-                  {heroOneLiner}
+                  {g.headline}
                 </p>
                 {showHeroReviews ? (
                   <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 sm:mt-3">
@@ -161,15 +169,6 @@ export async function GuardianDetailView({
                   <span className="drop-shadow-sm">{g.languages.map((l) => l.language_code.toUpperCase()).join(" · ")}</span>
                 </div>
               </div>
-              <div className="hidden w-full shrink-0 sm:block sm:w-auto sm:min-w-[13rem]">
-                <GuardianRequestOpenTrigger
-                  size="lg"
-                  className="w-full rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.35)] sm:w-auto"
-                >
-                  {tReq("openCta")}
-                </GuardianRequestOpenTrigger>
-                <p className="text-center text-[11px] text-white/70 sm:mt-2 sm:text-left">{t("heroCtaHint")}</p>
-              </div>
             </div>
           </div>
         </div>
@@ -179,6 +178,7 @@ export async function GuardianDetailView({
         <div className="space-y-10 lg:col-span-7">
           <section>
             <h2 className="text-text-strong text-lg font-semibold">{t("introTitle")}</h2>
+            <p className="text-muted-foreground mt-1 text-sm leading-relaxed">{t("introDecisionLead")}</p>
             <div className="text-muted-foreground mt-3 space-y-4 text-sm leading-relaxed sm:text-[15px]">
               {longBioParagraphs.map((para, i) => (
                 <p key={i}>{para}</p>
@@ -220,7 +220,8 @@ export async function GuardianDetailView({
           </section>
 
           <section>
-            <h2 className="text-text-strong text-lg font-semibold">{t("trustTitle")}</h2>
+            <p className="text-primary text-[10px] font-bold tracking-wide uppercase">{t("decisionRationaleEyebrow")}</p>
+            <h2 className="text-text-strong mt-1 text-lg font-semibold">{t("trustTitle")}</h2>
             <p className="text-muted-foreground mt-1 text-sm">{t("trustLead")}</p>
             {g.trust_reason_items?.length ? (
               <ul className="mt-4 space-y-3">
@@ -250,18 +251,22 @@ export async function GuardianDetailView({
           </section>
 
           <section>
-            <div className="flex flex-wrap items-end justify-between gap-2">
-              <h2 className="text-text-strong text-lg font-semibold">{t("postsTitle")}</h2>
+            <p className="text-primary text-[10px] font-bold tracking-wide uppercase">{t("postsDecisionEyebrow")}</p>
+            <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <h2 className="text-text-strong text-lg font-semibold">{t("postsTitle")}</h2>
+                <p className="text-muted-foreground mt-1 text-sm">{t("postsLead")}</p>
+                <p className="text-muted-foreground mt-2 text-xs leading-relaxed">{t("postsDecisionLead")}</p>
+              </div>
               {postSheetItems.length > 0 ? (
                 <GuardianPostsExplorerSheet
                   guardianDisplayName={g.display_name}
                   posts={postSheetItems}
-                  triggerVariant="inlineText"
-                  className="shrink-0"
+                  triggerVariant="asideOutline"
+                  className="shrink-0 sm:min-w-[11rem]"
                 />
               ) : null}
             </div>
-            <p className="text-muted-foreground mt-1 text-sm">{t("postsLead")}</p>
             {insightPosts.length === 0 ? (
               <p className="text-muted-foreground mt-3 text-sm">{t("noPosts")}</p>
             ) : (
@@ -286,46 +291,16 @@ export async function GuardianDetailView({
                   }
                   const themeLabel = categoryLabel(p.category_slug);
                   return (
-                    <li key={p.id}>
-                      <Link
-                        href={`/posts/${p.id}`}
-                        className="border-border/70 bg-card group flex gap-3 overflow-hidden rounded-2xl border p-3 shadow-[var(--shadow-sm)] transition-colors hover:border-primary/30"
-                      >
-                        <div className="border-border/50 relative size-[4.5rem] shrink-0 overflow-hidden rounded-xl border bg-muted sm:size-[5.25rem]">
-                          <Image
-                            src={thumb}
-                            alt=""
-                            fill
-                            className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                            sizes="(max-width:640px) 72px, 84px"
-                          />
-                        </div>
-                        <div className="min-w-0 flex-1 py-0.5">
-                          <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide">
-                            <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5">{fmtLabel}</span>
-                            <span className="text-muted-foreground font-medium normal-case">{regionLabel}</span>
-                            <span aria-hidden className="text-muted-foreground/60">
-                              ·
-                            </span>
-                            <span className="text-muted-foreground font-medium normal-case">{themeLabel}</span>
-                            {route ? (
-                              <>
-                                <span aria-hidden className="text-muted-foreground/60">
-                                  ·
-                                </span>
-                                <span className="text-muted-foreground font-medium normal-case">
-                                  {t("stopsLabel", { count: p.route_journey!.spots.length })}
-                                </span>
-                              </>
-                            ) : null}
-                          </div>
-                          <p className="text-foreground mt-1 line-clamp-2 text-sm font-semibold leading-snug">{p.title}</p>
-                          <p className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-relaxed sm:text-[13px]">
-                            {p.summary}
-                          </p>
-                        </div>
-                      </Link>
-                    </li>
+                    <GuardianInsightPostSheetRow
+                      key={p.id}
+                      post={p}
+                      imageUrl={thumb}
+                      fmtLabel={fmtLabel}
+                      regionLabel={regionLabel}
+                      themeLabel={themeLabel}
+                      route={route}
+                      stopsLabel={route ? t("stopsLabel", { count: p.route_journey!.spots.length }) : null}
+                    />
                   );
                 })}
               </ul>
@@ -348,43 +323,61 @@ export async function GuardianDetailView({
             </ul>
           </section>
 
-          <GuardianTravelerReviewsList
-            reviews={reviews}
-            locale={locale}
-            avg={listAvg}
-            sectionTitle={t("reviewsTitle")}
-            lead={t("reviewsLead")}
-            avgAria={t("reviewsAvgAria", { avg: listAvg.toFixed(1) })}
-            showMore={t("reviewsShowMore")}
-            showLess={t("reviewsShowLess")}
-          />
+          <section className="border-border/50 border-t pt-2">
+            <p className="text-primary text-[10px] font-bold tracking-wide uppercase">{t("reviewsDecisionEyebrow")}</p>
+            <GuardianTravelerReviewsList
+              reviews={reviews}
+              locale={locale}
+              avg={listAvg}
+              sectionTitle={t("reviewsTitle")}
+              lead={t("reviewsLead")}
+              avgAria={t("reviewsAvgAria", { avg: listAvg.toFixed(1) })}
+              showMore={t("reviewsShowMore")}
+              showLess={t("reviewsShowLess")}
+              sheetTitle={t("reviewsBrowseSheetTitle")}
+            />
+          </section>
         </div>
 
         <aside className="lg:col-span-5">
           <div className="border-border/60 bg-card lg:sticky lg:top-24 space-y-4 rounded-2xl border p-6 shadow-[var(--shadow-sm)]">
+            <p className="text-primary text-[10px] font-bold tracking-[0.18em] uppercase">{t("requestCardEyebrow")}</p>
             <h2 className="text-text-strong text-lg font-semibold">{t("requestCardTitle")}</h2>
             <p className="text-muted-foreground text-sm leading-relaxed">{t("requestLead")}</p>
-            <ul className="text-muted-foreground list-inside list-disc space-y-1.5 text-xs leading-relaxed">
-              <li>{tReq("asideBulletHalfFull")}</li>
-              <li>{tReq("asideBulletRegion")}</li>
-              <li>{tReq("asideBulletTheme")}</li>
-              <li>{tReq("asideBulletFlexible")}</li>
+            <ul className="text-muted-foreground space-y-2 text-xs leading-relaxed">
+              <li className="flex gap-2">
+                <span className="text-primary font-bold" aria-hidden>
+                  ·
+                </span>
+                <span>{tReq("asideBulletHalfFull")}</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary font-bold" aria-hidden>
+                  ·
+                </span>
+                <span>{tReq("asideBulletRegion")}</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary font-bold" aria-hidden>
+                  ·
+                </span>
+                <span>{tReq("asideBulletTheme")}</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary font-bold" aria-hidden>
+                  ·
+                </span>
+                <span>{tReq("asideBulletFlexible")}</span>
+              </li>
             </ul>
             <p className="text-muted-foreground text-xs leading-relaxed">{t("requestGuide")}</p>
-            <GuardianRequestOpenTrigger size="lg" className="h-12 w-full rounded-2xl text-base font-semibold">
+            <GuardianRequestOpenTrigger size="lg" className="h-12 w-full rounded-2xl text-base font-semibold shadow-[var(--shadow-brand)]">
               {tReq("openCta")}
             </GuardianRequestOpenTrigger>
           </div>
         </aside>
       </div>
 
-      <GuardianRequestSheetHost
-        guardianUserId={g.user_id}
-        displayName={g.display_name}
-        headline={g.headline}
-        avatarUrl={imgs.avatar}
-        suggestedRegionSlug={sheetRegion}
-      />
       <GuardianStickyCta />
     </div>
   );

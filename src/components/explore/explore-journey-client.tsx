@@ -37,7 +37,6 @@ export function ExploreJourneyClient() {
   const t = useTranslations("ExploreJourney");
   const tG = useTranslations("GuardiansDiscover");
   const locale = useLocale();
-  const isKo = locale === "ko";
   const searchParams = useSearchParams();
 
   const [step, setStep] = useState(0);
@@ -141,10 +140,6 @@ export function ExploreJourneyClient() {
 
     return { guardians: g.slice(0, 6), posts };
   }, [region, theme, langPref, pace, comingSoonArea, resultsSpin, guardianStylePrefs, effectiveTasteIds]);
-
-  function pos(g: PublicGuardian) {
-    return isKo ? g.positioning.ko : g.positioning.en;
-  }
 
   function toggleSceneMood(id: SceneMoodId) {
     setSceneMoods((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -299,7 +294,6 @@ export function ExploreJourneyClient() {
             guardianStylePrefs={guardianStylePrefs}
             onEditConditions={() => setStep(0)}
             onReRecommend={() => setResultsSpin((x) => x + 1)}
-            onPos={pos}
             resultsSpinDisabled={results.guardians.length === 0}
           />
         ) : null}

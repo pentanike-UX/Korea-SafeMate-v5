@@ -86,7 +86,7 @@ export function SiteHeader() {
       <div className="flex min-h-14 h-14 w-full items-center gap-3 px-4 sm:h-16 sm:min-h-16 sm:gap-4 sm:px-6 md:px-8 xl:px-10">
         <Link
           href="/"
-          className="flex min-w-0 max-w-[min(100%,calc(100%-6.75rem))] shrink-0 items-center gap-2.5 rounded-lg active:opacity-90 sm:max-w-[min(100%,calc(100%-7.5rem))] md:max-w-none"
+          className="flex min-w-0 max-w-[min(100%,calc(100%-9.75rem))] shrink-0 items-center gap-2.5 rounded-lg active:opacity-90 sm:max-w-[min(100%,calc(100%-10.5rem))] md:max-w-none"
         >
           <span
             className={cn(
@@ -137,9 +137,9 @@ export function SiteHeader() {
             <Button
               asChild
               variant="ghost"
-              size="default"
+              size="sm"
               className={cn(
-                "inline-flex px-3",
+                "inline-flex h-9 min-h-9 px-3 text-sm",
                 onDarkSurface
                   ? "text-white/90 hover:bg-white/10 hover:text-white"
                   : "text-[var(--text-strong)]/85 hover:bg-muted hover:text-[var(--text-strong)]",
@@ -152,7 +152,7 @@ export function SiteHeader() {
           <Sheet>
             <SheetTrigger
               className={cn(
-                "inline-flex size-11 min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border outline-none transition-colors duration-200 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:hidden",
+                "inline-flex size-9 min-h-9 min-w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] border outline-none transition-colors duration-200 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:hidden",
                 onDarkSurface
                   ? "border-white/28 bg-white/12 text-white hover:bg-white/18"
                   : "border-input bg-background text-[var(--text-strong)] hover:bg-muted",

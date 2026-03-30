@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import type { ContentPost } from "@/types/domain";
 import { isActiveLaunchArea, type PublicGuardian } from "@/lib/guardian-public";
@@ -13,7 +13,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { TrustBadgeRow } from "@/components/forty-two/trust-badges";
 import { guardianProfileImageUrls, GUARDIAN_PROFILE_COVER_POSITION_CLASS } from "@/lib/guardian-profile-images";
 import { GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, guardianTierBadgeVariant } from "@/lib/guardian-tier-ui";
+import { GuardianProfilePreviewSheetTrigger } from "@/components/guardians/guardian-profile-preview-sheet-trigger";
+import { GuardianRequestOpenTrigger } from "@/components/guardians/guardian-request-sheet";
 import { SaveGuardianButton } from "@/components/guardians/save-guardian-button";
+import { publicGuardianToSheetPreview } from "@/lib/guardian-profile-sheet-preview";
 import { ExplorationFilterSummaryBar, type ExplorationSummaryChip } from "@/components/listing/exploration-filter-summary-bar";
 import { StickyListingFiltersBar } from "@/components/listing/sticky-listing-filters-bar";
 import { SubpageHero } from "@/components/layout/subpage-hero";
@@ -23,7 +26,6 @@ import {
   ArrowDownWideNarrow,
   MapPin,
   Palette,
-  SlidersHorizontal,
   ShieldCheck,
   Star,
   Languages,
@@ -42,6 +44,14 @@ function repPostFor(g: PublicGuardian, approvedPosts: ContentPost[]) {
   return approvedPosts.find((p) => p.id === id) ?? null;
 }
 
+function repPostsForSheetPreview(g: PublicGuardian, approvedPosts: ContentPost[]) {
+  return g.representative_post_ids
+    .map((id) => approvedPosts.find((p) => p.id === id))
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((p) => ({ id: p!.id, title: p!.title, summary: p!.summary }));
+}
+
 export function GuardiansDiscoverClient({
   guardians,
   approvedPosts,
@@ -55,8 +65,6 @@ export function GuardiansDiscoverClient({
   const tThemes = useTranslations("ExperienceThemes");
   const tStyles = useTranslations("CompanionStyles");
   const tTier = useTranslations("GuardianTier");
-  const locale = useLocale();
-  const isKo = locale === "ko";
 
   const [region, setRegion] = useState<LaunchAreaSlug | "all" | "">("");
   const [language, setLanguage] = useState<string>("");
@@ -188,10 +196,6 @@ export function GuardiansDiscoverClient({
     return chips;
   }, [region, language, theme, style, minRating, verifiedOnly, sort, t, tLaunch, tThemes, tStyles]);
 
-  function pos(g: PublicGuardian) {
-    return isKo ? g.positioning.ko : g.positioning.en;
-  }
-
   const isFilterDefault =
     region === "" && !language && !theme && !style && minRating === 0 && !verifiedOnly && sort === "recommended";
   const hasActiveFilters = !isFilterDefault;
@@ -208,7 +212,7 @@ export function GuardiansDiscoverClient({
   }
 
   const filterPanel = (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="flex flex-col gap-6 sm:gap-7">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-muted-foreground text-sm font-medium tabular-nums">{t("listResultsCount", { count: filtered.length })}</p>
         {hasActiveFilters ? (
@@ -217,9 +221,9 @@ export function GuardiansDiscoverClient({
           </Button>
         ) : null}
       </div>
-      <div className="grid gap-6 sm:gap-7">
-        <div className="min-w-0">
-          <p className="text-muted-foreground mb-2.5 flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
+      <div className="flex flex-col gap-6 sm:gap-7">
+        <div className="min-w-0 space-y-2">
+          <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
             <MapPin className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
             {t("filterRegion")}
           </p>
@@ -256,8 +260,8 @@ export function GuardiansDiscoverClient({
             ))}
           </div>
         </div>
-        <div className="min-w-0">
-          <p className="text-muted-foreground mb-2.5 flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
+        <div className="min-w-0 space-y-2 border-border/40 border-t pt-6 sm:pt-7">
+          <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
             <Languages className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
             {t("filterLanguage")}
           </p>
@@ -279,8 +283,8 @@ export function GuardiansDiscoverClient({
             ))}
           </div>
         </div>
-        <div className="min-w-0">
-          <p className="text-muted-foreground mb-2.5 flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
+        <div className="min-w-0 space-y-2 border-border/40 border-t pt-6 sm:pt-7">
+          <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold tracking-wide uppercase sm:text-xs">
             <ArrowDownWideNarrow className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
             {t("sort")}
           </p>
@@ -305,8 +309,8 @@ export function GuardiansDiscoverClient({
             ))}
           </div>
         </div>
-        <div className="min-w-0">
-          <p className="text-muted-foreground mb-2.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide sm:text-xs">
+        <div className="min-w-0 space-y-2 border-border/40 border-t pt-6 sm:pt-7">
+          <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide sm:text-xs">
             <Palette className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
             {t("filterTheme")}
           </p>
@@ -328,8 +332,8 @@ export function GuardiansDiscoverClient({
             ))}
           </div>
         </div>
-        <div className="min-w-0">
-          <p className="text-muted-foreground mb-2.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide sm:text-xs">
+        <div className="min-w-0 space-y-2 border-border/40 border-t pt-6 sm:pt-7">
+          <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide sm:text-xs">
             <UserCircle className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
             {t("filterStyle")}
           </p>
@@ -351,8 +355,8 @@ export function GuardiansDiscoverClient({
             ))}
           </div>
         </div>
-        <div className="min-w-0">
-          <p className="text-muted-foreground mb-2.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide sm:text-xs">
+        <div className="min-w-0 space-y-2 border-border/40 border-t pt-6 sm:pt-7">
+          <p className="text-muted-foreground flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide sm:text-xs">
             <Star className="text-[var(--brand-trust-blue)] size-3.5 shrink-0" aria-hidden />
             {t("filterRating")}
           </p>
@@ -370,7 +374,7 @@ export function GuardiansDiscoverClient({
               </Button>
             ))}
           </div>
-          <label className="text-foreground mt-4 flex min-h-11 cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-border/60 px-3 py-2 text-sm font-medium">
+          <label className="text-foreground mt-3 flex min-h-10 cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-border/60 px-3 py-2 text-sm font-medium">
             <input
               type="checkbox"
               checked={verifiedOnly}
@@ -411,32 +415,24 @@ export function GuardiansDiscoverClient({
           showCloseButton
           className={
             desktopFilterDrawer
-              ? "h-dvh w-full max-w-[34rem] gap-0 overflow-hidden px-0 pt-2 pb-0 sm:max-w-[36rem]"
-              : "max-h-[min(92dvh,720px)] gap-0 overflow-hidden rounded-t-2xl px-0 pt-2 pb-6 sm:max-h-[min(85dvh,800px)]"
+              ? "h-dvh w-full max-w-[34rem] gap-0 overflow-hidden px-0 pt-0 pb-0 sm:max-w-[36rem]"
+              : "max-h-[min(92dvh,720px)] gap-0 overflow-hidden rounded-t-2xl px-0 pt-0 pb-6 sm:max-h-[min(85dvh,800px)]"
           }
         >
-          <SheetHeader className="border-border/60 shrink-0 border-b px-5 pb-4 text-left sm:px-6">
-            <SheetTitle>{t("filterSheetTitle")}</SheetTitle>
+          <SheetHeader className="border-border/60 shrink-0 space-y-1 border-b pt-4 pr-14 pb-3 pl-5 text-left sm:pt-5 sm:pr-16 sm:pb-4 sm:pl-6">
+            <SheetTitle className="pr-1">{t("filterSheetTitle")}</SheetTitle>
             <p className="text-muted-foreground text-sm tabular-nums">{t("listResultsCount", { count: filtered.length })}</p>
           </SheetHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
-            <div className="border-border/60 mb-4 flex items-center gap-3 border-b pb-4 md:hidden">
-              <span className="text-[var(--brand-trust-blue)] flex size-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--brand-trust-blue-soft)]">
-                <SlidersHorizontal className="size-[1.15rem]" strokeWidth={1.75} aria-hidden />
-              </span>
-              <h2 className="text-text-strong text-base font-semibold">{t("filterTitle")}</h2>
-            </div>
-            {filterPanel}
-          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6 sm:py-6">{filterPanel}</div>
           <SheetFooter className="border-border/60 shrink-0 border-t px-5 py-3 sm:px-6">
-            <div className="flex w-full items-center justify-end gap-2">
-              <Button type="button" variant="ghost" className="h-10" onClick={clearFilters}>
+            <div className="flex w-full flex-wrap items-center justify-end gap-2">
+              <Button type="button" variant="ghost" className="h-9 px-3 text-xs font-semibold sm:h-10 sm:px-4 sm:text-sm" onClick={clearFilters}>
                 {t("clear")}
               </Button>
-              <Button type="button" variant="outline" className="h-10" onClick={() => setFilterSheetOpen(false)}>
+              <Button type="button" variant="outline" className="h-9 px-3 text-xs font-semibold sm:h-10 sm:px-4 sm:text-sm" onClick={() => setFilterSheetOpen(false)}>
                 {t("filterClose")}
               </Button>
-              <Button type="button" className="h-10" onClick={() => setFilterSheetOpen(false)}>
+              <Button type="button" className="h-9 px-4 text-xs font-semibold sm:h-10 sm:text-sm" onClick={() => setFilterSheetOpen(false)}>
                 {t("filterApply")}
               </Button>
             </div>
@@ -454,7 +450,7 @@ export function GuardiansDiscoverClient({
             <p className="text-muted-foreground mt-3 text-sm leading-relaxed sm:text-[15px]">{t("emptyBody")}</p>
           </div>
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 2xl:gap-5">
+          <ul className="grid gap-3 sm:grid-cols-2 sm:gap-3.5 xl:grid-cols-3 2xl:grid-cols-4">
             {filtered.map((g) => {
               const rep = repPostFor(g, approvedPosts);
               const areaName = (tLaunch.raw(g.launch_area_slug) as { name: string }).name;
@@ -464,69 +460,93 @@ export function GuardiansDiscoverClient({
                 .map((slug) => tStyles(slug))
                 .join(" · ");
               const expertiseSummary = g.expertise_tags.slice(0, 2).join(" · ");
+              const langLine = g.languages.map((l) => l.language_code.toUpperCase()).join(" · ");
               return (
                 <li key={g.user_id}>
                   <Card className="border-border/70 h-full overflow-hidden rounded-[var(--radius-md)] py-0 shadow-[var(--shadow-sm)] transition-all hover:border-[color-mix(in_srgb,var(--brand-trust-blue)_30%,var(--border))] hover:shadow-[var(--shadow-md)]">
-                    <div className="flex h-full">
-                      <div className="relative w-[38%] min-w-[8.5rem] max-w-[10.5rem] self-stretch bg-muted/40 sm:min-w-[9rem]">
-                        <Image src={imgs.default} alt="" fill className={GUARDIAN_PROFILE_COVER_POSITION_CLASS} sizes="(max-width:640px) 40vw, 20vw" />
-                        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/40 to-transparent" />
+                    <div className="flex h-full min-h-[9.5rem]">
+                      <div className="relative w-[30%] min-w-[6.75rem] max-w-[8.5rem] shrink-0 self-stretch bg-muted/40 sm:min-w-[7.25rem] sm:max-w-[9rem]">
+                        <Image src={imgs.default} alt="" fill className={GUARDIAN_PROFILE_COVER_POSITION_CLASS} sizes="(max-width:640px) 32vw, 18vw" />
+                        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/35 to-transparent" />
                       </div>
-                      <CardContent className="flex min-w-0 flex-1 flex-col gap-3 p-3.5">
-                      <div>
-                        <p className="text-foreground truncate text-[17px] font-semibold">{g.display_name}</p>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                          <Badge variant={guardianTierBadgeVariant(g.guardian_tier)} className={cn(GUARDIAN_TIER_ROLE_BADGE_CLASSNAME)}>
-                            {tTier(g.guardian_tier)}
-                          </Badge>
+                      <CardContent className="flex min-w-0 flex-1 flex-col gap-2 p-2.5 sm:p-3">
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex min-w-0 items-start justify-between gap-2">
+                            <p className="text-foreground min-w-0 truncate text-[15px] font-semibold leading-tight sm:text-base">{g.display_name}</p>
+                            <Badge
+                              variant={guardianTierBadgeVariant(g.guardian_tier)}
+                              className={cn(GUARDIAN_TIER_ROLE_BADGE_CLASSNAME, "shrink-0 text-[10px]")}
+                            >
+                              {tTier(g.guardian_tier)}
+                            </Badge>
+                          </div>
+                          <p className="text-muted-foreground line-clamp-1 text-[11px] leading-snug sm:text-xs">{g.headline}</p>
                         </div>
-                        <p className="text-muted-foreground mt-2 line-clamp-2 text-sm leading-relaxed">{pos(g)}</p>
-                      </div>
 
-                      <div className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
-                        <MapPin className="size-3.5 shrink-0" aria-hidden />
-                        <span className="truncate">{areaName}</span>
-                        <span aria-hidden>·</span>
-                        <span className="truncate">{g.languages.map((l) => l.language_code.toUpperCase()).join(" · ")}</span>
-                      </div>
+                        <div className="text-muted-foreground flex min-w-0 items-center gap-1 text-[11px] leading-tight">
+                          <MapPin className="size-3 shrink-0 opacity-80" aria-hidden />
+                          <span className="truncate">{areaName}</span>
+                          <span aria-hidden className="shrink-0 opacity-50">
+                            ·
+                          </span>
+                          <span className="truncate">{langLine}</span>
+                        </div>
 
-                      <div className="space-y-1.5 text-xs">
-                        {styleSummary ? (
-                          <p className="text-muted-foreground line-clamp-1">
-                            <span className="text-foreground font-semibold">{t("filterStyle")}</span> · {styleSummary}
-                          </p>
-                        ) : null}
-                        {expertiseSummary ? (
-                          <p className="text-muted-foreground line-clamp-1">
-                            <span className="text-foreground font-semibold">{t("filterTheme")}</span> · {expertiseSummary}
-                          </p>
-                        ) : null}
-                      </div>
+                        <div className="space-y-1">
+                          {styleSummary ? (
+                            <p className="text-muted-foreground line-clamp-1 text-[11px] leading-tight">
+                              <span className="text-foreground/90 font-semibold">{t("compareStyleLabel")}</span> {styleSummary}
+                            </p>
+                          ) : null}
+                          {expertiseSummary ? (
+                            <p className="text-muted-foreground line-clamp-1 text-[11px] leading-tight">
+                              <span className="text-foreground/90 font-semibold">{t("compareTopicsLabel")}</span> {expertiseSummary}
+                            </p>
+                          ) : null}
+                        </div>
 
-                      <div className="flex items-center justify-between gap-2">
-                        <TrustBadgeRow ids={g.trust_badge_ids} size="xs" />
-                        {g.avg_traveler_rating != null ? (
-                          <p className="flex shrink-0 items-center gap-1 text-sm font-semibold">
-                            <Star className="size-4 fill-amber-400 text-amber-400" aria-hidden />
-                            {g.avg_traveler_rating.toFixed(1)}
-                            <span className="text-muted-foreground text-xs font-normal">({g.review_count_display})</span>
-                          </p>
-                        ) : null}
-                      </div>
+                        <div className="flex flex-wrap items-center justify-between gap-1.5 border-border/40 border-t border-dashed pt-1.5">
+                          <TrustBadgeRow ids={g.trust_badge_ids.slice(0, 3)} size="xs" className="min-w-0 flex-1" />
+                          {g.avg_traveler_rating != null ? (
+                            <p className="text-muted-foreground flex shrink-0 items-center gap-0.5 text-[11px] font-semibold tabular-nums">
+                              <Star className="size-3.5 fill-amber-400 text-amber-400" aria-hidden />
+                              {g.avg_traveler_rating.toFixed(1)}
+                              <span className="font-normal">({g.review_count_display})</span>
+                            </p>
+                          ) : null}
+                        </div>
 
                         {rep ? (
-                          <div className="border-border/60 bg-muted/20 rounded-xl border p-2">
-                          <p className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">{t("repPost")}</p>
-                            <p className="text-foreground mt-1 line-clamp-1 text-sm font-medium leading-snug">{rep.title}</p>
-                          </div>
+                          <p className="text-muted-foreground line-clamp-1 text-[10px] leading-tight">
+                            <span className="font-semibold text-foreground/80">{t("repPost")}</span> · {rep.title}
+                          </p>
                         ) : null}
 
-                        <div className="mt-auto grid grid-cols-2 gap-2">
-                          <Button asChild className="h-9 w-full rounded-[var(--radius-md)] text-xs font-semibold sm:text-sm">
-                            <Link href={`/guardians/${g.user_id}`}>{t("cardCtaPrimary")}</Link>
-                          </Button>
-                          <div className="[&_button]:h-9 [&_button]:w-full [&_button]:text-xs sm:[&_button]:text-sm">
-                            <SaveGuardianButton guardianUserId={g.user_id} compact />
+                        <div className="mt-auto flex flex-col gap-2 pt-1">
+                          <GuardianRequestOpenTrigger
+                            size="sm"
+                            className="h-9 min-h-9 w-full rounded-[var(--radius-md)] text-xs font-semibold"
+                            openDetail={{
+                              guardianUserId: g.user_id,
+                              displayName: g.display_name,
+                              headline: g.headline,
+                              avatarUrl: imgs.avatar,
+                              suggestedRegionSlug: g.primary_region_slug,
+                            }}
+                          >
+                            {t("cardCtaRequest")}
+                          </GuardianRequestOpenTrigger>
+                          <div className="grid grid-cols-2 gap-2">
+                            <GuardianProfilePreviewSheetTrigger
+                              guardian={publicGuardianToSheetPreview(g, repPostsForSheetPreview(g, approvedPosts))}
+                              triggerLabel={t("cardCtaCompareDetail")}
+                              triggerVariant="outline"
+                              size="sm"
+                              className="h-9 min-h-9 w-full rounded-[var(--radius-md)] text-[11px] font-semibold"
+                            />
+                            <div className="[&_button]:h-9 [&_button]:min-h-9 [&_button]:w-full [&_button]:text-[11px] [&_button]:font-semibold">
+                              <SaveGuardianButton guardianUserId={g.user_id} compact />
+                            </div>
                           </div>
                         </div>
                       </CardContent>

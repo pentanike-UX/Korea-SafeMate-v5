@@ -6,8 +6,10 @@ import { getPublicGuardianByIdMerged } from "@/lib/guardian-public-merged.server
 import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
 import { mockRegions } from "@/data/mock";
 import { relatedPostsForMerged } from "@/lib/posts-public-merged.server";
+import { SaveTravelerPostButton } from "@/components/posts/save-traveler-post-button";
 import { PostAuthorAside } from "@/components/posts/post-author-aside";
 import { PostDetailStickyAside } from "@/components/posts/post-detail-sticky-aside";
+import { RelatedPostsBrowseSheet } from "@/components/posts/related-posts-browse-sheet";
 import { RoutePostDetailClient } from "@/components/route-posts/route-post-detail-client";
 import { ArrowLeft } from "lucide-react";
 
@@ -51,6 +53,7 @@ export async function RoutePostDetailView({ post }: { post: ContentPost }) {
           />
         </div>
         <PostDetailStickyAside variant="route">
+          <SaveTravelerPostButton postId={post.id} />
           <PostAuthorAside post={post} />
         </PostDetailStickyAside>
       </div>
@@ -58,20 +61,19 @@ export async function RoutePostDetailView({ post }: { post: ContentPost }) {
       {related.length > 0 ? (
         <section className="border-border/50 mt-12 border-t bg-card/90">
           <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-            <h2 className="text-text-strong text-xl font-semibold">{t("relatedTitle")}</h2>
-            <ul className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {related.map((r) => (
-                <li key={r.id}>
-                  <Link
-                    href={`/posts/${r.id}`}
-                    className="border-border/70 bg-card block h-full rounded-2xl border p-4 shadow-[var(--shadow-sm)] transition-colors hover:border-primary/25"
-                  >
-                    <p className="line-clamp-2 font-semibold leading-snug">{r.title}</p>
-                    <p className="text-muted-foreground mt-2 line-clamp-2 text-xs">{r.summary}</p>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <h2 className="text-text-strong text-xl font-semibold">{t("relatedTitle")}</h2>
+              <RelatedPostsBrowseSheet
+                items={related.map((r) => ({
+                  id: r.id,
+                  title: r.title,
+                  summary: r.summary,
+                  imageUrl: getPostHeroImageUrl(r),
+                }))}
+                sheetTitle={t("relatedBrowseSheetTitle")}
+                triggerLabel={t("relatedBrowseTrigger")}
+              />
+            </div>
           </div>
         </section>
       ) : null}

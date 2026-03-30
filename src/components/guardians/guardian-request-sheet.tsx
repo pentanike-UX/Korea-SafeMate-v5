@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useEffect, useState, type ComponentProps, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { mockRegions } from "@/data/mock";
@@ -23,9 +23,28 @@ import { Loader2 } from "lucide-react";
 
 export const GUARDIAN_REQUEST_OPEN_EVENT = "safemate:open-guardian-request";
 
+/** Page-scoped defaults for 요청하기 when no guardianUserId is sent in the open event (single global host). */
+export const GUARDIAN_REQUEST_DEFAULTS_EVENT = "safemate:guardian-request-defaults";
+
+/** Optional guardian override (e.g. preview sheet / listing) so 요청하기 stays in-sheet without /book. */
 export type GuardianRequestOpenDetail = {
   postId?: string;
   postTitle?: string;
+  guardianUserId?: string;
+  displayName?: string;
+  headline?: string;
+  avatarUrl?: string;
+  suggestedRegionSlug?: string | null;
+};
+
+export const FALLBACK_GUARDIAN_REQUEST_AVATAR = "/images/hero/seoul2_MyLoveFromTheStar_NSeoulTower.jpg";
+
+type GuardianIdentityOverride = {
+  guardianUserId: string;
+  displayName: string;
+  headline: string;
+  avatarUrl: string;
+  suggestedRegionSlug: string | null;
 };
 
 export function GuardianRequestOpenTrigger({
@@ -34,13 +53,17 @@ export function GuardianRequestOpenTrigger({
   size = "lg",
   children,
   postContext,
+  openDetail,
 }: {
   className?: string;
   variant?: ComponentProps<typeof Button>["variant"];
   size?: ComponentProps<typeof Button>["size"];
   children: ReactNode;
+  /** @deprecated use openDetail */
   postContext?: GuardianRequestOpenDetail | null;
+  openDetail?: GuardianRequestOpenDetail | null;
 }) {
+  const detail = { ...(postContext ?? {}), ...(openDetail ?? {}) };
   return (
     <Button
       type="button"
@@ -50,7 +73,7 @@ export function GuardianRequestOpenTrigger({
       onClick={() =>
         window.dispatchEvent(
           new CustomEvent<GuardianRequestOpenDetail>(GUARDIAN_REQUEST_OPEN_EVENT, {
-            detail: postContext ?? {},
+            detail,
           }),
         )
       }
@@ -74,16 +97,40 @@ export function GuardianRequestSheetHost({
   headline,
   avatarUrl,
   suggestedRegionSlug,
-}: GuardianRequestSheetHostProps) {
+  useWindowDefaults = false,
+}: GuardianRequestSheetHostProps & { useWindowDefaults?: boolean }) {
   const t = useTranslations("GuardianRequest");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [postCtx, setPostCtx] = useState<GuardianRequestOpenDetail | null>(null);
+  const [identityOverride, setIdentityOverride] = useState<GuardianIdentityOverride | null>(null);
+  const [baseIdentity, setBaseIdentity] = useState<GuardianRequestSheetHostProps | null>(null);
   const [side, setSide] = useState<"right" | "bottom">("bottom");
+
+  const effectiveBase: GuardianRequestSheetHostProps = useWindowDefaults
+    ? (baseIdentity ?? {
+        guardianUserId: "",
+        displayName: "",
+        headline: "",
+        avatarUrl: FALLBACK_GUARDIAN_REQUEST_AVATAR,
+        suggestedRegionSlug: null,
+      })
+    : {
+        guardianUserId,
+        displayName,
+        headline,
+        avatarUrl,
+        suggestedRegionSlug: suggestedRegionSlug ?? null,
+      };
+
+  const effectiveRef = useRef(effectiveBase);
+  effectiveRef.current = effectiveBase;
 
   const [requestKind, setRequestKind] = useState<GuardianRequestKind>("full_day");
   const [regionSlug, setRegionSlug] = useState(() =>
-    mockRegions.some((r) => r.slug === (suggestedRegionSlug ?? "")) ? suggestedRegionSlug! : "seoul",
+    mockRegions.some((r) => r.slug === (effectiveBase.suggestedRegionSlug ?? ""))
+      ? effectiveBase.suggestedRegionSlug!
+      : "seoul",
   );
   const [preferredDate, setPreferredDate] = useState("");
   const [mood, setMood] = useState("");
@@ -100,17 +147,53 @@ export function GuardianRequestSheetHost({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
+    const mq = window.matchMedia("(min-width: 1024px)");
     const sync = () => setSide(mq.matches ? "right" : "bottom");
     sync();
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
   }, []);
 
+  useEffect(() => {
+    if (!useWindowDefaults) return;
+    const fn = (e: Event) => {
+      const d = (e as CustomEvent<GuardianRequestSheetHostProps | null>).detail;
+      setBaseIdentity(d);
+    };
+    window.addEventListener(GUARDIAN_REQUEST_DEFAULTS_EVENT, fn);
+    return () => window.removeEventListener(GUARDIAN_REQUEST_DEFAULTS_EVENT, fn);
+  }, [useWindowDefaults]);
+
+  useEffect(() => {
+    if (!useWindowDefaults || !baseIdentity) return;
+    const slug = baseIdentity.suggestedRegionSlug;
+    setRegionSlug(mockRegions.some((r) => r.slug === (slug ?? "")) ? slug! : "seoul");
+  }, [useWindowDefaults, baseIdentity?.guardianUserId, baseIdentity?.suggestedRegionSlug]);
+
   const onOpenEvent = useCallback((e: Event) => {
-    const ce = e as CustomEvent<GuardianRequestOpenDetail>;
-    const d = ce.detail;
-    setPostCtx(d?.postId ? { postId: d.postId, postTitle: d.postTitle } : null);
+    const d = (e as CustomEvent<GuardianRequestOpenDetail>).detail ?? {};
+    setPostCtx(d.postId ? { postId: d.postId, postTitle: d.postTitle } : null);
+    if (d.guardianUserId) {
+      setIdentityOverride({
+        guardianUserId: d.guardianUserId,
+        displayName: d.displayName ?? d.guardianUserId,
+        headline: d.headline ?? "",
+        avatarUrl: d.avatarUrl?.trim() ? d.avatarUrl : FALLBACK_GUARDIAN_REQUEST_AVATAR,
+        suggestedRegionSlug:
+          d.suggestedRegionSlug != null && mockRegions.some((r) => r.slug === d.suggestedRegionSlug)
+            ? d.suggestedRegionSlug
+            : null,
+      });
+      if (d.suggestedRegionSlug && mockRegions.some((r) => r.slug === d.suggestedRegionSlug)) {
+        setRegionSlug(d.suggestedRegionSlug);
+      }
+    } else {
+      setIdentityOverride(null);
+      const b = effectiveRef.current;
+      setRegionSlug(
+        mockRegions.some((r) => r.slug === (b.suggestedRegionSlug ?? "")) ? b.suggestedRegionSlug! : "seoul",
+      );
+    }
     setOpen(true);
   }, []);
 
@@ -122,7 +205,13 @@ export function GuardianRequestSheetHost({
   const resetForClose = () => {
     setError(null);
     setPostCtx(null);
+    setIdentityOverride(null);
   };
+
+  const activeGuardianUserId = identityOverride?.guardianUserId ?? effectiveBase.guardianUserId;
+  const activeDisplayName = identityOverride?.displayName ?? effectiveBase.displayName;
+  const activeHeadline = identityOverride?.headline ?? effectiveBase.headline;
+  const activeAvatarUrl = identityOverride?.avatarUrl ?? effectiveBase.avatarUrl;
 
   const kindLabel = (k: GuardianRequestKind) => {
     if (k === "half_day") return t("kindHalf");
@@ -134,6 +223,10 @@ export function GuardianRequestSheetHost({
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!activeGuardianUserId.trim()) {
+      setError(t("errorSubmit"));
+      return;
+    }
     if (!guestName.trim() || !guestEmail.trim()) {
       setError(t("errorContact"));
       return;
@@ -162,8 +255,8 @@ export function GuardianRequestSheetHost({
       travelerUserType,
       preferredLanguage,
       travelerCount,
-      guardianUserId,
-      guardianDisplayName: displayName,
+      guardianUserId: activeGuardianUserId,
+      guardianDisplayName: activeDisplayName,
       relatedPost:
         postCtx?.postId && postCtx.postTitle ? { id: postCtx.postId, title: postCtx.postTitle } : null,
     };
@@ -222,11 +315,11 @@ export function GuardianRequestSheetHost({
         <SheetHeader className="border-border/60 shrink-0 space-y-3 border-b px-5 py-4 sm:px-6">
           <div className="flex items-start gap-3">
             <div className="border-border/50 relative size-14 shrink-0 overflow-hidden rounded-xl border bg-muted">
-              <Image src={avatarUrl} alt="" fill className="object-cover" sizes="56px" />
+              <Image src={activeAvatarUrl} alt="" fill className="object-cover" sizes="56px" />
             </div>
             <div className="min-w-0 flex-1 text-left">
-              <SheetTitle className="text-left text-base leading-snug sm:text-lg">{displayName}</SheetTitle>
-              <p className="text-muted-foreground mt-1 line-clamp-2 text-sm leading-relaxed">{headline}</p>
+              <SheetTitle className="text-left text-base leading-snug sm:text-lg">{activeDisplayName}</SheetTitle>
+              <p className="text-muted-foreground mt-1 line-clamp-2 text-sm leading-relaxed">{activeHeadline}</p>
             </div>
           </div>
           {postCtx?.postTitle ? (
@@ -235,6 +328,8 @@ export function GuardianRequestSheetHost({
             </p>
           ) : null}
         </SheetHeader>
+
+        <p className="text-muted-foreground border-border/60 border-b px-5 py-3 text-sm leading-relaxed sm:px-6">{t("sheetIntroLead")}</p>
 
         <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
@@ -260,6 +355,7 @@ export function GuardianRequestSheetHost({
                   </label>
                 ))}
               </div>
+              <p className="text-muted-foreground text-xs leading-relaxed">{t("fieldRequestKindHelp")}</p>
             </div>
 
             <div className="grid gap-2">
@@ -415,5 +511,19 @@ export function GuardianRequestSheetHost({
         </form>
       </SheetContent>
     </Sheet>
+  );
+}
+
+/** Mount once in the site shell; pages publish defaults via `GuardianRequestDefaultsPublisher`. */
+export function GuardianRequestSheetGlobal() {
+  return (
+    <GuardianRequestSheetHost
+      useWindowDefaults
+      guardianUserId=""
+      displayName=""
+      headline=""
+      avatarUrl={FALLBACK_GUARDIAN_REQUEST_AVATAR}
+      suggestedRegionSlug={null}
+    />
   );
 }

@@ -48,7 +48,12 @@ export function TravelerOverviewStatGrid({
       </Card>
       <Card className="rounded-2xl border-border/60 py-0 shadow-[var(--shadow-sm)]">
         <CardContent className="p-5">
-          <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t("statSavedGuardians")}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t("statSavedGuardians")}</p>
+            {savedG > 0 && (unread?.navJourneys ?? 0) > 0 ? (
+              <BlockAttentionBadge count={savedG} ariaLabel={t("attentionBlockSavedGuardians")} />
+            ) : null}
+          </div>
           <p className="text-text-strong mt-2 text-3xl font-semibold tabular-nums">{savedG}</p>
           <Button asChild variant="link" className="mt-2 h-auto px-0 text-sm font-semibold">
             <Link href="/mypage/journeys">{t("hubQuickJourneys")}</Link>
@@ -57,7 +62,12 @@ export function TravelerOverviewStatGrid({
       </Card>
       <Card className="rounded-2xl border-border/60 py-0 shadow-[var(--shadow-sm)]">
         <CardContent className="p-5">
-          <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t("statSavedPosts")}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">{t("statSavedPosts")}</p>
+            {savedP > 0 && (unread?.navJourneys ?? 0) > 0 ? (
+              <BlockAttentionBadge count={savedP} ariaLabel={t("attentionBlockSavedPosts")} />
+            ) : null}
+          </div>
           <p className="text-text-strong mt-2 text-3xl font-semibold tabular-nums">{savedP}</p>
           <Button asChild variant="link" className="mt-2 h-auto px-0 text-sm font-semibold">
             <Link href="/mypage/journeys">{t("hubQuickJourneys")}</Link>

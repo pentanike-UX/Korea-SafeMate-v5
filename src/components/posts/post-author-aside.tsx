@@ -1,13 +1,13 @@
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
-import { Link } from "@/i18n/navigation";
 import type { ContentPost } from "@/types/domain";
 import { getPublicGuardianByIdMerged } from "@/lib/guardian-public-merged.server";
 import { getPostHeroImageUrl } from "@/lib/content-post-route";
 import { listPostsForGuardianMerged } from "@/lib/posts-public-merged.server";
+import { publicGuardianToSheetPreview } from "@/lib/guardian-profile-sheet-preview";
 import { GuardianPostsExplorerSheet } from "@/components/guardians/guardian-posts-explorer-sheet";
+import { GuardianProfilePreviewSheetTrigger } from "@/components/guardians/guardian-profile-preview-sheet-trigger";
 import { PostAuthorRequestCta } from "@/components/posts/post-author-request-cta";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { TrustBadgesServer } from "@/components/forty-two/trust-badges-server";
@@ -29,6 +29,13 @@ export async function PostAuthorAside({ post }: { post: ContentPost }) {
     summary: gp.summary,
     imageUrl: getPostHeroImageUrl(gp),
   }));
+  const repForPreview =
+    guardian != null
+      ? publicGuardianToSheetPreview(
+          guardian,
+          authorApprovedPosts.slice(0, 3).map((gp) => ({ id: gp.id, title: gp.title, summary: gp.summary })),
+        )
+      : null;
 
   return (
     <aside className="contents">
@@ -65,9 +72,15 @@ export async function PostAuthorAside({ post }: { post: ContentPost }) {
             <>
               <p className="text-muted-foreground text-sm leading-relaxed">{guardian.headline}</p>
               <TrustBadgesServer ids={guardian.trust_badge_ids} size="xs" />
-              <Button asChild className="w-full rounded-xl">
-                <Link href={`/guardians/${guardian.user_id}`}>{t("viewGuardian")}</Link>
-              </Button>
+              {repForPreview ? (
+                <GuardianProfilePreviewSheetTrigger
+                  guardian={repForPreview}
+                  triggerLabel={t("viewGuardian")}
+                  triggerVariant="outline"
+                  className="w-full"
+                  postContext={{ postId: post.id, postTitle: post.title }}
+                />
+              ) : null}
               <ul className="text-muted-foreground list-inside list-disc space-y-1 text-xs leading-relaxed">
                 <li>{tReq("asideBulletHalfFull")}</li>
                 <li>{tReq("asideBulletRegion")}</li>

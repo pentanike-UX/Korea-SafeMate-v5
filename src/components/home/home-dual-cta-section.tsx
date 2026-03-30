@@ -37,7 +37,8 @@ export function HomeDualCtaSection() {
 
   return (
     <section className="bg-muted/25 border-t border-border/50">
-      <div className="mx-auto max-w-6xl px-4 py-14 pb-20 sm:px-5 sm:py-16 sm:pb-24">
+      <div className="mx-auto max-w-6xl px-4 py-12 pb-16 sm:px-5 sm:py-14 sm:pb-20">
+        <p className="text-primary mb-6 text-center text-[11px] font-semibold tracking-[0.2em] uppercase sm:mb-8">{t("dualCtaEyebrow")}</p>
         <div className="grid gap-6 lg:grid-cols-2 lg:gap-8">
           {/* 가디언 찾기 */}
           <article

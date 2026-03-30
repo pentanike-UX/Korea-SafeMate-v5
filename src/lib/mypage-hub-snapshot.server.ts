@@ -1,11 +1,13 @@
 import { mockBookings } from "@/data/mock/bookings";
 import { getGuardianSeedBundle } from "@/data/mock/guardian-seed-bundle";
-import { mockTravelerTripRequests } from "@/data/mock/traveler-hub";
+import { mockTravelerSavedPostIds, mockTravelerTripRequests } from "@/data/mock/traveler-hub";
 import type { AppAccountRole } from "@/lib/auth/app-role";
 import type { GuardianProfileStatus } from "@/lib/auth/guardian-profile-status";
 import { isMockGuardianId } from "@/lib/dev/mock-guardian-auth";
 import { fetchLedgerForUser } from "@/lib/points/point-ledger-service";
 import { getMatchRequestsForGuardian, getMatchRequestsForTraveler } from "@/lib/traveler-match-requests.server";
+import { getTravelerSavedGuardianIds } from "@/lib/traveler-saved-guardians-cookie";
+import { getTravelerSavedPostIds } from "@/lib/traveler-saved-posts-cookie";
 import { getSubmittedTravelerReviewsFromCookie } from "@/lib/traveler-submitted-reviews.server";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role";
 import type { ContentPostStatus } from "@/types/domain";
@@ -76,6 +78,11 @@ export async function getMypageHubSnapshot(
     ? mockTravelerTripRequests.filter((r) => r.status === "requested" || r.status === "reviewing").length
     : 0;
 
+  const savedGuardianIdsSorted = userId ? [...(await getTravelerSavedGuardianIds())].sort() : [];
+  const savedPostIdsSorted = useMockTrip
+    ? [...mockTravelerSavedPostIds].sort()
+    : [...(await getTravelerSavedPostIds())].sort();
+
   let matchRows = userId ? await getMatchRequestsForTraveler(userId) : [];
   const matchPending = matchRows.filter((m) => m.status === "requested").length;
   const matchAccepted = matchRows.filter((m) => m.status === "accepted").length;
@@ -100,17 +107,17 @@ export async function getMypageHubSnapshot(
 
   const travelerNavBadges = emptyTravelerNav();
   const travelerNavSignatures = emptyTravelerNavSignatures();
-  /** 여정(mock) 파이프라인 — LNB 「내 여정」 */
-  travelerNavBadges.navJourneys = openTrip;
+  /** 여정(mock) 파이프라인 + 저장 목록 변화 — LNB 「내 여정」 */
+  const journeySavedSignal =
+    savedGuardianIdsSorted.length > 0 || savedPostIdsSorted.length > 0 ? 1 : 0;
+  travelerNavBadges.navJourneys = openTrip + journeySavedSignal;
   /** 매칭 쿠키 — 응답 대기 + 리뷰 미작성 완료 */
   travelerNavBadges.navMatches = matchPending + matchReviewDue;
   /** 포인트 원장 최근 활동 */
   travelerNavBadges.navPoints = pointsRecentLedgerCount;
-  travelerNavBadges.navOverview = 0;
   travelerNavBadges.navProfile = 0;
-  travelerNavSignatures.navOverview = "overview:none";
   travelerNavSignatures.navProfile = "profile:none";
-  travelerNavSignatures.navJourneys = `journeys:open=${openTrip}`;
+  travelerNavSignatures.navJourneys = `journeys:open=${openTrip}:savedG=${savedGuardianIdsSorted.join("|")}:savedP=${savedPostIdsSorted.join("|")}`;
   travelerNavSignatures.navMatches = `matches:pending=${matchPending}:reviewDue=${matchReviewDue}:ids=${matchRows
     .map((m) => `${m.id}:${m.status}:${m.updated_at}`)
     .join("|")}`;
@@ -126,6 +133,8 @@ export async function getMypageHubSnapshot(
       accepted: matchAccepted,
     },
     pointsRecentLedgerCount,
+    savedGuardianCount: savedGuardianIdsSorted.length,
+    savedPostCount: savedPostIdsSorted.length,
   };
 
   const guardianSegmentUnlocked = appRole === "guardian" || guardianStatus !== "none";
@@ -246,12 +255,18 @@ export async function getMypageHubSnapshot(
     const incomingMatchRequests = guardianMatchRows.filter((r) => r.status === "requested").length;
     const poolSignal = openPoolCount > 0 ? 1 : 0;
 
+    guardianWorkspaceNavBadges.guardianNavHome = 0;
     guardianWorkspaceNavBadges.guardianNavPosts = pendingPosts + (draftPosts > 0 ? 1 : 0);
     guardianWorkspaceNavBadges.guardianNavMatches = incomingMatchRequests + reviewingBookings + poolSignal;
     guardianWorkspaceNavBadges.guardianNavProfile = 0;
     guardianWorkspaceNavBadges.guardianNavNewPost = 0;
+    guardianWorkspaceNavBadges.guardianNavPoints = 0;
+    guardianWorkspaceNavBadges.guardianNavSettings = 0;
+    guardianWorkspaceNavSignatures.guardianNavHome = "guardianHome:none";
     guardianWorkspaceNavSignatures.guardianNavProfile = "guardianProfile:none";
     guardianWorkspaceNavSignatures.guardianNavNewPost = "guardianNewPost:none";
+    guardianWorkspaceNavSignatures.guardianNavPoints = "guardianPoints:none";
+    guardianWorkspaceNavSignatures.guardianNavSettings = "guardianSettings:none";
     guardianWorkspaceNavSignatures.guardianNavPosts = `guardianPosts:pending=${pendingPosts}:draft=${draftPosts}:recent=${recentPosts
       .map((p) => `${p.id}:${p.status}:${p.updatedAt}`)
       .join("|")}`;

@@ -1,8 +1,16 @@
 import type { LucideIcon } from "lucide-react";
-import { Coins, FolderOpen, HeartHandshake, Images, PenSquare, Plane, Settings, Users } from "lucide-react";
+import {
+  Coins,
+  Compass,
+  FolderOpen,
+  HeartHandshake,
+  LayoutDashboard,
+  PenSquare,
+  Settings,
+  UserRound,
+} from "lucide-react";
 
 export type HubNavLabelKey =
-  | "navOverview"
   | "navJourneys"
   | "navProfile"
   | "navPoints"
@@ -22,12 +30,17 @@ export type HubNavItem = {
   match: (pathname: string) => boolean;
 };
 
-function travelerOverviewMatch(p: string) {
+function travelerHomeMatch(p: string) {
   return p === "/mypage" || p === "/mypage/";
 }
 
 function travelerJourneysMatch(p: string) {
   return p === "/mypage/journeys" || p.startsWith("/mypage/journeys/");
+}
+
+/** 허브(/mypage) + 심화 여정 화면 — LNB는 「내 여정」 하나로 묶음 */
+function travelerHubAndJourneysMatch(p: string) {
+  return travelerHomeMatch(p) || travelerJourneysMatch(p);
 }
 
 function travelerProfileMatch(p: string) {
@@ -42,20 +55,27 @@ function travelerMatchesMatch(p: string) {
   return p === "/mypage/matches" || p.startsWith("/mypage/matches/");
 }
 
-/** 여행자 허브 LNB — 요청·저장 흐름은 허브 요약·여정·매칭 화면에서 진입 (매칭과 역할 중복 방지). */
+/** Traveler — 저장·요청·진행 요약(허브) / 프로필 / 포인트 / 매칭 */
 export const TRAVELER_HUB_NAV: HubNavItem[] = [
-  { href: "/mypage", labelKey: "navJourneys", Icon: Plane, match: travelerOverviewMatch },
-  { href: "/mypage/profile", labelKey: "navProfile", Icon: Settings, match: travelerProfileMatch },
+  { href: "/mypage", labelKey: "navJourneys", Icon: Compass, match: travelerHubAndJourneysMatch },
+  { href: "/mypage/profile", labelKey: "navProfile", Icon: UserRound, match: travelerProfileMatch },
   { href: "/mypage/points", labelKey: "navPoints", Icon: Coins, match: travelerPointsMatch },
-  { href: "/mypage/matches", labelKey: "navMatches", Icon: Users, match: travelerMatchesMatch },
+  { href: "/mypage/matches", labelKey: "navMatches", Icon: HeartHandshake, match: travelerMatchesMatch },
 ];
 
 function guardianProfileMatch(p: string) {
   return p.startsWith("/mypage/guardian/profile");
 }
 
-function guardianPostsMatch(p: string) {
-  return p.startsWith("/mypage/guardian/posts");
+function guardianPostsListMatch(p: string) {
+  return (
+    p.startsWith("/mypage/guardian/posts") &&
+    !p.startsWith("/mypage/guardian/posts/new")
+  );
+}
+
+function guardianNewPostMatch(p: string) {
+  return p.startsWith("/mypage/guardian/posts/new");
 }
 
 function guardianMatchesMatch(p: string) {
@@ -63,36 +83,33 @@ function guardianMatchesMatch(p: string) {
 }
 
 function guardianPointsMatch(p: string) {
-  return p.startsWith("/mypage/guardian/points") || p.startsWith("/mypage/points");
+  return p.startsWith("/mypage/guardian/points");
 }
 
 function guardianSettingsMatch(p: string) {
-  return p.startsWith("/mypage/guardian/settings") || p.startsWith("/mypage/profile");
+  return p.startsWith("/mypage/guardian/settings");
 }
 
-/** 가디언 운영 전용 — 마이페이지 허브 안에서만 이동 */
+/** Guardian 운영 콘솔 — 홈 → 프로필 → 포스트 목록 → 신규 작성 → 매칭 → 포인트 → 설정 */
 export const GUARDIAN_WORKSPACE_NAV: HubNavItem[] = [
-  { href: "/mypage", labelKey: "guardianNavHome", Icon: Plane, match: travelerOverviewMatch },
-  { href: "/mypage/guardian/profile/edit", labelKey: "guardianNavProfile", Icon: Images, match: guardianProfileMatch },
-  {
-    href: "/mypage/guardian/posts/new",
-    labelKey: "guardianNavNewPost",
-    Icon: PenSquare,
-    match: (p) => p.startsWith("/mypage/guardian/posts/new"),
-  },
+  { href: "/mypage", labelKey: "guardianNavHome", Icon: LayoutDashboard, match: travelerHomeMatch },
+  { href: "/mypage/guardian/profile/edit", labelKey: "guardianNavProfile", Icon: UserRound, match: guardianProfileMatch },
   {
     href: "/mypage/guardian/posts",
     labelKey: "guardianNavPosts",
     Icon: FolderOpen,
-    match: (p) => guardianPostsMatch(p) && !p.startsWith("/mypage/guardian/posts/new"),
+    match: guardianPostsListMatch,
+  },
+  {
+    href: "/mypage/guardian/posts/new",
+    labelKey: "guardianNavNewPost",
+    Icon: PenSquare,
+    match: guardianNewPostMatch,
   },
   { href: "/mypage/guardian/matches", labelKey: "guardianNavMatches", Icon: HeartHandshake, match: guardianMatchesMatch },
   { href: "/mypage/guardian/points", labelKey: "guardianNavPoints", Icon: Coins, match: guardianPointsMatch },
   { href: "/mypage/guardian/settings", labelKey: "guardianNavSettings", Icon: Settings, match: guardianSettingsMatch },
 ];
-
-/** 승인된 가디언: 공통 여행자 허브 + 가디언 운영 링크 */
-export const GUARDIAN_APPROVED_HUB_NAV: HubNavItem[] = [...TRAVELER_HUB_NAV, ...GUARDIAN_WORKSPACE_NAV];
 
 export function resolveActiveNavLabel(pathname: string, items: HubNavItem[]): HubNavItem | null {
   const hit = items.find((i) => i.match(pathname));

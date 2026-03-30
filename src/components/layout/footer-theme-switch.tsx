@@ -23,7 +23,7 @@ export function FooterThemeSwitch({ className }: { className?: string }) {
       aria-label={dark ? t("themeSwitchToLight") : t("themeSwitchToDark")}
       onClick={toggleTheme}
       className={cn(
-        "relative inline-flex h-11 w-[6.1rem] shrink-0 items-center rounded-[var(--radius-md)] border border-white/22 bg-white/[0.07] px-1 shadow-inner outline-none transition-colors",
+        "relative inline-flex h-10 min-h-10 w-[5.75rem] shrink-0 items-center rounded-[var(--radius-md)] border border-white/22 bg-white/[0.07] px-1 shadow-inner outline-none transition-colors sm:w-[6rem]",
         "focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
         "disabled:opacity-60",
         className,
@@ -31,21 +31,21 @@ export function FooterThemeSwitch({ className }: { className?: string }) {
     >
       <span className="pointer-events-none flex w-full items-center justify-between px-1.5">
         <Sun
-          className={cn("size-4 transition-colors", dark ? "text-amber-200/80" : "text-amber-100/75")}
-          strokeWidth={1.9}
+          className={cn("size-[1.125rem] transition-colors", dark ? "text-amber-200/95" : "text-amber-200")}
+          strokeWidth={2.35}
           aria-hidden
         />
         <Moon
-          className={cn("size-4 transition-colors", dark ? "text-sky-100/70" : "text-sky-100/90")}
-          strokeWidth={1.9}
+          className={cn("size-[1.125rem] transition-colors", dark ? "text-sky-50" : "text-sky-200")}
+          strokeWidth={2.35}
           aria-hidden
         />
       </span>
       <span
         aria-hidden
         className={cn(
-          "pointer-events-none absolute top-1 bottom-1 w-8 rounded-[calc(var(--radius-md)-4px)] bg-white/95 shadow-md ring-1 ring-black/15 transition-[left] duration-200 ease-out",
-          dark ? "left-[calc(100%-2.25rem)]" : "left-1",
+          "pointer-events-none absolute top-0.5 bottom-0.5 w-[1.875rem] rounded-[calc(var(--radius-md)-4px)] bg-white/95 shadow-md ring-1 ring-black/15 transition-[left] duration-200 ease-out",
+          dark ? "left-[calc(100%-2.125rem)]" : "left-1",
         )}
       />
       <span className="sr-only">{dark ? tFooter("themeDark") : tFooter("themeLight")}</span>

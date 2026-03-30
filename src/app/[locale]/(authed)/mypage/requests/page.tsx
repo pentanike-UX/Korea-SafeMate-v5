@@ -13,7 +13,7 @@ import { MypageGuardianProfileSheetTrigger } from "@/components/mypage/mypage-gu
 import { listPublicGuardiansMerged } from "@/lib/guardian-public-merged.server";
 import { listApprovedPostsMerged } from "@/lib/posts-public-merged.server";
 import { guardianProfileImageUrls } from "@/lib/guardian-profile-images";
-import { Compass, ExternalLink } from "lucide-react";
+import { Compass } from "lucide-react";
 
 function requestTypeFromTheme(themeSlug: string) {
   if (themeSlug.includes("night")) return "half_day";
@@ -157,10 +157,9 @@ export default async function TravelerRequestsPage() {
                       />
                     ) : null}
                     <Button asChild size="sm" className="rounded-xl">
-                      <Link href="/guardians" target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5">
+                      <Link href="/guardians" className="inline-flex items-center gap-1.5">
                         <Compass className="size-4" aria-hidden />
                         {t("findGuardian")}
-                        <ExternalLink className="size-3.5 opacity-80" aria-hidden />
                       </Link>
                     </Button>
                   </div>
