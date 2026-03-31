@@ -23,32 +23,41 @@ export function FooterThemeSwitch({ className }: { className?: string }) {
       aria-label={dark ? t("themeSwitchToLight") : t("themeSwitchToDark")}
       onClick={toggleTheme}
       className={cn(
-        "relative inline-flex h-10 min-h-10 w-[5.75rem] shrink-0 items-center rounded-[var(--radius-md)] border border-white/22 bg-white/[0.07] px-1 shadow-inner outline-none transition-colors sm:w-[6rem]",
-        "hover:border-white/32 hover:bg-white/[0.11] enabled:hover:shadow-sm",
+        "inline-flex h-10 min-h-10 shrink-0 items-center gap-0.5 rounded-[var(--radius-md)] border border-white/20 bg-white/10 p-0.5 backdrop-blur-sm",
+        "outline-none transition-[box-shadow,background-color,opacity] duration-200",
+        "hover:bg-white/12",
         "focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
         "disabled:opacity-60",
         className,
       )}
     >
-      <span className="pointer-events-none flex w-full items-center justify-between px-1.5">
-        <Sun
-          className={cn("size-[1.125rem] transition-colors", dark ? "text-amber-200/95" : "text-amber-200")}
-          strokeWidth={2.35}
-          aria-hidden
-        />
-        <Moon
-          className={cn("size-[1.125rem] transition-colors", dark ? "text-sky-50" : "text-sky-200")}
-          strokeWidth={2.35}
-          aria-hidden
-        />
+      <span
+        aria-hidden
+        className={cn(
+          "flex h-9 min-h-9 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] px-2 leading-none",
+          "transition-[box-shadow,background-color,opacity] duration-200",
+          dark ? "opacity-80" : "bg-white shadow-sm ring-2 ring-white/50",
+        )}
+      >
+        <Sun className="size-[1.05rem]" strokeWidth={2.35} aria-hidden />
+        <span className={cn("text-[11px] font-semibold tracking-wide", !dark ? "underline underline-offset-4 text-[#0b1020]" : "opacity-80")}>
+          LIGHT
+        </span>
       </span>
       <span
         aria-hidden
         className={cn(
-          "pointer-events-none absolute top-0.5 bottom-0.5 w-[1.875rem] rounded-[calc(var(--radius-md)-4px)] bg-white/95 shadow-md ring-1 ring-black/15 transition-[left] duration-200 ease-out",
-          dark ? "left-[calc(100%-2.125rem)]" : "left-1",
+          "flex h-9 min-h-9 items-center justify-center gap-1.5 rounded-[var(--radius-sm)] px-2 leading-none",
+          "transition-[box-shadow,background-color,opacity] duration-200",
+          dark ? "bg-white shadow-sm ring-2 ring-white/50" : "opacity-80",
         )}
-      />
+      >
+        <Moon className="size-[1.05rem]" strokeWidth={2.35} aria-hidden />
+        <span className={cn("text-[11px] font-semibold tracking-wide", dark ? "underline underline-offset-4 text-[#0b1020]" : "opacity-80")}>
+          DARK
+        </span>
+      </span>
+
       <span className="sr-only">{dark ? tFooter("themeDark") : tFooter("themeLight")}</span>
     </button>
   );
