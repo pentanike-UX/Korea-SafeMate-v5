@@ -61,6 +61,10 @@ export function HomeQuickStartExplorer() {
   }, [area, theme]);
 
   const canExplore = area !== null || theme !== null;
+  const selectedChips = [
+    area ? (tLaunch.raw(area) as { name: string }).name : null,
+    theme ? (tTheme.raw(theme as MoodSlug) as { title: string }).title : null,
+  ].filter(Boolean) as string[];
 
   function regionLabel(slug: LaunchAreaSlug) {
     return (tLaunch.raw(slug) as { name: string }).name;
@@ -79,6 +83,23 @@ export function HomeQuickStartExplorer() {
           <p className="text-muted-foreground mt-2.5 text-sm leading-relaxed sm:mt-3 sm:text-[15px]">{t("lead")}</p>
         </div>
 
+        {!canExplore ? (
+          <p className="text-muted-foreground mb-6 text-sm">
+            지역과 무드를 고르면 맞는 가디언을 바로 볼 수 있어요
+          </p>
+        ) : (
+          <div className="mb-6 flex flex-wrap items-center gap-2">
+            {selectedChips.map((c) => (
+              <span
+                key={c}
+                className="bg-background text-foreground ring-border inline-flex min-h-8 items-center rounded-full px-3 text-xs font-semibold ring-1"
+              >
+                {c}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* 1. Regions */}
         <div className="mb-8 sm:mb-10">
           <h3 className="text-foreground mb-3 text-sm font-semibold tracking-tight sm:mb-4 sm:text-base">{t("step1Title")}</h3>
@@ -87,7 +108,10 @@ export function HomeQuickStartExplorer() {
               const active = a.active && !a.comingSoon;
               const selected = area === a.slug;
               const copy = tLaunch.raw(a.slug) as { name: string; blurb: string; landmark: string; imageAlt: string };
-              const desc = t(REGION_DESC_KEY[a.slug]);
+              const descRaw = t(REGION_DESC_KEY[a.slug]);
+              // next-intl key-miss can leak as "Home.regionDesc_*" (or similar). Never show raw keys in UI.
+              const desc =
+                descRaw.includes(".") && descRaw.endsWith(REGION_DESC_KEY[a.slug]) ? "" : descRaw;
 
               const media = (
                 <div className="relative aspect-[16/10] overflow-hidden bg-muted">

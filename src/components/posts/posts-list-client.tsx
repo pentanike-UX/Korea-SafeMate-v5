@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import type { ContentCategory } from "@/types/domain";
 import type { ContentPost } from "@/types/domain";
 import { getPostHeroImageAlt, getPostHeroImageUrl, postHasRouteJourney } from "@/lib/content-post-route";
@@ -39,6 +39,7 @@ export function PostsListClient({
 }) {
   const t = useTranslations("Posts");
   const tExplore = useTranslations("ListingExploration");
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [q, setQ] = useState("");
   const [category, setCategory] = useState<string>("all");
@@ -385,18 +386,39 @@ export function PostsListClient({
                         </div>
                         <p className="text-muted-foreground mt-3 line-clamp-2 flex-1 text-sm leading-relaxed sm:text-[15px]">{p.summary}</p>
                         <div className="text-muted-foreground mt-4 flex flex-wrap items-center gap-2 text-xs">
-                          <span>{p.author_display_name}</span>
-                          <span aria-hidden>·</span>
-                          <span className="capitalize">{t(`region.${p.region_slug}` as "region.seoul")}</span>
-                          {p.helpful_rating != null ? (
-                            <>
-                              <span aria-hidden>·</span>
-                              <span className="inline-flex items-center gap-0.5">
-                                <Heart className="size-3.5 fill-rose-400/80 text-rose-400/80" aria-hidden />
-                                {p.helpful_rating.toFixed(1)}
-                              </span>
-                            </>
-                          ) : null}
+                          <span
+                            role="link"
+                            tabIndex={0}
+                            className="text-muted-foreground hover:text-foreground underline-offset-4 transition-colors hover:underline"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              router.push(`/guardians/${p.author_user_id}`);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key !== "Enter" && e.key !== " ") return;
+                              e.preventDefault();
+                              e.stopPropagation();
+                              router.push(`/guardians/${p.author_user_id}`);
+                            }}
+                          >
+                            {p.author_display_name}
+                            <span aria-hidden className="mx-1.5 opacity-60">
+                              ·
+                            </span>
+                            <span className="capitalize">{t(`region.${p.region_slug}` as "region.seoul")}</span>
+                            {p.helpful_rating != null ? (
+                              <>
+                                <span aria-hidden className="mx-1.5 opacity-60">
+                                  ·
+                                </span>
+                                <span className="inline-flex items-center gap-0.5">
+                                  <Heart className="size-3.5 fill-rose-400/80 text-rose-400/80" aria-hidden />
+                                  {p.helpful_rating.toFixed(1)}
+                                </span>
+                              </>
+                            ) : null}
+                          </span>
                         </div>
                       </div>
                     </Link>

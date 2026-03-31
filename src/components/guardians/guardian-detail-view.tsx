@@ -79,8 +79,9 @@ export async function GuardianDetailView({
       ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10
       : g.avg_traveler_rating;
   const showHeroReviews = displayAvg != null && displayCount > 0;
-  const listAvg =
-    reviews.length > 0 ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10 : 0;
+  const travelerAvgLine =
+    displayAvg != null ? (isKo ? `여행자 평균 ${displayAvg.toFixed(1)}점` : `Avg. traveler rating ${displayAvg.toFixed(1)}`) : null;
+  const listAvg = displayAvg ?? 0;
   const areaName = (tLaunch.raw(g.launch_area_slug) as { name: string }).name;
 
   const imgs = guardianProfileImageUrls(g);
@@ -208,27 +209,43 @@ export async function GuardianDetailView({
             lead={t("introGalleryLead")}
           />
 
-          <section>
-            <h2 className="text-text-strong text-lg font-semibold">{t("expertiseTitle")}</h2>
-            <p className="text-muted-foreground mt-1 text-sm">{t("expertiseLead")}</p>
-            <ul className="mt-4 space-y-4">
-              {(g.strength_items?.length ? g.strength_items : g.expertise_tags.map((tag) => ({ tag, blurb: { ko: "", en: "" } }))).map(
-                (item, i) => (
-                  <li
-                    key={`${item.tag}-${i}`}
-                    className="border-border/60 bg-card/80 rounded-2xl border px-4 py-3 shadow-[var(--shadow-sm)]"
-                  >
-                    <span className="bg-primary/10 text-primary inline-block rounded-full px-3 py-0.5 text-xs font-semibold">
-                      {item.tag}
-                    </span>
-                    {item.blurb.ko || item.blurb.en ? (
-                      <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{line(item.blurb)}</p>
-                    ) : null}
-                  </li>
-                ),
-              )}
-            </ul>
-          </section>
+          {(() => {
+            const src = g.strength_items?.length
+              ? g.strength_items
+              : g.expertise_tags.map((tag) => ({ tag, blurb: { ko: "", en: "" } }));
+
+            const visible = src
+              .map((item) => {
+                const blurb = (item.blurb?.ko || item.blurb?.en) ? line(item.blurb).trim() : "";
+                const isTemplate =
+                  blurb.includes("이(가)") && (blurb.includes("다음 선택지") || blurb.includes("급하게 결정하지"));
+                const isEmpty = !blurb;
+                return { item, blurb, hide: isEmpty || isTemplate };
+              })
+              .filter((x) => !x.hide);
+
+            if (visible.length === 0) return null;
+
+            return (
+              <section>
+                <h2 className="text-text-strong text-lg font-semibold">{t("expertiseTitle")}</h2>
+                <p className="text-muted-foreground mt-1 text-sm">{t("expertiseLead")}</p>
+                <ul className="mt-4 space-y-4">
+                  {visible.map(({ item, blurb }, i) => (
+                    <li
+                      key={`${item.tag}-${i}`}
+                      className="border-border/60 bg-card/80 rounded-2xl border px-4 py-3 shadow-[var(--shadow-sm)]"
+                    >
+                      <span className="bg-primary/10 text-primary inline-block rounded-full px-3 py-0.5 text-xs font-semibold">
+                        {item.tag}
+                      </span>
+                      <p className="text-muted-foreground mt-2 text-sm leading-relaxed">{blurb}</p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            );
+          })()}
 
           <section>
             <p className="text-primary text-[10px] font-bold tracking-wide uppercase">{t("decisionRationaleEyebrow")}</p>
@@ -238,6 +255,8 @@ export async function GuardianDetailView({
               <ul className="mt-4 space-y-3">
                 {g.trust_reason_items.map((item, idx) => {
                   const Icon = item.badge_id ? TRUST_ICONS[item.badge_id] ?? Sparkles : Sparkles;
+                  const headline =
+                    item.badge_id === "reviewed" && travelerAvgLine ? travelerAvgLine : line(item.headline);
                   return (
                     <li
                       key={idx}
@@ -247,7 +266,7 @@ export async function GuardianDetailView({
                         <Icon className="size-5" aria-hidden />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-foreground text-sm font-semibold leading-snug">{line(item.headline)}</p>
+                        <p className="text-foreground text-sm font-semibold leading-snug">{headline}</p>
                         <p className="text-muted-foreground mt-1 text-sm leading-relaxed">{line(item.detail)}</p>
                       </div>
                     </li>
@@ -261,7 +280,7 @@ export async function GuardianDetailView({
             )}
           </section>
 
-          <section>
+          <section id="guardian-posts">
             <p className="text-primary text-[10px] font-bold tracking-wide uppercase">{t("postsDecisionEyebrow")}</p>
             <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
               <div className="min-w-0 flex-1">
@@ -351,7 +370,7 @@ export async function GuardianDetailView({
         </div>
 
         <aside className="lg:col-span-5">
-          <div className="border-border/60 bg-card lg:sticky lg:top-24 space-y-4 rounded-2xl border p-6 shadow-[var(--shadow-sm)]">
+          <div id="request" className="border-border/60 bg-card lg:sticky lg:top-24 space-y-4 rounded-2xl border p-6 shadow-[var(--shadow-sm)]">
             <p className="text-primary text-[10px] font-bold tracking-[0.18em] uppercase">{t("requestCardEyebrow")}</p>
             <h2 className="text-text-strong text-lg font-semibold">{t("requestCardTitle")}</h2>
             <p className="text-muted-foreground text-sm leading-relaxed">{t("requestLead")}</p>

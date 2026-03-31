@@ -516,20 +516,40 @@ export function GuardiansDiscoverClient({
                         ) : null}
 
                         <div className="mt-auto flex flex-col gap-2 pt-1">
-                          <GuardianRequestOpenTrigger
-                            size="sm"
-                            className={cn(listCardActionButtonClass, "w-full rounded-[var(--radius-md)]")}
-                            openDetail={{
-                              guardianUserId: g.user_id,
-                              displayName: g.display_name,
-                              headline: g.headline,
-                              avatarUrl: imgs.avatar,
-                              suggestedRegionSlug: g.primary_region_slug,
-                              ...(repCtx ?? {}),
-                            }}
-                          >
-                            {t("cardCtaRequest")}
-                          </GuardianRequestOpenTrigger>
+                          {g.approval_status === "paused" ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled
+                              className={cn(listCardActionButtonClass, "w-full rounded-[var(--radius-md)] opacity-60")}
+                            >
+                              현재 활동 중지
+                            </Button>
+                          ) : g.guardian_tier === "contributor" ? (
+                            <Button
+                              asChild
+                              size="sm"
+                              variant="outline"
+                              className={cn(listCardActionButtonClass, "w-full rounded-[var(--radius-md)]")}
+                            >
+                              <Link href={`/guardians/${g.user_id}#guardian-posts`}>포스트 보기</Link>
+                            </Button>
+                          ) : (
+                            <GuardianRequestOpenTrigger
+                              size="sm"
+                              className={cn(listCardActionButtonClass, "w-full rounded-[var(--radius-md)]")}
+                              openDetail={{
+                                guardianUserId: g.user_id,
+                                displayName: g.display_name,
+                                headline: g.headline,
+                                avatarUrl: imgs.avatar,
+                                suggestedRegionSlug: g.primary_region_slug,
+                                ...(repCtx ?? {}),
+                              }}
+                            >
+                              {t("cardCtaRequest")}
+                            </GuardianRequestOpenTrigger>
+                          )}
                           <div className="grid grid-cols-2 gap-2">
                             <GuardianProfilePreviewSheetTrigger
                               guardian={publicGuardianToSheetPreview(

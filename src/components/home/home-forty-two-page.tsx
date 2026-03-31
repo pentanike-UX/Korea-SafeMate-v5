@@ -17,6 +17,8 @@ export async function HomeFortyTwoPage() {
   const locale = await getLocale();
   const isKo = locale === "ko";
   const scopeNoteSecondaryFromSm = getHomeHeroScopeNoteSecondaryFromSm();
+  const disclaimerText =
+    "이 서비스는 동행·실무 지원만 가능합니다. 의료·법률·긴급 구조는 범위 밖입니다.";
 
   const seoulPosts = mockContentPosts
     .filter((p) => p.status === "approved" && p.region_slug === "seoul")
@@ -35,6 +37,17 @@ export async function HomeFortyTwoPage() {
   return (
     <div className="bg-[var(--bg-page)]">
       <HomeHeroCarousel scopeNoteSecondaryFromSm={scopeNoteSecondaryFromSm} />
+
+      <div className="border-border/40 bg-[var(--bg-surface-subtle)] border-b">
+        <div className="mx-auto flex min-h-11 max-w-6xl items-center justify-center gap-2 px-4 py-2 text-center text-sm sm:px-6">
+          <span className="text-muted-foreground/80" aria-hidden>
+            ℹ︎
+          </span>
+          <p className="text-muted-foreground text-sm leading-snug">{disclaimerText}</p>
+        </div>
+      </div>
+
+      <HomeExploreBundle />
 
       {/* 신뢰 + 후기 — 설득 우선, 한 블록으로 압축 */}
       <section className="border-border/50 border-y bg-card" aria-labelledby="home-credibility-heading">
@@ -128,8 +141,6 @@ export async function HomeFortyTwoPage() {
           </div>
         </div>
       </section>
-
-      <HomeExploreBundle />
 
       <HomeDualCtaSection />
     </div>

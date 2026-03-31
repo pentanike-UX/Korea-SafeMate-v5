@@ -29,6 +29,7 @@ import {
 } from "@/components/explore/explore-journey-step-panels";
 import { ExploreResultsDecisionHeader } from "@/components/explore/explore-results-decision-header";
 import { ClientErrorBoundary } from "@/components/common/client-error-boundary";
+import { Link } from "@/i18n/navigation";
 
 const STEPS = 5;
 
@@ -38,6 +39,8 @@ type Pace = "calm" | "balanced" | "packed";
 export function ExploreJourneyClient() {
   const t = useTranslations("ExploreJourney");
   const tG = useTranslations("GuardiansDiscover");
+  const tLaunch = useTranslations("LaunchAreas");
+  const tThemes = useTranslations("ExperienceThemes");
   const locale = useLocale();
   const searchParams = useSearchParams();
 
@@ -81,6 +84,20 @@ export function ExploreJourneyClient() {
 
   const comingSoonArea = region === "busan" || region === "jeju";
 
+  useEffect(() => {
+    // Browser console only; helps diagnose prod step crashes without breaking UX.
+    // eslint-disable-next-line no-console
+    console.log(`[ExploreStep${step + 1}]`, {
+      step,
+      region,
+      theme,
+      comingSoonArea,
+      langPref,
+      pace,
+      partySize,
+    });
+  }, [step, region, theme, comingSoonArea, langPref, pace, partySize]);
+
   const effectiveTasteIds = useMemo(() => {
     const s = new Set<string>();
     sceneMoods.forEach((m) => sceneMoodToTasteIds(m).forEach((id) => s.add(id)));
@@ -88,59 +105,67 @@ export function ExploreJourneyClient() {
   }, [sceneMoods]);
 
   const results = useMemo(() => {
-    if (!region || comingSoonArea) return { guardians: [] as PublicGuardian[], posts: [] as ContentPost[] };
-    const pool = listLaunchReadyGuardians();
-    let g = pool.filter((x) => x.launch_area_slug === region);
-    if (theme) {
-      g = g.filter((x) => x.theme_slugs.includes(theme));
-    }
-    if (langPref !== "any") {
-      g = g.filter((x) => x.languages.some((l) => l.language_code === langPref));
-    }
-    if (pace === "calm") {
-      g = g.filter((x) => x.companion_style_slugs.includes("calm") || x.companion_style_slugs.includes("friendly"));
-    }
-    if (pace === "packed") {
-      g = g.filter((x) => x.companion_style_slugs.includes("energetic") || x.companion_style_slugs.includes("planner"));
-    }
-    if (guardianStylePrefs.length > 0) {
-      const hasNoMatchStyle = guardianStylePrefs.includes("style_no_match_test");
-      if (hasNoMatchStyle) {
-        g = [];
-      } else {
-        g = g.filter((x) =>
-          guardianStylePrefs.some((pref) =>
-            companionSlugsForStyle(pref).some((slug) => x.companion_style_slugs.includes(slug)),
-          ),
-        );
+    try {
+      if (!region || comingSoonArea) return { guardians: [] as PublicGuardian[], posts: [] as ContentPost[] };
+      const pool = listLaunchReadyGuardians();
+      let g = pool.filter((x) => x.launch_area_slug === region);
+      if (theme) {
+        g = g.filter((x) => x.theme_slugs.includes(theme));
       }
-    }
-    effectiveTasteIds.forEach((tid) => {
-      if (tid === "tastePhoto") {
-        g.sort((a, b) => (b.theme_slugs.includes("photo_route") ? 1 : 0) - (a.theme_slugs.includes("photo_route") ? 1 : 0));
+      if (langPref !== "any") {
+        g = g.filter((x) => x.languages.some((l) => l.language_code === langPref));
       }
-    });
-    g = [...g].sort((a, b) => (b.avg_traveler_rating ?? 0) - (a.avg_traveler_rating ?? 0));
-    if (g.length > 0 && resultsSpin > 0) {
-      const rot = resultsSpin % g.length;
-      g = [...g.slice(rot), ...g.slice(0, rot)];
+      if (pace === "calm") {
+        g = g.filter((x) => x.companion_style_slugs.includes("calm") || x.companion_style_slugs.includes("friendly"));
+      }
+      if (pace === "packed") {
+        g = g.filter((x) => x.companion_style_slugs.includes("energetic") || x.companion_style_slugs.includes("planner"));
+      }
+      if (guardianStylePrefs.length > 0) {
+        const hasNoMatchStyle = guardianStylePrefs.includes("style_no_match_test");
+        if (hasNoMatchStyle) {
+          g = [];
+        } else {
+          g = g.filter((x) =>
+            guardianStylePrefs.some((pref) =>
+              companionSlugsForStyle(pref).some((slug) => x.companion_style_slugs.includes(slug)),
+            ),
+          );
+        }
+      }
+      effectiveTasteIds.forEach((tid) => {
+        if (tid === "tastePhoto") {
+          g.sort((a, b) => (b.theme_slugs.includes("photo_route") ? 1 : 0) - (a.theme_slugs.includes("photo_route") ? 1 : 0));
+        }
+      });
+      g = [...g].sort((a, b) => (b.avg_traveler_rating ?? 0) - (a.avg_traveler_rating ?? 0));
+      if (g.length > 0 && resultsSpin > 0) {
+        const rot = resultsSpin % g.length;
+        g = [...g.slice(rot), ...g.slice(0, rot)];
+      }
+
+      const posts = mockContentPosts
+        .filter((p) => p.status === "approved" && p.region_slug === "seoul")
+        .filter((p) => {
+          if (!theme) return true;
+          if (theme === "k_pop_day") return p.tags.some((x) => /k-pop|album|pop/i.test(x));
+          if (theme === "k_drama_romance") return p.tags.some((x) => /drama|filming|hanok|palace/i.test(x));
+          if (theme === "movie_location") return p.category_slug === "k-content" || p.tags.some((x) => /film|filming/i.test(x));
+          if (theme === "seoul_night") return p.tags.some((x) => /night|Hongdae|late/i.test(x));
+          if (theme === "photo_route") return p.kind === "hot_place" || p.tags.some((x) => /photo|view/i.test(x));
+          if (theme === "safe_solo") return p.kind === "practical" || p.kind === "local_tip";
+          return true;
+        })
+        .slice(0, 8);
+
+      // eslint-disable-next-line no-console
+      console.log("[ExploreRecommendationLoader]", { pool: pool.length, guardians: g.length, posts: posts.length });
+      return { guardians: g.slice(0, 6), posts };
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[ExploreRecommendationLoader]", err);
+      return { guardians: [] as PublicGuardian[], posts: [] as ContentPost[] };
     }
-
-    const posts = mockContentPosts
-      .filter((p) => p.status === "approved" && p.region_slug === "seoul")
-      .filter((p) => {
-        if (!theme) return true;
-        if (theme === "k_pop_day") return p.tags.some((x) => /k-pop|album|pop/i.test(x));
-        if (theme === "k_drama_romance") return p.tags.some((x) => /drama|filming|hanok|palace/i.test(x));
-        if (theme === "movie_location") return p.category_slug === "k-content" || p.tags.some((x) => /film|filming/i.test(x));
-        if (theme === "seoul_night") return p.tags.some((x) => /night|Hongdae|late/i.test(x));
-        if (theme === "photo_route") return p.kind === "hot_place" || p.tags.some((x) => /photo|view/i.test(x));
-        if (theme === "safe_solo") return p.kind === "practical" || p.kind === "local_tip";
-        return true;
-      })
-      .slice(0, 8);
-
-    return { guardians: g.slice(0, 6), posts };
   }, [region, theme, langPref, pace, comingSoonArea, resultsSpin, guardianStylePrefs, effectiveTasteIds]);
 
   function toggleSceneMood(id: SceneMoodId) {
@@ -172,6 +197,57 @@ export function ExploreJourneyClient() {
   }
 
   const showMobileStickyCta = step === 2 || step === 3;
+  const areaName = useMemo(() => {
+    if (!region) return "";
+    const raw = tLaunch.raw(region) as any;
+    return typeof raw?.name === "string" ? raw.name : "";
+  }, [region, tLaunch]);
+  const themeTitle = useMemo(() => {
+    if (!theme) return "";
+    const raw = tThemes.raw(theme as any) as any;
+    return typeof raw?.title === "string" ? raw.title : "";
+  }, [theme, tThemes]);
+
+  function StepIndicator({ current }: { current: number }) {
+    const steps = Array.from({ length: STEPS }).map((_, i) => i);
+    return (
+      <div className="mx-auto mb-8 w-full max-w-xl">
+        <div className="flex items-center justify-center">
+          {steps.map((i) => {
+            const isDone = i < current;
+            const isCurrent = i === current;
+            const isFuture = i > current;
+            return (
+              <div key={i} className="flex flex-1 items-center">
+                <div
+                  className={cn(
+                    "flex size-8 items-center justify-center rounded-full text-xs font-semibold transition-colors sm:size-9",
+                    isCurrent
+                      ? "bg-primary text-primary-foreground shadow-[var(--shadow-brand)]"
+                      : isDone
+                        ? "bg-primary/15 text-primary"
+                        : "border-border/70 text-muted-foreground bg-background border",
+                  )}
+                  aria-current={isCurrent ? "step" : undefined}
+                >
+                  {isDone ? <Check className="size-4" aria-hidden /> : i + 1}
+                </div>
+                {i < steps.length - 1 ? (
+                  <div
+                    className={cn("mx-2 h-0.5 flex-1 rounded-full sm:mx-3", isFuture ? "bg-border/60" : "bg-primary/50")}
+                    aria-hidden
+                  />
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-muted-foreground mt-3 text-center text-xs">
+          <span className="text-foreground font-semibold">{current + 1}</span> / {STEPS}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <ClientErrorBoundary>
@@ -180,6 +256,32 @@ export function ExploreJourneyClient() {
         <section className="border-border/60 border-b bg-card/95">
           <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
             <ExploreResultsDecisionHeader />
+            {region && theme ? (
+              <div className="mt-6 flex flex-col items-center justify-between gap-4 rounded-2xl border border-border/60 bg-background/70 p-4 sm:flex-row sm:gap-6 sm:p-5">
+                <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                  <span className="bg-muted text-muted-foreground inline-flex items-center rounded-full px-3 py-1 text-xs font-medium">
+                    {areaName || String(region)}
+                  </span>
+                  <span className="bg-muted text-muted-foreground inline-flex items-center rounded-full px-3 py-1 text-xs font-medium">
+                    {themeTitle || String(theme)}
+                  </span>
+                </div>
+                <Button asChild className="h-10 rounded-xl px-5 font-semibold">
+                  <Link
+                    href={`/guardians?${new URLSearchParams({
+                      region,
+                      mood: String(theme).replaceAll("_", "-"),
+                    }).toString()}`}
+                  >
+                    결과 보기
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="text-muted-foreground mt-6 rounded-2xl border border-border/60 bg-background/70 p-4 text-center text-sm">
+                추천 조건이 아직 완성되지 않았어요. 이전 단계로 돌아가서 선택을 완료해 주세요.
+              </div>
+            )}
           </div>
         </section>
       ) : (
@@ -203,30 +305,7 @@ export function ExploreJourneyClient() {
           showMobileStickyCta && "pb-28 sm:pb-10",
         )}
       >
-        {step < 4 ? (
-          <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
-            {Array.from({ length: STEPS }).map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => {
-                  if (i === 4 && step !== 4) return;
-                  if (i < 4) setStep(i);
-                }}
-                className={cn(
-                  "flex size-9 items-center justify-center rounded-full text-xs font-semibold transition-colors",
-                  i === step
-                    ? "bg-primary text-primary-foreground shadow-[var(--shadow-brand)]"
-                    : i < step
-                      ? "bg-primary/15 text-primary"
-                      : "bg-muted text-muted-foreground",
-                )}
-              >
-                {i < step ? <Check className="size-4" /> : i + 1}
-              </button>
-            ))}
-          </div>
-        ) : null}
+        {step < 4 ? <StepIndicator current={step} /> : null}
 
         {enteredExploreViaPreset && step >= 2 && region && theme ? (
           <p className="text-muted-foreground mb-2 text-center text-[11px] font-medium">{t("presetFromHome")}</p>

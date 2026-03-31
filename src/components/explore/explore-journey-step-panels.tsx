@@ -668,7 +668,16 @@ export function ExploreResultsDashboard(props: {
 
   const basisBulletKeys = useMemo(() => exploreTopPickBulletKeys(region, theme, pace), [region, theme, pace]);
 
-  const themeTitleForUi = theme ? (tThemes.raw(theme) as { title: string }).title : t("dashThemeAny");
+  const themeTitleForUi = useMemo(() => {
+    if (!theme) return t("dashThemeAny");
+    try {
+      return (tThemes.raw(theme) as { title: string }).title;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn("[ExploreStep5][i18n]", { key: theme, err });
+      return t("dashThemeAny");
+    }
+  }, [t, tThemes, theme]);
 
   return (
     <div className="animate-in fade-in space-y-8 duration-300">
@@ -739,7 +748,15 @@ export function ExploreResultsDashboard(props: {
                                 {tTier(featured.guardian_tier)}
                               </Badge>
                               <Badge variant="outline" className="rounded-full text-[10px] font-medium">
-                                {(tLaunch.raw(featured.launch_area_slug) as { name: string }).name}
+                                {(() => {
+                                  try {
+                                    return (tLaunch.raw(featured.launch_area_slug) as { name: string }).name;
+                                  } catch (err) {
+                                    // eslint-disable-next-line no-console
+                                    console.warn("[ExploreStep5][i18n]", { key: featured.launch_area_slug, err });
+                                    return featured.launch_area_slug;
+                                  }
+                                })()}
                               </Badge>
                               <Badge variant="outline" className="rounded-full font-mono text-[10px] font-medium">
                                 {guardianLangsLine(featured)}
@@ -752,7 +769,13 @@ export function ExploreResultsDashboard(props: {
                             </div>
                             <p className="text-muted-foreground mt-3 text-[11px] leading-relaxed">
                               {t("dashCardMatchLine", {
-                                area: (tLaunch.raw(featured.launch_area_slug) as { name: string }).name,
+                                area: (() => {
+                                  try {
+                                    return (tLaunch.raw(featured.launch_area_slug) as { name: string }).name;
+                                  } catch {
+                                    return featured.launch_area_slug;
+                                  }
+                                })(),
                                 theme: themeTitleForUi,
                                 langs: guardianLangsLine(featured),
                               })}
@@ -900,7 +923,15 @@ export function ExploreResultsDashboard(props: {
                                     {tTier(g.guardian_tier)}
                                   </Badge>
                                   <span className="text-border">·</span>
-                                  <span>{(tLaunch.raw(g.launch_area_slug) as { name: string }).name}</span>
+                                  <span>
+                                    {(() => {
+                                      try {
+                                        return (tLaunch.raw(g.launch_area_slug) as { name: string }).name;
+                                      } catch {
+                                        return g.launch_area_slug;
+                                      }
+                                    })()}
+                                  </span>
                                   <span className="text-border">·</span>
                                   <span className="font-mono">{guardianLangsLine(g)}</span>
                                 </div>

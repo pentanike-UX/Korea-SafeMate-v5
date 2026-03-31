@@ -16,7 +16,8 @@ export async function SiteFooter() {
     { href: "/explore", label: tNav("explore") },
     { href: "/posts", label: tNav("posts") },
     { href: "/guardians", label: tNav("guardians") },
-    { href: "/mypage", label: tHeader("myJourney") },
+    // Option A (default): hide /mypage until login UX is ready.
+    // Option B (future): add a simple "준비 중" /mypage page and restore this link.
     { href: "/about", label: tNav("about") },
     { href: "/guardians/apply", label: tFooter("apply") },
     { href: "/about#terms" as AppHref, label: tFooter("termsLink") },
@@ -62,9 +63,11 @@ export async function SiteFooter() {
               <div className="max-lg:rounded-xl max-lg:border max-lg:border-white/[0.07] max-lg:bg-white/[0.02] max-lg:p-3">
                 <FooterPreferences className="justify-start opacity-85" />
               </div>
-              <NextLink href="/admin/dashboard" className={adminQuiet}>
-                {tFooter("adminConsoleLink")}
-              </NextLink>
+              {process.env.NODE_ENV === "development" ? (
+                <NextLink href="/admin/dashboard" className={adminQuiet}>
+                  {tFooter("adminConsoleLink")}
+                </NextLink>
+              ) : null}
             </div>
           </div>
         </div>

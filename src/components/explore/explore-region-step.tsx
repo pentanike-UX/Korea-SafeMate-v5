@@ -40,7 +40,10 @@ export function ExploreRegionStep({
           const selectable = isLaunchAreaSelectable(a.slug);
           const selected = value === a.slug;
           const copy = tLaunch.raw(a.slug) as { name: string; blurb: string; landmark: string; imageAlt: string };
-          const desc = tQuick(REGION_DESC_KEY[a.slug]);
+          const descRaw = tQuick(REGION_DESC_KEY[a.slug]);
+          // next-intl key-miss can leak as "Home.regionDesc_*" (or similar). Never show raw keys in UI.
+          const desc =
+            descRaw.includes(".") && descRaw.endsWith(REGION_DESC_KEY[a.slug]) ? "" : descRaw;
 
           const media = (
             <div className="relative aspect-[16/10] overflow-hidden bg-muted">

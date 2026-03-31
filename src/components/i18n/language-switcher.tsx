@@ -15,6 +15,12 @@ const LOCALE_FLAGS: Record<LocaleCode, string> = {
   ja: "\u{1F1EF}\u{1F1F5}",
 };
 
+const LOCALE_LABELS: Record<LocaleCode, string> = {
+  en: "EN",
+  ko: "KO",
+  ja: "JA",
+};
+
 const FLAG_ARIA_KEY: Record<LocaleCode, "flagAriaEn" | "flagAriaKo" | "flagAriaJa"> = {
   en: "flagAriaEn",
   ko: "flagAriaKo",
@@ -57,8 +63,8 @@ export function LanguageSwitcher({
           aria-label={t(FLAG_ARIA_KEY[code])}
           title={t(FLAG_ARIA_KEY[code])}
           className={cn(
-            "flex items-center justify-center rounded-[var(--radius-sm)] leading-none transition-[box-shadow,background-color,opacity] duration-200",
-            onDark ? "size-9 min-h-9 min-w-9 text-[1.25rem]" : "size-10 text-[1.375rem] sm:size-11 sm:text-[1.5rem]",
+            "flex items-center justify-center gap-1.5 rounded-[var(--radius-sm)] px-2 leading-none transition-[box-shadow,background-color,opacity] duration-200",
+            onDark ? "h-9 min-h-9 text-[1.1rem]" : "h-10 text-[1.15rem] sm:h-11 sm:text-[1.2rem]",
             locale === code
               ? onDark
                 ? "bg-white shadow-sm ring-2 ring-white/50"
@@ -70,6 +76,16 @@ export function LanguageSwitcher({
         >
           <span aria-hidden className="select-none">
             {LOCALE_FLAGS[code]}
+          </span>
+          <span
+            aria-hidden
+            className={cn(
+              "text-[11px] font-semibold tracking-wide",
+              locale === code ? "underline underline-offset-4" : "opacity-80",
+              onDark && locale === code ? "text-[#0b1020]" : undefined,
+            )}
+          >
+            {LOCALE_LABELS[code]}
           </span>
         </button>
       ))}

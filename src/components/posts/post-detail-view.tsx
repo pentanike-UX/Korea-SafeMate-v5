@@ -179,6 +179,27 @@ export async function PostDetailView({ post }: { post: ContentPost }) {
       </div>
 
       <PostDetailRelatedSection current={post} related={related} />
+
+      <div className="mx-auto max-w-6xl px-4 pb-10 sm:px-6">
+        <Card className="border-border/60 rounded-2xl border bg-card/95">
+          <CardContent className="flex flex-col items-start justify-between gap-3 p-4 sm:flex-row sm:items-center sm:p-5">
+            <div className="flex items-center gap-3">
+              <div className="border-border/60 relative size-8 shrink-0 overflow-hidden rounded-full border bg-muted">
+                <Image src={sheetAvatar} alt="" fill sizes="32px" className="object-cover" />
+              </div>
+              <p className="text-sm font-semibold">
+                {sheetName}에게 이 코스로 요청하기
+              </p>
+            </div>
+            <Link
+              href={`/guardians/${post.author_user_id}#request`}
+              className="bg-primary text-primary-foreground inline-flex h-10 min-h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold shadow-[var(--shadow-brand)]"
+            >
+              요청하기
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
     </article>
   );
 }

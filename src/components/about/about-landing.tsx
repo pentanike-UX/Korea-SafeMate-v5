@@ -366,30 +366,28 @@ export function AboutLanding() {
       <SectionShell className="page-container max-w-3xl px-4 py-14 sm:px-6 sm:py-16">
         <p className="text-muted-foreground text-center text-sm">{t("landing.legalIntro")}</p>
         <div className="mt-8 space-y-3">
-          <details id="terms" className="border-border/70 bg-card/40 group scroll-mt-24 rounded-[var(--radius-md)] border">
-            <summary className="text-text-strong cursor-pointer list-none px-4 py-3.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-              <span className="flex items-center justify-between gap-2">
-                {t("legalTermsTitle")}
-                <span className="text-muted-foreground text-xs font-normal group-open:hidden">+</span>
-                <span className="text-muted-foreground hidden text-xs font-normal group-open:inline">−</span>
+          <div id="terms" className="border-border/70 bg-card/40 scroll-mt-24 rounded-[var(--radius-md)] border">
+            <div className="text-muted-foreground flex items-center justify-between gap-2 px-4 py-3.5 text-sm font-semibold">
+              <span className="opacity-75">{t("legalTermsTitle")}</span>
+              <span aria-hidden className="text-xs">
+                🔒
               </span>
-            </summary>
-            <div className="text-muted-foreground border-border/60 border-t px-4 py-4 text-[15px] leading-relaxed">
-              {t("legalTermsBody")}
             </div>
-          </details>
-          <details id="privacy" className="border-border/70 bg-card/40 group scroll-mt-24 rounded-[var(--radius-md)] border">
-            <summary className="text-text-strong cursor-pointer list-none px-4 py-3.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-              <span className="flex items-center justify-between gap-2">
-                {t("legalPrivacyTitle")}
-                <span className="text-muted-foreground text-xs font-normal group-open:hidden">+</span>
-                <span className="text-muted-foreground hidden text-xs font-normal group-open:inline">−</span>
+            <div className="text-muted-foreground border-border/60 border-t px-4 py-4 text-[15px] leading-relaxed">
+              정식 오픈 전 공개 예정입니다.
+            </div>
+          </div>
+          <div id="privacy" className="border-border/70 bg-card/40 scroll-mt-24 rounded-[var(--radius-md)] border">
+            <div className="text-muted-foreground flex items-center justify-between gap-2 px-4 py-3.5 text-sm font-semibold">
+              <span className="opacity-75">{t("legalPrivacyTitle")}</span>
+              <span aria-hidden className="text-xs">
+                🔒
               </span>
-            </summary>
-            <div className="text-muted-foreground border-border/60 border-t px-4 py-4 text-[15px] leading-relaxed">
-              {t("legalPrivacyBody")}
             </div>
-          </details>
+            <div className="text-muted-foreground border-border/60 border-t px-4 py-4 text-[15px] leading-relaxed">
+              정식 오픈 전 공개 예정입니다.
+            </div>
+          </div>
         </div>
       </SectionShell>
     </div>
