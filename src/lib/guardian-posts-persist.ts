@@ -68,6 +68,7 @@ export async function insertGuardianContentPost(payload: GuardianPostSavePayload
       popular_score: 0,
       recommended_score: 0,
       featured: false,
+      is_sample: false,
     })
     .select("id")
     .single();

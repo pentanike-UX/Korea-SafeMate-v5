@@ -6,6 +6,12 @@ import { parsePostStructuredContent } from "@/lib/post-structured-content";
 import type { RouteJourney } from "@/types/domain";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role";
 
+/** `0`/`false` → DB만 사용(시드 반영 후 중복 mock 제거). 미설정 시 기존처럼 mock 보충. */
+function mergeSeedMockPostsEnabled(): boolean {
+  const v = process.env.SAFE_MERGE_SEED_MOCK;
+  return v !== "0" && v !== "false";
+}
+
 type RawPost = {
   id: string;
   author_user_id: string;
@@ -30,6 +36,8 @@ type RawPost = {
   /** `content_posts.hero_subject` — 마이그레이션 후 Supabase select에 포함 */
   hero_subject?: string | null;
   structured_content?: unknown;
+  is_sample?: boolean | null;
+  seed_content_key?: string | null;
 };
 
 function heroSubjectFromRow(v: unknown): ContentPostHeroSubject | undefined {
@@ -73,7 +81,7 @@ function mapToContentPost(
     route_highlights: highlights,
     ...(heroSubject != null ? { hero_subject: heroSubject } : {}),
     ...(structured != null ? { structured_content: structured } : {}),
-    is_sample: false,
+    ...(row.is_sample === true ? { is_sample: true } : {}),
     has_route: Boolean(rj?.spots?.length),
   };
 }
@@ -133,7 +141,8 @@ export const listApprovedPostsMerged = cache(async (): Promise<ContentPost[]> =>
 
   const dbPosts = await mapRowsToPosts((rows ?? []) as RawPost[]);
   const dbIds = new Set(dbPosts.map((p) => p.id));
-  const mockOnly = mockApproved.filter((m) => !dbIds.has(m.id));
+  const mockOnly =
+    mergeSeedMockPostsEnabled() ? mockApproved.filter((m) => !dbIds.has(m.id)) : [];
   return [...dbPosts, ...mockOnly].sort((a, b) => {
     if (b.recommended_score !== a.recommended_score) return b.recommended_score - a.recommended_score;
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -143,14 +152,32 @@ export const listApprovedPostsMerged = cache(async (): Promise<ContentPost[]> =>
 export async function getPublicPostByIdMerged(id: string): Promise<ContentPost | null> {
   const sb = createServiceRoleSupabase();
   if (sb) {
-    const { data: row, error } = await sb.from("content_posts").select("*").eq("id", id).eq("status", "approved").maybeSingle();
-    if (!error && row) {
-      const mapped = await mapRowsToPosts([row as RawPost]);
+    const { data: byId, error: errId } = await sb
+      .from("content_posts")
+      .select("*")
+      .eq("id", id)
+      .eq("status", "approved")
+      .maybeSingle();
+    if (!errId && byId) {
+      const mapped = await mapRowsToPosts([byId as RawPost]);
       if (mapped[0]) return mapped[0];
+    }
+    if (!errId && !byId) {
+      const { data: bySeed, error: errSeed } = await sb
+        .from("content_posts")
+        .select("*")
+        .eq("seed_content_key", id)
+        .eq("status", "approved")
+        .maybeSingle();
+      if (!errSeed && bySeed) {
+        const mapped = await mapRowsToPosts([bySeed as RawPost]);
+        if (mapped[0]) return mapped[0];
+      }
     }
   }
   const mock = mockContentPosts.find((x) => x.id === id);
-  return mock && mock.status === "approved" ? mock : null;
+  if (mock && mock.status === "approved") return mock;
+  return null;
 }
 
 const mockApprovedById = (): Map<string, ContentPost> => {
@@ -197,7 +224,7 @@ export async function listApprovedPostsByIdsMerged(ids: string[]): Promise<Conte
       out.push(fromDb);
       continue;
     }
-    const fromMock = mockMap.get(id);
+    const fromMock = mergeSeedMockPostsEnabled() ? mockMap.get(id) : undefined;
     if (fromMock) out.push(fromMock);
   }
   return out;
@@ -225,14 +252,14 @@ export async function getLatestApprovedPostForGuardianMerged(authorUserId: strin
 
   if (error) {
     console.error("[getLatestApprovedPostForGuardianMerged]", error);
-    return bestMock ?? null;
+    return mergeSeedMockPostsEnabled() ? (bestMock ?? null) : null;
   }
 
   if (row) {
     const mapped = await mapRowsToPosts([row as RawPost]);
     if (mapped[0]) return mapped[0];
   }
-  return bestMock ?? null;
+  return mergeSeedMockPostsEnabled() ? (bestMock ?? null) : null;
 }
 
 function upsertLatestByAuthor(m: Map<string, ContentPost>, p: ContentPost) {
@@ -277,13 +304,15 @@ export async function getLatestApprovedPostsForGuardiansMergedBatch(
     }
   }
 
-  const mockLatestByAuthor = new Map<string, ContentPost>();
-  for (const p of mockContentPosts) {
-    if (p.status !== "approved" || !uidSet.has(p.author_user_id)) continue;
-    upsertLatestByAuthor(mockLatestByAuthor, p);
-  }
-  for (const [aid, p] of mockLatestByAuthor) {
-    if (!out.has(aid)) out.set(aid, p);
+  if (mergeSeedMockPostsEnabled()) {
+    const mockLatestByAuthor = new Map<string, ContentPost>();
+    for (const p of mockContentPosts) {
+      if (p.status !== "approved" || !uidSet.has(p.author_user_id)) continue;
+      upsertLatestByAuthor(mockLatestByAuthor, p);
+    }
+    for (const [aid, p] of mockLatestByAuthor) {
+      if (!out.has(aid)) out.set(aid, p);
+    }
   }
 
   const missing = unique.filter((id) => !out.has(id));

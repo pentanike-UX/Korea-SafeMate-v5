@@ -157,6 +157,8 @@ export interface GuardianProfile {
   avg_traveler_rating: number | null;
   /** Neighborhood / theme tags for Explore trust UI. */
   expertise_tags: string[];
+  /** DB sample row — 공개 UI에서 샘플 배지(실데이터와 동일 렌더). */
+  is_sample?: boolean;
 }
 
 export interface Region {

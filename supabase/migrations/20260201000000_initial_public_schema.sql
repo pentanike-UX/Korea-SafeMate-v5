@@ -1,3 +1,7 @@
+-- Baseline: empty remote `public` — run before all other migrations in this folder.
+-- Source of truth snapshot: `supabase/schema.sql` (users / guardian_profiles.user_id / content_posts.author_user_id model).
+-- Later migrations add matches, point_*, user_profiles, admin_accounts, traveler_saved_*, RLS, and idempotent column tweaks.
+
 -- Legacy reference schema (pre–formal model).
 -- Implementation-ready DDL + RLS + phasing: see `schema_production.sql`.
 --

@@ -4,6 +4,12 @@ import type { GuardianLanguage, GuardianProfile } from "@/types/domain";
 import { getPublicGuardianById, isActiveLaunchArea, mergePublicGuardian, type PublicGuardian } from "@/lib/guardian-public";
 import { createServiceRoleSupabase } from "@/lib/supabase/service-role";
 
+/** `0`/`false` → DB 가디언만 + mock 보충 없음. 미설정 시 기존 병합 유지. */
+function mergeSeedMockGuardiansEnabled(): boolean {
+  const v = process.env.SAFE_MERGE_SEED_MOCK;
+  return v !== "0" && v !== "false";
+}
+
 type GpRow = {
   user_id: string;
   display_name: string;
@@ -25,6 +31,8 @@ type GpRow = {
   matching_enabled: boolean;
   avg_traveler_rating: number | null;
   expertise_tags: string[] | null;
+  is_sample?: boolean | null;
+  seed_guardian_key?: string | null;
 };
 
 function mapProficiency(p: string): GuardianLanguage["proficiency"] {
@@ -55,6 +63,7 @@ function toGuardianProfile(row: GpRow, primary_region_slug: string, languages: G
     matching_enabled: row.matching_enabled,
     avg_traveler_rating: row.avg_traveler_rating,
     expertise_tags: row.expertise_tags ?? [],
+    ...(row.is_sample === true ? { is_sample: true } : {}),
   };
 }
 
@@ -64,7 +73,7 @@ async function loadApprovedGuardiansFromDb(): Promise<GpRow[]> {
   const { data, error } = await sb
     .from("guardian_profiles")
     .select(
-      "user_id, display_name, headline, bio, guardian_tier, approval_status, years_in_seoul, photo_url, avatar_image_url, list_card_image_url, detail_hero_image_url, intro_gallery_image_urls, primary_region_id, posts_approved_last_30d, posts_approved_last_7d, featured, influencer_seed, matching_enabled, avg_traveler_rating, expertise_tags",
+      "user_id, display_name, headline, bio, guardian_tier, approval_status, years_in_seoul, photo_url, avatar_image_url, list_card_image_url, detail_hero_image_url, intro_gallery_image_urls, primary_region_id, posts_approved_last_30d, posts_approved_last_7d, featured, influencer_seed, matching_enabled, avg_traveler_rating, expertise_tags, is_sample, seed_guardian_key",
     )
     .eq("approval_status", "approved");
   if (error) {
@@ -111,7 +120,9 @@ export const listPublicGuardiansMerged = cache(async (): Promise<PublicGuardian[
   }
 
   const dbIds = new Set(dbPublic.map((g) => g.user_id));
-  const mockRest = mockGuardians.filter((m) => !dbIds.has(m.user_id)).map((g) => mergePublicGuardian(g));
+  const mockRest = mergeSeedMockGuardiansEnabled()
+    ? mockGuardians.filter((m) => !dbIds.has(m.user_id)).map((g) => mergePublicGuardian(g))
+    : [];
   return [...dbPublic, ...mockRest];
 });
 
@@ -120,16 +131,28 @@ export async function getPublicGuardianByIdMerged(userId: string): Promise<Publi
   const sb = createServiceRoleSupabase();
   if (!sb) return mock;
 
-  const { data: row, error } = await sb
+  const selectCols =
+    "user_id, display_name, headline, bio, guardian_tier, approval_status, years_in_seoul, photo_url, avatar_image_url, list_card_image_url, detail_hero_image_url, intro_gallery_image_urls, primary_region_id, posts_approved_last_30d, posts_approved_last_7d, featured, influencer_seed, matching_enabled, avg_traveler_rating, expertise_tags, is_sample, seed_guardian_key";
+
+  const { data: byUid, error: errUid } = await sb
     .from("guardian_profiles")
-    .select(
-      "user_id, display_name, headline, bio, guardian_tier, approval_status, years_in_seoul, photo_url, avatar_image_url, list_card_image_url, detail_hero_image_url, intro_gallery_image_urls, primary_region_id, posts_approved_last_30d, posts_approved_last_7d, featured, influencer_seed, matching_enabled, avg_traveler_rating, expertise_tags",
-    )
+    .select(selectCols)
     .eq("user_id", userId)
     .eq("approval_status", "approved")
     .maybeSingle();
 
-  if (error || !row) return mock;
+  let row = !errUid ? byUid : null;
+  if (!errUid && !row) {
+    const { data: bySeed, error: errSeed } = await sb
+      .from("guardian_profiles")
+      .select(selectCols)
+      .eq("seed_guardian_key", userId)
+      .eq("approval_status", "approved")
+      .maybeSingle();
+    if (!errSeed) row = bySeed;
+  }
+
+  if (errUid || !row) return mock;
 
   const r = row as GpRow;
   let primary_region_slug = "gwanghwamun";
@@ -138,7 +161,7 @@ export async function getPublicGuardianByIdMerged(userId: string): Promise<Publi
     if (reg?.slug) primary_region_slug = reg.slug as string;
   }
 
-  const { data: langRows } = await sb.from("guardian_languages").select("*").eq("guardian_user_id", userId);
+  const { data: langRows } = await sb.from("guardian_languages").select("*").eq("guardian_user_id", r.user_id);
   const langs: GuardianLanguage[] =
     langRows?.map((l) => ({
       guardian_user_id: l.guardian_user_id,
