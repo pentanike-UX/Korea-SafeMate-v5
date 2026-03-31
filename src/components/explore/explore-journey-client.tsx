@@ -28,6 +28,7 @@ import {
   ExploreTripSetupStep,
 } from "@/components/explore/explore-journey-step-panels";
 import { ExploreResultsDecisionHeader } from "@/components/explore/explore-results-decision-header";
+import { ClientErrorBoundary } from "@/components/common/client-error-boundary";
 
 const STEPS = 5;
 
@@ -173,7 +174,8 @@ export function ExploreJourneyClient() {
   const showMobileStickyCta = step === 2 || step === 3;
 
   return (
-    <div className="bg-[var(--bg-page)] min-h-[70vh]">
+    <ClientErrorBoundary>
+      <div className="bg-[var(--bg-page)] min-h-[70vh]">
       {step === 4 ? (
         <section className="border-border/60 border-b bg-card/95">
           <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
@@ -405,6 +407,7 @@ export function ExploreJourneyClient() {
           </div>
         </div>
       ) : null}
-    </div>
+      </div>
+    </ClientErrorBoundary>
   );
 }

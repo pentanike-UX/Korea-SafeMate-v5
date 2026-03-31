@@ -87,7 +87,7 @@ export function HomeQuickStartExplorer() {
               const active = a.active && !a.comingSoon;
               const selected = area === a.slug;
               const copy = tLaunch.raw(a.slug) as { name: string; blurb: string; landmark: string; imageAlt: string };
-              const desc = tHome(REGION_DESC_KEY[a.slug]);
+              const desc = t(REGION_DESC_KEY[a.slug]);
 
               const media = (
                 <div className="relative aspect-[16/10] overflow-hidden bg-muted">

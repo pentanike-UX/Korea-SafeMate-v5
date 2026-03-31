@@ -40,7 +40,7 @@ export function ExploreRegionStep({
           const selectable = isLaunchAreaSelectable(a.slug);
           const selected = value === a.slug;
           const copy = tLaunch.raw(a.slug) as { name: string; blurb: string; landmark: string; imageAlt: string };
-          const desc = tHome(REGION_DESC_KEY[a.slug]);
+          const desc = tQuick(REGION_DESC_KEY[a.slug]);
 
           const media = (
             <div className="relative aspect-[16/10] overflow-hidden bg-muted">
