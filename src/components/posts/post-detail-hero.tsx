@@ -26,15 +26,12 @@ export function PostDetailHero({
   coverUrl,
   coverAlt,
   typeLabelKey,
-  visualWeight = "standard",
   postId,
 }: {
   post: HeroPost;
   coverUrl: string;
   coverAlt: string;
   typeLabelKey: PostTypeLabelKey;
-  /** 루트형 등 도입부 강조 — 더 큰 히어로·이미지 존재감 */
-  visualWeight?: "standard" | "emphasized";
   /** 있으면 메타 줄 오른쪽에 저장 액션 */
   postId?: string;
 }) {
@@ -45,20 +42,13 @@ export function PostDetailHero({
     day: "numeric",
   });
 
+  /** 실용 팁·루트형 공통 — 동일 쉘·오버레이·메타 그리드 */
   const imageShell =
-    visualWeight === "emphasized"
-      ? "relative aspect-[16/9] min-h-[min(52vw,260px)] max-h-[min(52vh,520px)] overflow-hidden sm:min-h-[280px] sm:max-h-[min(58vh,580px)] lg:aspect-[2.12/1] lg:min-h-[300px] lg:max-h-[min(62vh,620px)]"
-      : "relative aspect-[21/10] max-h-[320px] min-h-[200px] overflow-hidden sm:aspect-[3/1]";
+    "relative aspect-[16/9] min-h-[min(52vw,260px)] max-h-[min(52vh,520px)] overflow-hidden sm:min-h-[280px] sm:max-h-[min(58vh,580px)] lg:aspect-[2.12/1] lg:min-h-[300px] lg:max-h-[min(62vh,620px)]";
 
-  const imageTreatment =
-    visualWeight === "emphasized"
-      ? cn(postHeroCoverClass(post), "opacity-[0.48] mix-blend-multiply")
-      : cn(postHeroCoverClass(post), "opacity-35 mix-blend-multiply");
+  const imageTreatment = cn(postHeroCoverClass(post), "opacity-[0.48] mix-blend-multiply");
 
-  const washGradient =
-    visualWeight === "emphasized"
-      ? "absolute inset-0 bg-gradient-to-t from-white via-white/65 to-white/25"
-      : "absolute inset-0 bg-gradient-to-t from-white via-white/70 to-transparent";
+  const washGradient = "absolute inset-0 bg-gradient-to-t from-white via-white/65 to-white/25";
 
   return (
     <header className="relative mx-auto max-w-6xl px-4 sm:px-6">

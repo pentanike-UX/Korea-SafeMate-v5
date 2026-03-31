@@ -9,8 +9,8 @@ import { clampSheetHeadline, resolveGuardianHeadlineWithPostFallback } from "@/l
 import { relatedPostsForMerged } from "@/lib/posts-public-merged.server";
 import { PostAuthorAside } from "@/components/posts/post-author-aside";
 import { PostDetailHero } from "@/components/posts/post-detail-hero";
+import { PostDetailRelatedSection } from "@/components/posts/post-detail-related-section";
 import { PostDetailStickyAside } from "@/components/posts/post-detail-sticky-aside";
-import { RelatedPostsBrowseSheet } from "@/components/posts/related-posts-browse-sheet";
 import { RoutePostDetailClient } from "@/components/route-posts/route-post-detail-client";
 import { GuardianRequestDefaultsPublisher } from "@/components/guardians/guardian-request-defaults-publisher";
 import { resolvePostTypeLabelKey } from "@/lib/post-detail-type-label";
@@ -18,7 +18,7 @@ import { ArrowLeft } from "lucide-react";
 
 export async function RoutePostDetailView({ post }: { post: ContentPost }) {
   const t = await getTranslations("Posts");
-  const related = await relatedPostsForMerged(post, 4);
+  const related = await relatedPostsForMerged(post);
   const guardian = await getPublicGuardianByIdMerged(post.author_user_id);
   const sheetAvatar = guardian ? guardianProfileImageUrls(guardian).avatar : getPostHeroImageUrl(post);
   const sheetHeadline = clampSheetHeadline(resolveGuardianHeadlineWithPostFallback(guardian?.headline, post.summary));
@@ -53,14 +53,7 @@ export async function RoutePostDetailView({ post }: { post: ContentPost }) {
         </Link>
       </div>
 
-      <PostDetailHero
-        post={post}
-        coverUrl={heroCover}
-        coverAlt={heroAlt}
-        typeLabelKey={typeLabelKey}
-        visualWeight="emphasized"
-        postId={post.id}
-      />
+      <PostDetailHero post={post} coverUrl={heroCover} coverAlt={heroAlt} typeLabelKey={typeLabelKey} postId={post.id} />
 
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-12 lg:gap-12">
         <div className="lg:col-span-8">
@@ -80,27 +73,7 @@ export async function RoutePostDetailView({ post }: { post: ContentPost }) {
         </PostDetailStickyAside>
       </div>
 
-      {related.length > 0 ? (
-        <section className="border-border/50 border-t bg-card/90">
-          <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <h2 className="text-text-strong text-xl font-semibold">{t("relatedTitle")}</h2>
-              <RelatedPostsBrowseSheet
-                items={related.map((r) => ({
-                  id: r.id,
-                  title: r.title,
-                  summary: r.summary,
-                  imageUrl: getPostHeroImageUrl(r),
-                  kind: r.kind,
-                  hero_subject: r.hero_subject,
-                }))}
-                sheetTitle={t("relatedBrowseSheetTitle")}
-                triggerLabel={t("relatedBrowseTrigger")}
-              />
-            </div>
-          </div>
-        </section>
-      ) : null}
+      <PostDetailRelatedSection current={post} related={related} />
     </article>
   );
 }

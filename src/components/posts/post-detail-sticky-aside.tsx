@@ -21,17 +21,23 @@ export function PostDetailStickyAside({
 }) {
   const topClass = variant === "route" ? "md:top-36 lg:top-[9.5rem]" : "md:top-20";
 
+  /** 루트 상단 고정 네비(z-40)보다 낮게, 긴 카드는 뷰포트 안에서 스크롤 */
+  const scrollShell =
+    variant === "route"
+      ? "md:max-h-[calc(100dvh-10.5rem)] md:overflow-y-auto md:overflow-x-hidden md:pr-0.5 md:[scrollbar-gutter:stable]"
+      : "md:max-h-[calc(100dvh-6rem)] md:overflow-y-auto md:overflow-x-hidden md:pr-0.5 md:[scrollbar-gutter:stable]";
+
   return (
     <div
       id={id}
       className={cn(
-        "md:sticky md:z-0 md:self-start",
+        "md:sticky md:z-10 md:self-start",
         topClass,
         "lg:col-span-4",
         className,
       )}
     >
-      <div className="space-y-5 md:space-y-6">{children}</div>
+      <div className={cn("space-y-5 md:space-y-6", scrollShell)}>{children}</div>
     </div>
   );
 }

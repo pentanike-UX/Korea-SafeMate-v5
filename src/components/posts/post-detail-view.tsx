@@ -11,7 +11,6 @@ import {
   postHasOwnVisualMedia,
   postHasRouteJourney,
 } from "@/lib/content-post-route";
-import { RelatedPostsBrowseSheet } from "@/components/posts/related-posts-browse-sheet";
 import { GuardianRequestDefaultsPublisher } from "@/components/guardians/guardian-request-defaults-publisher";
 import { PostAuthorAside } from "@/components/posts/post-author-aside";
 import { PostDetailStickyAside } from "@/components/posts/post-detail-sticky-aside";
@@ -24,8 +23,10 @@ import { splitPostBodyLeadRest } from "@/lib/post-detail-body-split";
 import { resolvePostTypeLabelKey } from "@/lib/post-detail-type-label";
 import { PostDetailHero } from "@/components/posts/post-detail-hero";
 import { PostDetailIntroPanel } from "@/components/posts/post-detail-intro-panel";
-import { PostGuardianAttributionRow } from "@/components/posts/post-guardian-attribution-row";
+import { PostDetailRelatedSection } from "@/components/posts/post-detail-related-section";
 import { postHeroCoverClass } from "@/lib/post-image-crop";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft } from "lucide-react";
 
 export async function PostDetailView({ post }: { post: ContentPost }) {
@@ -34,7 +35,7 @@ export async function PostDetailView({ post }: { post: ContentPost }) {
   }
 
   const t = await getTranslations("Posts");
-  const related = await relatedPostsForMerged(post, 4);
+  const related = await relatedPostsForMerged(post);
   const heroCover = getPostHeroImageUrl(post);
   const heroAlt = getPostHeroImageAlt(post);
   const guardian = await getPublicGuardianByIdMerged(post.author_user_id);
@@ -56,6 +57,19 @@ export async function PostDetailView({ post }: { post: ContentPost }) {
   const articleIntro = lead.length > 0 && rest.length > 0;
   const bodyText = articleIntro ? rest : post.body.trim();
   const typeLabelKey = resolvePostTypeLabelKey(post);
+  /** 인트로 카드가 있으면 요약 첫 줄 대신 태그로 한 줄 팁 — 도입부 중복 완화 */
+  const oneLineFromSummary =
+    post.summary
+      .trim()
+      .split(/\n+/)[0]
+      ?.trim()
+      .slice(0, 140) ?? "";
+  const oneLineTip = articleIntro
+    ? post.tags[0]
+      ? `${t("articleOneLineFromTagPrefix")} ${post.tags[0]}`
+      : ""
+    : oneLineFromSummary;
+  const showOneLineTip = oneLineTip.length > 0;
 
   return (
     <article className="bg-[var(--bg-page)] pb-16">
@@ -82,6 +96,25 @@ export async function PostDetailView({ post }: { post: ContentPost }) {
         <div className="max-w-none space-y-8 lg:col-span-8">
           {articleIntro ? <PostDetailIntroPanel variant="article" primary={lead} /> : null}
 
+          {showOneLineTip ? (
+            <p className="border-primary/35 text-foreground rounded-xl border-l-[3px] bg-primary/5 px-4 py-3 text-[15px] leading-relaxed sm:text-base">
+              <span className="text-primary mb-1 block text-[10px] font-bold tracking-[0.18em] uppercase">
+                {t("articleOneLineTipEyebrow")}
+              </span>
+              {oneLineTip}
+              {!articleIntro && post.summary.trim().length > 140 ? "…" : ""}
+            </p>
+          ) : null}
+
+          {post.summary.trim() ? (
+            <Card className="border-border/60 rounded-2xl border bg-white/90 shadow-[var(--shadow-sm)]">
+              <CardContent className="space-y-2 p-5 sm:p-6">
+                <p className="text-primary text-[10px] font-bold tracking-[0.2em] uppercase">{t("articleKeyTakeawayEyebrow")}</p>
+                <p className="text-foreground text-[15px] leading-relaxed sm:text-base">{post.summary.trim()}</p>
+              </CardContent>
+            </Card>
+          ) : null}
+
           {showEnrichedPair ? (
             <figure className="border-border/60 relative aspect-[16/10] overflow-hidden rounded-xl border sm:aspect-[21/9]">
               <Image
@@ -102,8 +135,19 @@ export async function PostDetailView({ post }: { post: ContentPost }) {
             </div>
           ) : null}
 
-          {guardian ? (
-            <PostGuardianAttributionRow variant="article" displayName={sheetName} avatarUrl={sheetAvatar} />
+          {post.tags.length > 0 ? (
+            <Card className="border-border/60 rounded-2xl border bg-muted/15 shadow-[var(--shadow-sm)]">
+              <CardContent className="space-y-3 p-5 sm:p-6">
+                <p className="text-primary text-[10px] font-bold tracking-[0.2em] uppercase">{t("articleTopicGuideEyebrow")}</p>
+                <div className="flex flex-wrap gap-2">
+                  {post.tags.map((tag) => (
+                    <Badge key={tag} variant="outline" className="rounded-full border-border/70 font-medium">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           ) : null}
         </div>
 
@@ -112,27 +156,7 @@ export async function PostDetailView({ post }: { post: ContentPost }) {
         </PostDetailStickyAside>
       </div>
 
-      {related.length > 0 ? (
-        <section className="border-border/50 border-t bg-card/90">
-          <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <h2 className="text-text-strong text-xl font-semibold">{t("relatedTitle")}</h2>
-              <RelatedPostsBrowseSheet
-                items={related.map((r) => ({
-                  id: r.id,
-                  title: r.title,
-                  summary: r.summary,
-                  imageUrl: getPostHeroImageUrl(r),
-                  kind: r.kind,
-                  hero_subject: r.hero_subject,
-                }))}
-                sheetTitle={t("relatedBrowseSheetTitle")}
-                triggerLabel={t("relatedBrowseTrigger")}
-              />
-            </div>
-          </div>
-        </section>
-      ) : null}
+      <PostDetailRelatedSection current={post} related={related} />
     </article>
   );
 }

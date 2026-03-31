@@ -304,11 +304,54 @@ export async function listPostsForGuardianMerged(authorUserId: string): Promise<
   return all.filter((p) => p.author_user_id === authorUserId);
 }
 
-export async function relatedPostsForMerged(current: ContentPost, limit = 4): Promise<ContentPost[]> {
+/**
+ * 상세 하단·시트용 관련 포스트. `min` 미만이면 지역/카테고리 필터 밖에서도 채워 최소 노출을 맞춘다.
+ */
+export async function relatedPostsForMerged(
+  current: ContentPost,
+  opts: { max?: number; min?: number } = {},
+): Promise<ContentPost[]> {
+  const max = opts.max ?? 8;
+  const min = Math.min(opts.min ?? 3, max);
+
   const all = await listApprovedPostsMerged();
-  return all
-    .filter((p) => p.id !== current.id)
-    .filter((p) => p.region_slug === current.region_slug || p.category_slug === current.category_slug)
-    .sort((a, b) => b.recommended_score - a.recommended_score)
-    .slice(0, limit);
+  const others = all.filter((p) => p.id !== current.id);
+
+  const scored = others
+    .map((p) => {
+      let bonus = 0;
+      if (p.region_slug === current.region_slug) bonus += 100;
+      if (p.category_slug === current.category_slug) bonus += 80;
+      if (p.author_user_id === current.author_user_id) bonus += 70;
+      if (p.kind === current.kind) bonus += 25;
+      const tagOverlap = p.tags.filter((tg) => current.tags.includes(tg)).length;
+      bonus += tagOverlap * 12;
+      return { p, score: p.recommended_score + bonus };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const picked: ContentPost[] = [];
+  const seen = new Set<string>();
+
+  for (const { p } of scored) {
+    if (picked.length >= max) break;
+    if (p.region_slug === current.region_slug || p.category_slug === current.category_slug) {
+      if (!seen.has(p.id)) {
+        seen.add(p.id);
+        picked.push(p);
+      }
+    }
+  }
+
+  if (picked.length < min) {
+    for (const { p } of scored) {
+      if (picked.length >= max) break;
+      if (!seen.has(p.id)) {
+        seen.add(p.id);
+        picked.push(p);
+      }
+    }
+  }
+
+  return picked.slice(0, max);
 }
