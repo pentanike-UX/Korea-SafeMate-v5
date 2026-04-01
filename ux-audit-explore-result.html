@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>UX Audit — Explore 결과화면 · SafeMate v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-base: #0f0f13;
+    --bg-card: #1a1a22;
+    --bg-card-hover: #22222e;
+    --border: #2a2a38;
+    --text-primary: #f0f0f5;
+    --text-secondary: #8888aa;
+    --critical: #ff4757;
+    --warning: #ffa502;
+    --success: #2ed573;
+    --accent: #5352ed;
+    --accent-dim: rgba(83,82,237,0.12);
+  }
+
+  body {
+    background: var(--bg-base);
+    color: var(--text-primary);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 0 0 80px;
+  }
+
+  /* ── HEADER ── */
+  .audit-header {
+    background: linear-gradient(135deg, #12122a 0%, #1a1a2e 60%, #0f0f1a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 36px 40px 32px;
+  }
+  .audit-header-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .audit-title {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .audit-title span { color: var(--accent); }
+  .audit-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .audit-meta span { display: flex; align-items: center; gap: 4px; }
+  .audit-subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+  }
+  .scope-pills {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .scope-pill {
+    background: var(--accent-dim);
+    border: 1px solid rgba(83,82,237,0.3);
+    color: #a8a7ff;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .container {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── SECTION TITLE ── */
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 16px;
+    margin-top: 48px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── ISSUE CARD ── */
+  .issue-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .issue-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .issue-number {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    flex-shrink: 0;
+  }
+  .issue-number.critical { background: rgba(255,71,87,0.15); color: var(--critical); border: 1px solid rgba(255,71,87,0.3); }
+  .issue-number.warning  { background: rgba(255,165,2,0.13); color: var(--warning); border: 1px solid rgba(255,165,2,0.3); }
+  .issue-title { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+  .issue-location {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-secondary);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    white-space: nowrap;
+  }
+
+  .issue-body { padding: 24px; }
+
+  /* Diagnosis */
+  .diag-block {
+    background: rgba(255,71,87,0.06);
+    border: 1px solid rgba(255,71,87,0.18);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+  }
+  .diag-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--critical);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 10px;
+    opacity: 0.85;
+  }
+  .diag-points { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .diag-points li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13.5px;
+    color: #e0e0ee;
+    line-height: 1.55;
+  }
+  .diag-points li::before {
+    content: '→';
+    color: var(--critical);
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* Root Cause */
+  .cause-block {
+    background: rgba(83,82,237,0.06);
+    border: 1px solid rgba(83,82,237,0.2);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+  }
+  .cause-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #a8a7ff;
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 10px;
+  }
+  .cause-body { font-size: 13px; color: #c8c8e8; line-height: 1.65; }
+  .code-inline {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: #c8c8ff;
+  }
+
+  /* Fix Directives */
+  .fix-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--success);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 12px;
+    opacity: 0.9;
+  }
+  .fix-item {
+    background: rgba(46,213,115,0.05);
+    border: 1px solid rgba(46,213,115,0.15);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 10px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .fix-item:last-child { margin-bottom: 0; }
+  .fix-priority {
+    flex-shrink: 0;
+    min-width: 44px;
+    text-align: center;
+  }
+  .fix-priority-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 2px;
+  }
+  .fix-priority-badge {
+    display: inline-block;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .badge-s { background: rgba(46,213,115,0.2); color: var(--success); }
+  .badge-m { background: rgba(255,165,2,0.2); color: var(--warning); }
+  .badge-l { background: rgba(255,71,87,0.2); color: var(--critical); }
+  .fix-content { flex: 1; }
+  .fix-content strong {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #e8e8f8;
+    margin-bottom: 4px;
+  }
+  .fix-content p {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+  .fix-content code {
+    display: block;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #a8d8ff;
+    margin-top: 8px;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  /* Visual Diagram */
+  .diagram-block {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 20px 0;
+  }
+  .diagram-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 14px;
+  }
+
+  /* ── BEFORE/AFTER ── */
+  .ba-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 0;
+  }
+  @media (max-width: 620px) { .ba-grid { grid-template-columns: 1fr; } }
+  .ba-col { border-radius: 10px; overflow: hidden; }
+  .ba-label {
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 6px 12px;
+    text-align: center;
+  }
+  .ba-before .ba-label { background: rgba(255,71,87,0.15); color: var(--critical); }
+  .ba-after .ba-label  { background: rgba(46,213,115,0.12); color: var(--success); }
+  .ba-content { padding: 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 0 0 10px 10px; }
+
+  /* ── Issue 1 mockup: Filter Summary Bar ── */
+  .mock-bar {
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.02);
+    font-size: 12px;
+  }
+  .mock-bar-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .mock-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+  .chip {
+    border-radius: 20px;
+    padding: 2px 9px;
+    font-size: 11px;
+    font-weight: 500;
+    border: 1px solid;
+  }
+  .chip-region  { background: rgba(83,82,237,0.18); border-color: rgba(83,82,237,0.35); color: #a8a7ff; }
+  .chip-theme   { background: rgba(83,82,237,0.12); border-color: rgba(83,82,237,0.25); color: #c0c0ff; }
+  .chip-sched   { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); color: #c0c0cc; }
+  .chip-mood    { background: rgba(255,165,2,0.10); border-color: rgba(255,165,2,0.22); color: #ffca6a; }
+  .chip-taste   { background: rgba(46,213,115,0.10); border-color: rgba(46,213,115,0.22); color: #7de8a8; }
+  .chip-flat    { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.10); color: #a0a0b8; }
+  .mock-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 8px 0; }
+  .mock-sentence { font-size: 11.5px; color: #d0d0e8; line-height: 1.5; }
+  .mock-sentence-before { font-size: 10.5px; color: var(--text-secondary); line-height: 1.5; }
+  .mock-edit-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .mock-btn {
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 10.5px;
+    font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.04);
+    color: #b0b0c8;
+    cursor: default;
+  }
+  .mock-btn-primary {
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 10.5px;
+    font-weight: 700;
+    border: 1px solid rgba(83,82,237,0.35);
+    background: rgba(83,82,237,0.15);
+    color: #c0c0ff;
+    cursor: default;
+  }
+  .group-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 4px;
+    display: block;
+    opacity: 0.7;
+  }
+  .chip-group { margin-bottom: 8px; }
+  .ba-caption {
+    font-size: 10.5px;
+    color: var(--text-secondary);
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+  .ba-caption.bad { color: rgba(255,71,87,0.7); }
+  .ba-caption.good { color: rgba(46,213,115,0.7); }
+
+  /* ── Issue 2 mockup: Guardian Card Image ── */
+  .mock-card {
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.02);
+  }
+  .mock-card-inner {
+    display: flex;
+    min-height: 200px;
+  }
+  .mock-img-col {
+    width: 42%;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .mock-img-before {
+    background: linear-gradient(to bottom, #1a1a2a 0%, #3a3a4a 30%, #5a5a6a 50%, #3a3a4a 70%, #1a1a2a 100%);
+    color: rgba(255,255,255,0.3);
+  }
+  .mock-img-after {
+    background: linear-gradient(to bottom, #2a2040 0%, #5a4a7a 30%, #8a6aaa 55%, #6a5a9a 80%, #4a3a6a 100%);
+    color: rgba(255,255,255,0.5);
+    position: relative;
+  }
+  .mock-img-after::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 40%;
+    background: linear-gradient(to bottom, transparent, rgba(20,16,35,0.6));
+  }
+  .mock-img-before .empty-zone {
+    position: absolute;
+    left: 0; right: 0;
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(255,71,87,0.06) 0px,
+      rgba(255,71,87,0.06) 4px,
+      transparent 4px,
+      transparent 10px
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    color: rgba(255,71,87,0.5);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .mock-img-before .empty-zone.top { top: 0; height: 25%; }
+  .mock-img-before .empty-zone.bottom { bottom: 0; height: 25%; }
+  .mock-img-before .subject-zone {
+    position: absolute;
+    left: 0; right: 0;
+    top: 25%; bottom: 25%;
+    background: rgba(80,80,120,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.5);
+    font-size: 24px;
+  }
+  .mock-content-col {
+    flex: 1;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .mock-name { font-size: 14px; font-weight: 700; }
+  .mock-chips-sm { display: flex; gap: 4px; flex-wrap: wrap; }
+  .chip-sm {
+    border-radius: 12px;
+    padding: 1px 7px;
+    font-size: 10px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+  .mock-reasons {
+    background: rgba(255,255,255,0.04);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 10.5px;
+    color: #c0c0d8;
+    line-height: 1.6;
+  }
+  .mock-reasons li { margin-left: 12px; margin-bottom: 2px; }
+  .mock-actions { margin-top: auto; }
+  .mock-cta {
+    width: 100%;
+    background: #1a1a2a;
+    border: 1px solid rgba(83,82,237,0.4);
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #a8a7ff;
+    text-align: center;
+    cursor: default;
+    margin-bottom: 4px;
+  }
+
+  /* ── SUMMARY TABLE ── */
+  .summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .summary-table th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    padding: 10px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .summary-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: top;
+    color: #d0d0e8;
+  }
+  .summary-table tr:last-child td { border-bottom: none; }
+  .summary-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .priority-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+  .dot-critical { background: var(--critical); box-shadow: 0 0 6px var(--critical); }
+  .dot-warning  { background: var(--warning);  box-shadow: 0 0 6px var(--warning); }
+  .effort-badge {
+    display: inline-block;
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── FOOTER CTA ── */
+  .footer-cta {
+    margin-top: 48px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .footer-cta-text strong {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .footer-cta-text p {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 28px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'Noto Sans KR', sans-serif;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-primary:hover { background: #6a69ff; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+
+  /* ── ANNOTATIONS ── */
+  .annotation {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255,71,87,0.12);
+    border: 1px solid rgba(255,71,87,0.25);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #ff8f9a;
+    margin: 4px 2px;
+  }
+  .annotation.good {
+    background: rgba(46,213,115,0.12);
+    border-color: rgba(46,213,115,0.25);
+    color: #7de8a8;
+  }
+
+  /* responsive */
+  @media (max-width: 600px) {
+    .audit-header { padding: 24px 20px; }
+    .container { padding: 0 16px; }
+    .issue-location { display: none; }
+    .footer-cta { flex-direction: column; }
+    .btn-primary { width: 100%; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════ HEADER -->
+<div class="audit-header">
+  <div style="max-width:1080px; margin:0 auto; padding: 0 24px;">
+    <div class="audit-header-top">
+      <div>
+        <div class="audit-title">SafeMate v3 · <span>UX Audit</span></div>
+        <div class="audit-subtitle">Explore 결과화면 — 집중 점검 2건</div>
+      </div>
+      <div class="audit-meta">
+        <span>📅 2026-04-01</span>
+        <span>🖥 Desktop Web</span>
+        <span>🔍 스크린샷 + 코드 분석</span>
+      </div>
+    </div>
+    <div class="scope-pills">
+      <span class="scope-pill">① 선택 조건 요약 블록</span>
+      <span class="scope-pill">② 1순위 카드 이미지 여백</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ══════════════════════════════════════════ SUMMARY TABLE -->
+  <div class="section-label">수정 지시 요약</div>
+  <div class="issue-card">
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>구분</th>
+          <th>이슈</th>
+          <th>수정 지시 핵심</th>
+          <th>공수</th>
+          <th>우선</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span style="font-family:monospace; color:var(--text-secondary);">01</span></td>
+          <td><span style="color:#c0b8ff; font-weight:600;">UI</span></td>
+          <td>선택 조건 요약 블록 — 칩 구분 없음, 수정 버튼 분산</td>
+          <td>카테고리별 칩 색상 분리 + 수정 버튼 1개 드롭다운으로 통합 + interpretLine 시각 격상</td>
+          <td><span class="effort-badge badge-m">M</span></td>
+          <td><span class="priority-dot dot-critical"></span>즉시</td>
+        </tr>
+        <tr>
+          <td><span style="font-family:monospace; color:var(--text-secondary);">02</span></td>
+          <td><span style="color:#a8d8ff; font-weight:600;">GUI</span></td>
+          <td>1순위 카드 이미지 상하단 공백 — 인물 주변 허공</td>
+          <td>lg 브레이크포인트에서 <code class="code-inline">max-h</code> 제한 + <code class="code-inline">object-position: top</code> 적용 + 하단 그라디언트 오버레이 추가</td>
+          <td><span class="effort-badge badge-s">S</span></td>
+          <td><span class="priority-dot dot-critical"></span>즉시</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════ ISSUE 01 -->
+  <div class="section-label">이슈 ① 상세 분석</div>
+  <div class="issue-card">
+    <div class="issue-header">
+      <div class="issue-number critical">01</div>
+      <div>
+        <div class="issue-title">선택 조건 요약 블록 — 정보 구조 붕괴</div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">칩 구분 없음 · 수정 버튼 3개 분산 · interpretLine 묻힘</div>
+      </div>
+      <div class="issue-location">explore-journey-summary-bar.tsx</div>
+    </div>
+
+    <div class="issue-body">
+
+      <!-- 진단 -->
+      <div class="diag-block">
+        <div class="diag-label">🔴 진단</div>
+        <ul class="diag-points">
+          <li>지역·테마·일정·무드·취향 칩이 모두 동일한 <code class="code-inline">Badge variant="outline"</code>으로 렌더링됨. 사용자가 어떤 기준이 적용됐는지 한눈에 파악 불가.</li>
+          <li>수정 버튼 3개(조건 수정하기, 일정·인원 수정, 취향 수정)가 우측에 나란히 배치. 어느 것이 주요 액션인지 위계 없음. 동등하게 나열된 버튼은 결국 모두 무시된다.</li>
+          <li>interpretLine(강남·'K-드라마 로맨스 산책'·무드, 혼자·1~2일·균형 기준으로 골랐어요.)이 <code class="code-inline">text-xs border-t mt-1</code> 처리로 묻힘. 이 문장이 사실상 이 블록의 핵심 정보인데 가장 약하게 표시.</li>
+          <li>레이블 "현재 선택"이 10px uppercase + muted로 처리. 이게 확인 영역인지 필터 패널인지 사용자가 인식하기 어렵다.</li>
+        </ul>
+      </div>
+
+      <!-- 근본 원인 -->
+      <div class="cause-block">
+        <div class="cause-label">🔵 코드 레벨 원인</div>
+        <div class="cause-body">
+          현재 코드에서 <code class="code-inline">region</code>·<code class="code-inline">theme</code>은 <code class="code-inline">variant="secondary"</code>, 나머지 일정·무드·취향 모두 <code class="code-inline">variant="outline"</code>으로 렌더링. secondary와 outline의 시각 차이가 미미해 사실상 동질해 보인다. chipClass도 단일 클래스로 통일되어 있어 카테고리별 컬러 분기 로직 자체가 없다.
+          <br/><br/>
+          수정 버튼은 <code class="code-inline">flex-row flex-wrap justify-end</code> 안에 동일 variant·size·height로 3개 나열. UI 위계 설계가 없다.
+          <br/><br/>
+          interpretLine은 <code class="code-inline">border-t mt-1 pt-2 text-xs</code>로 하단 구석에 숨겨짐. 이 문장을 블록 상단 또는 독립 시각 요소로 격상해야 이 블록이 '선택 확인 영역'으로 기능한다.
+        </div>
+      </div>
+
+      <!-- Before / After 다이어그램 -->
+      <div class="diagram-block">
+        <div class="diagram-title">Before vs After — 선택 조건 블록 구조</div>
+        <div class="ba-grid">
+          <!-- BEFORE -->
+          <div class="ba-col ba-before">
+            <div class="ba-label">❌ 현재 (Before)</div>
+            <div class="ba-content">
+              <div class="mock-bar">
+                <div class="mock-bar-label">✦ 현재 선택</div>
+                <div class="mock-chips">
+                  <span class="chip chip-flat">강남</span>
+                  <span class="chip chip-flat">K-드라마 로맨스 산책</span>
+                  <span class="chip chip-flat">1~2일</span>
+                  <span class="chip chip-flat">혼자</span>
+                  <span class="chip chip-flat">균형</span>
+                  <span class="chip chip-flat">무관</span>
+                  <span class="chip chip-flat">2주 안에</span>
+                  <span class="chip chip-flat">조용한 산책</span>
+                  <span class="chip chip-flat">한옥 골목</span>
+                  <span class="chip chip-flat">네온 야경</span>
+                  <span class="chip chip-flat">+1</span>
+                  <span class="chip chip-flat">계획형 가이드</span>
+                  <span class="chip chip-flat">느긋한 친구형</span>
+                  <span class="chip chip-flat">도깨비</span>
+                  <span class="chip chip-flat">이태원 클라쓰</span>
+                  <span class="chip chip-flat">BTS</span>
+                  <span class="chip chip-flat">블랙핑크</span>
+                </div>
+                <div class="mock-edit-row">
+                  <button class="mock-btn">조건 수정하기</button>
+                  <button class="mock-btn">일정·인원 수정</button>
+                  <button class="mock-btn">취향 수정</button>
+                </div>
+                <div class="mock-divider"></div>
+                <div class="mock-sentence-before">강남·'K-드라마 로맨스 산책'무드, 혼자·1~2일·균형 기준으로 골랐어요.</div>
+              </div>
+              <div class="ba-caption bad">
+                모든 칩 동일 색상 → 뭘 선택했는지 파악 안 됨<br/>
+                버튼 3개 병렬 → 클릭할 게 없어 보임<br/>
+                핵심 요약 문장 → 가장 아래 최소 크기로 묻힘
+              </div>
+            </div>
+          </div>
+
+          <!-- AFTER -->
+          <div class="ba-col ba-after">
+            <div class="ba-label">✅ 제안 (After)</div>
+            <div class="ba-content">
+              <div class="mock-bar">
+                <!-- interpretLine 격상 -->
+                <div class="mock-sentence" style="margin-bottom:10px; font-size:12.5px; font-weight:600; color:#e0e0f8;">
+                  강남 · K-드라마 로맨스 산책 · 혼자 · 1~2일 · 균형 기준
+                </div>
+                <div class="mock-divider"></div>
+                <!-- 카테고리별 칩 그룹 -->
+                <div class="chip-group">
+                  <span class="group-label">지역 · 테마</span>
+                  <div class="mock-chips">
+                    <span class="chip chip-region">강남</span>
+                    <span class="chip chip-theme">K-드라마 로맨스 산책</span>
+                  </div>
+                </div>
+                <div class="chip-group">
+                  <span class="group-label">일정 · 인원</span>
+                  <div class="mock-chips">
+                    <span class="chip chip-sched">1~2일</span>
+                    <span class="chip chip-sched">혼자</span>
+                    <span class="chip chip-sched">균형</span>
+                    <span class="chip chip-sched">2주 안에</span>
+                  </div>
+                </div>
+                <div class="chip-group">
+                  <span class="group-label">무드 · 취향</span>
+                  <div class="mock-chips">
+                    <span class="chip chip-mood">조용한 산책</span>
+                    <span class="chip chip-mood">한옥 골목</span>
+                    <span class="chip chip-taste">계획형 가이드</span>
+                    <span class="chip chip-taste">도깨비</span>
+                    <span class="chip chip-taste">BTS</span>
+                    <span class="chip chip-taste">+3더</span>
+                  </div>
+                </div>
+                <div class="mock-divider"></div>
+                <div style="display:flex; justify-content:flex-end;">
+                  <button class="mock-btn-primary">조건 수정 ▾</button>
+                </div>
+              </div>
+              <div class="ba-caption good">
+                interpretLine 상단 격상 → 스캔 즉시 읽힘<br/>
+                카테고리별 색상 구분 → 구조 파악 가능<br/>
+                수정 버튼 1개 통합 → 클릭 의도 명확
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 수정 지시 -->
+      <div class="fix-label">✅ 수정 지시</div>
+
+      <div class="fix-item">
+        <div class="fix-priority">
+          <span class="fix-priority-label">공수</span>
+          <span class="fix-priority-badge badge-s">S</span>
+        </div>
+        <div class="fix-content">
+          <strong>① interpretLine을 블록 최상단으로 이동하고 시각 격상</strong>
+          <p>현재 <code class="code-inline">border-t mt-1 text-xs</code>로 하단에 묻혀 있는 interpretLine을 블록 제일 위로 올린다. font-size를 최소 <code class="code-inline">text-sm (14px)</code> + <code class="code-inline">font-semibold</code>로 변경. 이 한 줄이 이 블록 존재 이유다.</p>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-priority">
+          <span class="fix-priority-label">공수</span>
+          <span class="fix-priority-badge badge-m">M</span>
+        </div>
+        <div class="fix-content">
+          <strong>② chipClass를 카테고리별로 분기 — 색상 시스템 적용</strong>
+          <p>현재 단일 chipClass를 카테고리에 따라 분기 처리. 아래 매핑을 기준으로 적용:</p>
+          <code>region/theme  → bg-primary/15 border-primary/30 text-primary (보라)
+days/party/pace/when → bg-muted/40 border/20 text-muted-fg (중립)
+sceneMoods    → bg-amber-500/10 border-amber-400/25 text-amber-300 (황)
+styles/tokens → bg-emerald-500/10 border-emerald-400/25 text-emerald-300 (초록)</code>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-priority">
+          <span class="fix-priority-label">공수</span>
+          <span class="fix-priority-badge badge-s">S</span>
+        </div>
+        <div class="fix-content">
+          <strong>③ 수정 버튼 3개 → "조건 수정 ▾" 단일 드롭다운으로 통합</strong>
+          <p>3개의 동등 버튼을 제거하고 <code class="code-inline">DropdownMenu</code> 1개로 통합. 내부 항목은 기존 3개 액션 그대로. 버튼 크기는 현재 h-9 유지, 위치는 우측 정렬. 버튼 variant는 <code class="code-inline">outline</code> → <code class="code-inline">secondary</code>로 올려 존재감 확보.</p>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-priority">
+          <span class="fix-priority-label">공수</span>
+          <span class="fix-priority-badge badge-s">S</span>
+        </div>
+        <div class="fix-content">
+          <strong>④ 카테고리 그룹 레이블 추가 (선택 사항, 권장)</strong>
+          <p>칩 앞에 "지역·테마 / 일정·인원 / 무드·취향" 같은 9px uppercase 그룹 레이블을 추가하면 스캔 속도가 올라간다. 칩이 많아질수록 효과가 커진다. 레이블은 muted로 눈에 띄지 않게 처리해 칩 밀도를 해치지 않는다.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════ ISSUE 02 -->
+  <div class="section-label">이슈 ② 상세 분석</div>
+  <div class="issue-card">
+    <div class="issue-header">
+      <div class="issue-number warning">02</div>
+      <div>
+        <div class="issue-title">1순위 카드 이미지 — 상하단 여백 공백</div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">lg 브레이크포인트에서 이미지 컨테이너 고도 불확정 + object-position 미설정</div>
+      </div>
+      <div class="issue-location">explore-journey-step-panels.tsx : L.721</div>
+    </div>
+
+    <div class="issue-body">
+
+      <!-- 진단 -->
+      <div class="diag-block">
+        <div class="diag-label">🔴 진단</div>
+        <ul class="diag-points">
+          <li>데스크톱(lg)에서 이미지 컨테이너가 <code class="code-inline">aspect-auto + min-h-[300px]</code>. 높이가 우측 콘텐츠 패널 높이에 종속되어 실제 컨테이너가 450~500px으로 늘어남.</li>
+          <li>이미지는 <code class="code-inline">fill + object-fit:cover</code>이지만 <code class="code-inline">object-position</code>이 기본값 center. 인물 중심이 사진 중앙보다 약간 하단에 있을 경우, 머리 위와 발 아래가 동일하게 잘려 '위아래 공백' 인상을 준다.</li>
+          <li>사용 중인 이미지가 <code class="code-inline">guardianProfileImageUrls(featured).landscape</code>인데, landscape 이미지를 좁고 긴(320×480) 세로 컨테이너에 넣으면 좌우는 잘리고 상하는 패딩처럼 보이는 영역이 생긴다.</li>
+        </ul>
+      </div>
+
+      <!-- 근본 원인 -->
+      <div class="cause-block">
+        <div class="cause-label">🔵 코드 레벨 원인</div>
+        <div class="cause-body">
+          문제 클래스:
+          <br/><br/>
+          <code class="code-inline">lg:aspect-auto lg:max-h-none lg:max-w-[320px] lg:min-h-[300px]</code>
+          <br/><br/>
+          <code class="code-inline">aspect-auto</code>는 컨테이너 비율을 포기한다는 의미. 높이는 이제 flexbox 부모가 결정한다. 우측 패널(<code class="code-inline">flex-1 flex-col justify-center</code>) 안에 이름, 티어, 언어, 이유 3줄, CTA 버튼까지 쌓이면 약 420~480px가 된다. 이미지 컨테이너는 이 높이를 그대로 따라가고, landscape 이미지는 320px 너비에서 cover로 맞추면 위아래가 크게 잘려 인물 주변 배경이 노출된다.
+          <br/><br/>
+          <code class="code-inline">FILL_IMAGE_EXPLORE_TOP_PICK</code> 클래스에 <code class="code-inline">object-position</code>이 없으면 Next.js Image의 기본값인 <code class="code-inline">center center</code>가 적용되는데, 이 이미지의 인물 위치가 중앙에서 벗어나 있을 경우 공백이 더 두드러진다.
+        </div>
+      </div>
+
+      <!-- Before / After 다이어그램 -->
+      <div class="diagram-block">
+        <div class="diagram-title">Before vs After — 1순위 카드 이미지 영역 (lg 기준)</div>
+        <div class="ba-grid">
+          <!-- BEFORE -->
+          <div class="ba-col ba-before">
+            <div class="ba-label">❌ 현재 (Before)</div>
+            <div class="ba-content">
+              <div class="mock-card">
+                <div class="mock-card-inner">
+                  <div class="mock-img-col mock-img-before" style="min-height:200px;">
+                    <div class="empty-zone top">EMPTY ↑</div>
+                    <div class="subject-zone">👤</div>
+                    <div class="empty-zone bottom">EMPTY ↓</div>
+                  </div>
+                  <div class="mock-content-col">
+                    <div class="mock-name">박도윤</div>
+                    <div class="mock-chips-sm">
+                      <span class="chip-sm chip-region">활동 중인 Guardian</span>
+                      <span class="chip-sm chip-sched">강남</span>
+                      <span class="chip-sm chip-sched">KO · EN · ZH</span>
+                    </div>
+                    <div class="mock-reasons">
+                      <ul>
+                        <li>도보 중심으로 가볍게 움직이기 좋아요</li>
+                        <li>광화문 반나절 동선에 잘 맞아요</li>
+                        <li>K-POP 스팟 설명이 자연스러워요</li>
+                      </ul>
+                    </div>
+                    <div class="mock-actions">
+                      <div class="mock-cta">요청하기</div>
+                      <div style="display:flex; gap:6px; font-size:10px; color:var(--text-secondary); justify-content:center;">
+                        <span>자세히 보기</span><span>♡ 찜</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="ba-caption bad">
+                이미지 상하 20~25% 구간이 비어 보임<br/>
+                인물이 작게 중앙에 갇힌 인상
+              </div>
+            </div>
+          </div>
+
+          <!-- AFTER -->
+          <div class="ba-col ba-after">
+            <div class="ba-label">✅ 제안 (After)</div>
+            <div class="ba-content">
+              <div class="mock-card">
+                <div class="mock-card-inner">
+                  <div class="mock-img-col mock-img-after" style="min-height:200px;">
+                    <div style="position:absolute; top:0; left:0; right:0; bottom:0; background:linear-gradient(to bottom, #2a2040 0%, #5a4a7a 20%, #8a6aaa 50%, #6a5a9a 80%, #4a3a6a 100%); display:flex; align-items:center; justify-content:center; font-size:32px;">👤</div>
+                    <div style="position:absolute; bottom:0; left:0; right:0; height:35%; background:linear-gradient(to bottom, transparent, rgba(16,12,28,0.55)); z-index:2;"></div>
+                    <div style="position:absolute; top:8px; left:8px; display:flex; gap:4px; z-index:3;">
+                      <span style="background:#f59e0b; color:#fff; font-size:9px; font-weight:800; border-radius:10px; padding:2px 7px;">1순위</span>
+                      <span style="background:rgba(255,255,255,0.9); color:#5352ed; font-size:9px; font-weight:800; border-radius:10px; padding:2px 7px;">Best match</span>
+                    </div>
+                  </div>
+                  <div class="mock-content-col">
+                    <div class="mock-name">박도윤</div>
+                    <div class="mock-chips-sm">
+                      <span class="chip-sm chip-region">활동 중인 Guardian</span>
+                      <span class="chip-sm chip-sched">강남</span>
+                      <span class="chip-sm chip-sched">KO · EN · ZH</span>
+                    </div>
+                    <div class="mock-reasons">
+                      <ul>
+                        <li>도보 중심으로 가볍게 움직이기 좋아요</li>
+                        <li>광화문 반나절 동선에 잘 맞아요</li>
+                        <li>K-POP 스팟 설명이 자연스러워요</li>
+                      </ul>
+                    </div>
+                    <div class="mock-actions">
+                      <div class="mock-cta">요청하기</div>
+                      <div style="display:flex; gap:6px; font-size:10px; color:var(--text-secondary); justify-content:center;">
+                        <span>자세히 보기</span><span>♡ 찜</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="ba-caption good">
+                max-h 제한으로 이미지 컨테이너 고도 고정<br/>
+                object-position: top → 인물 상체 노출<br/>
+                하단 그라디언트 → 컷오프 자연스럽게 처리
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 수정 지시 -->
+      <div class="fix-label">✅ 수정 지시</div>
+
+      <div class="fix-item">
+        <div class="fix-priority">
+          <span class="fix-priority-label">공수</span>
+          <span class="fix-priority-badge badge-s">S</span>
+        </div>
+        <div class="fix-content">
+          <strong>① lg 이미지 컨테이너에 max-h 명시적 제한 추가</strong>
+          <p>현재 <code class="code-inline">lg:max-h-none</code>이 height 제한을 해제. 아래처럼 변경해 컨테이너 최대 고도를 고정한다:</p>
+          <code>// Before
+lg:max-h-none lg:min-h-[300px]
+
+// After
+lg:max-h-[420px] lg:min-h-[320px]</code>
+          <p style="margin-top:8px;">420px로 제한하면 우측 콘텐츠가 길어져도 이미지 영역이 과도하게 늘어나지 않는다. 우측 콘텐츠가 넘칠 경우 <code class="code-inline">lg:overflow-y-auto</code> 또는 콘텐츠 gap 줄이기로 대응.</p>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-priority">
+          <span class="fix-priority-label">공수</span>
+          <span class="fix-priority-badge badge-s">S</span>
+        </div>
+        <div class="fix-content">
+          <strong>② FILL_IMAGE_EXPLORE_TOP_PICK에 object-position: top center 추가</strong>
+          <p><code class="code-inline">FILL_IMAGE_EXPLORE_TOP_PICK</code> 상수가 정의된 파일을 찾아 아래 클래스를 추가:</p>
+          <code>// 현재 (추정): object-cover
+// 변경 후:
+object-cover object-top</code>
+          <p style="margin-top:8px;"><code class="code-inline">object-top</code>은 Tailwind 기본 유틸리티. 인물 사진은 상체/얼굴이 프레임 위쪽에 위치하는 경우가 많아 object-top이 기본 center보다 안전하다. 특정 이미지에서 어색하면 <code class="code-inline">object-[center_20%]</code> 등 커스텀 포지션으로 미세 조정.</p>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-priority">
+          <span class="fix-priority-label">공수</span>
+          <span class="fix-priority-badge badge-s">S</span>
+        </div>
+        <div class="fix-content">
+          <strong>③ 이미지 컨테이너 하단에 그라디언트 오버레이 추가 (권장)</strong>
+          <p>컷오프 라인이 자연스럽게 이어지도록 절대 위치 div로 하단 페이드를 추가. 카드 배경색 기준으로 그라디언트 종료:</p>
+          <code>// 이미지 div 내부에 추가
+&lt;div className="absolute inset-x-0 bottom-0 h-1/3
+  bg-gradient-to-b from-transparent
+  to-card/70 pointer-events-none z-10" /&gt;</code>
+          <p style="margin-top:8px;">공백이 실제로 없어지는 건 ①②번 작업이고, 이 그라디언트는 이미지와 콘텐츠 경계를 부드럽게 연결하는 마감 처리다. <code class="code-inline">to-card/70</code>은 현재 카드 배경색 변수를 활용.</p>
+        </div>
+      </div>
+
+      <div class="fix-item">
+        <div class="fix-priority">
+          <span class="fix-priority-label">공수</span>
+          <span class="fix-priority-badge badge-m">M</span>
+        </div>
+        <div class="fix-content">
+          <strong>④ (중기) landscape 대신 portrait 이미지 URL 사용 검토</strong>
+          <p>현재 <code class="code-inline">guardianProfileImageUrls(featured).landscape</code>를 사용 중. 이 카드의 이미지 컨테이너는 320×420px로 세로형이므로 portrait 이미지가 훨씬 잘 맞는다. <code class="code-inline">guardianProfileImageUrls(featured).portrait</code>가 있다면 lg 이상에서 portrait로 전환 검토. 없다면 이미지 등록 시 portrait 버전도 받는 방향으로 데이터 구조 확장.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════ FOOTER CTA -->
+  <div class="footer-cta">
+    <div class="footer-cta-text">
+      <strong>즉시 수정 작업 시작할게요?</strong>
+      <p>이슈 ①②번 모두 S~M 공수. 빌드 깨질 리스크 없음. 지금 바로 진행 가능.</p>
+    </div>
+    <button class="btn-primary" onclick="if(window.sendPrompt) window.sendPrompt('즉시수정 항목부터 수정 시작해줘'); else alert('즉시수정 항목부터 수정 시작해줘 — 를 입력하세요');">
+      즉시수정 항목 수정 시작 →
+    </button>
+  </div>
+
+</div><!-- /container -->
+
+</body>
+</html>

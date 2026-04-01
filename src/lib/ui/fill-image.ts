@@ -28,7 +28,7 @@ export const FILL_IMAGE_GUARDIAN_LIST_CARD = `${FS} object-top`;
 // C — 추천 결과 1순위 메인 (강한 상단 앵커, 얼굴 비중↑)
 // ---------------------------------------------------------------------------
 
-export const FILL_IMAGE_EXPLORE_TOP_PICK = `${FS} object-[center_18%] sm:object-[center_20%]`;
+export const FILL_IMAGE_EXPLORE_TOP_PICK = `${FS} object-top`;
 
 // ---------------------------------------------------------------------------
 // D — 가디언 상세·시트 가로 히어로 (텍스트 오버레이 고려, 중앙)

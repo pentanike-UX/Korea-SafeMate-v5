@@ -5,9 +5,14 @@ import { useTranslations } from "next-intl";
 import { formatDecisionInterpretLine } from "@/lib/explore-decision-interpret";
 import type { LaunchAreaSlug } from "@/types/launch-area";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { Sparkles } from "lucide-react";
+import { ChevronDown, Sparkles } from "lucide-react";
 import type { PartySize, SceneMoodId, GuardianStyleId, TripWhenPreset } from "@/components/explore/explore-journey-data";
 
 type Pace = "calm" | "balanced" | "packed";
@@ -56,8 +61,12 @@ export function ExploreJourneySummaryBar({
 
   const tripKey = days === "1" ? "tripDays1" : days === "2" ? "tripDays2" : "tripDays3";
 
-  const chipClass =
+  const chipBase =
     "inline-flex min-h-7 max-w-[min(100%,11rem)] min-w-0 shrink items-center justify-center gap-1 truncate rounded-full px-2 py-0.5 text-[11px] font-medium sm:max-w-[min(100%,12rem)] sm:px-2.5";
+  const chipRegionTheme = cn(chipBase, "bg-primary/15 border border-primary/30 text-primary");
+  const chipSchedule = cn(chipBase, "bg-muted/50 border border-border/50 text-muted-foreground");
+  const chipMood = cn(chipBase, "bg-amber-500/10 border border-amber-400/25 text-amber-300");
+  const chipTaste = cn(chipBase, "bg-emerald-500/10 border border-emerald-400/25 text-emerald-300");
 
   const isResults = variant === "results";
 
@@ -67,6 +76,11 @@ export function ExploreJourneySummaryBar({
   }, [hasAnything, isResults, step, t, tLaunch, tThemes, region, theme, days, partySize, pace]);
 
   if (!hasAnything) return null;
+
+  const hasEditActions =
+    (step >= 2 && onEditBasics) ||
+    (isResults && onEditSchedule) ||
+    (isResults && onEditTaste);
 
   return (
     <div
@@ -78,115 +92,109 @@ export function ExploreJourneySummaryBar({
       aria-label={t("summaryBarAria")}
     >
       <div className="flex flex-col gap-2">
-      <div className="flex flex-col gap-2 min-[400px]:flex-row min-[400px]:flex-wrap min-[400px]:items-center min-[400px]:justify-between">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1 min-[400px]:gap-2">
-          <span className="text-muted-foreground inline-flex w-full min-w-0 items-center gap-1 text-[10px] font-semibold tracking-wide uppercase min-[400px]:w-auto">
-            <Sparkles className="text-primary size-3 shrink-0" aria-hidden />
-            <span className="truncate">{isResults ? t("summaryBarLabelResults") : t("summaryBarLabel")}</span>
-          </span>
-          {region ? (
-            <Badge variant="secondary" className={chipClass}>
-              {(tLaunch.raw(region) as { name: string }).name}
-            </Badge>
-          ) : null}
-          {theme ? (
-            <Badge variant="secondary" className={chipClass}>
-              {(tThemes.raw(theme) as { title: string }).title}
-            </Badge>
-          ) : null}
-          {step >= 2 ? (
-            <>
-              <Badge variant="outline" className={chipClass}>
-                {t(tripKey)}
+        {interpretLine ? (
+          <p className="text-foreground text-sm font-semibold leading-snug tracking-tight mb-1">
+            {interpretLine}
+          </p>
+        ) : null}
+
+        <div className="flex flex-col gap-2 min-[400px]:flex-row min-[400px]:flex-wrap min-[400px]:items-center min-[400px]:justify-between">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1 min-[400px]:gap-2">
+            <span className="text-muted-foreground inline-flex w-full min-w-0 items-center gap-1 text-[10px] font-semibold tracking-wide uppercase min-[400px]:w-auto">
+              <Sparkles className="text-primary size-3 shrink-0" aria-hidden />
+              <span className="truncate">{isResults ? t("summaryBarLabelResults") : t("summaryBarLabel")}</span>
+            </span>
+            {region ? (
+              <Badge className={chipRegionTheme}>
+                {(tLaunch.raw(region) as { name: string }).name}
               </Badge>
-              <Badge variant="outline" className={chipClass}>
-                {t(`party_${partySize}` as "party_solo")}
+            ) : null}
+            {theme ? (
+              <Badge className={chipRegionTheme}>
+                {(tThemes.raw(theme) as { title: string }).title}
               </Badge>
-              <Badge variant="outline" className={chipClass}>
-                {pace === "calm" ? t("paceCalm") : pace === "balanced" ? t("paceBalanced") : t("pacePacked")}
-              </Badge>
-              <Badge variant="outline" className={chipClass}>
-                {langPref === "any" ? t("langAny") : langPref.toUpperCase()}
-              </Badge>
-              {tripWhenPreset ? (
-                <Badge variant="outline" className={chipClass}>
-                  {t(`tripWhen_${tripWhenPreset}` as "tripWhen_weekend")}
+            ) : null}
+            {step >= 2 ? (
+              <>
+                <Badge className={chipSchedule}>
+                  {t(tripKey)}
                 </Badge>
-              ) : null}
-            </>
-          ) : null}
-          {step >= 3 ? (
-            <>
-              {sceneMoods.slice(0, 3).map((id) => (
-                <Badge key={id} variant="outline" className={chipClass}>
-                  {t(`moodScene_${id.replace(/^scene_/, "")}` as "moodScene_neon")}
+                <Badge className={chipSchedule}>
+                  {t(`party_${partySize}` as "party_solo")}
                 </Badge>
-              ))}
-              {sceneMoods.length > 3 ? (
-                <span className="text-muted-foreground shrink-0 text-[11px]">+{sceneMoods.length - 3}</span>
-              ) : null}
-              {guardianStylePrefs
-                .filter((id) => id !== "style_no_match_test")
-                .slice(0, 2)
-                .map((id) => (
-                  <Badge key={id} variant="outline" className={chipClass}>
-                    {t(`moodStyle_${id.replace(/^style_/, "")}` as "moodStyle_calm")}
+                <Badge className={chipSchedule}>
+                  {pace === "calm" ? t("paceCalm") : pace === "balanced" ? t("paceBalanced") : t("pacePacked")}
+                </Badge>
+                <Badge className={chipSchedule}>
+                  {langPref === "any" ? t("langAny") : langPref.toUpperCase()}
+                </Badge>
+                {tripWhenPreset ? (
+                  <Badge className={chipSchedule}>
+                    {t(`tripWhen_${tripWhenPreset}` as "tripWhen_weekend")}
+                  </Badge>
+                ) : null}
+              </>
+            ) : null}
+            {step >= 3 ? (
+              <>
+                {sceneMoods.slice(0, 3).map((id) => (
+                  <Badge key={id} className={chipMood}>
+                    {t(`moodScene_${id.replace(/^scene_/, "")}` as "moodScene_neon")}
                   </Badge>
                 ))}
-              {workTokens.slice(0, 2).map((w) => (
-                <Badge key={w} variant="secondary" className={cn(chipClass, "max-w-[min(100%,9rem)] sm:max-w-[min(100%,10rem)]")}>
-                  {w}
-                </Badge>
-              ))}
-              {artistTokens.slice(0, 2).map((w) => (
-                <Badge key={w} variant="secondary" className={cn(chipClass, "max-w-[min(100%,9rem)] sm:max-w-[min(100%,10rem)]")}>
-                  {w}
-                </Badge>
-              ))}
-            </>
+                {sceneMoods.length > 3 ? (
+                  <span className="text-muted-foreground shrink-0 text-[11px]">+{sceneMoods.length - 3}</span>
+                ) : null}
+                {guardianStylePrefs
+                  .filter((id) => id !== "style_no_match_test")
+                  .slice(0, 2)
+                  .map((id) => (
+                    <Badge key={id} className={cn(chipTaste, "max-w-[min(100%,9rem)] sm:max-w-[min(100%,10rem)]")}>
+                      {t(`moodStyle_${id.replace(/^style_/, "")}` as "moodStyle_calm")}
+                    </Badge>
+                  ))}
+                {workTokens.slice(0, 2).map((w) => (
+                  <Badge key={w} className={cn(chipTaste, "max-w-[min(100%,9rem)] sm:max-w-[min(100%,10rem)]")}>
+                    {w}
+                  </Badge>
+                ))}
+                {artistTokens.slice(0, 2).map((w) => (
+                  <Badge key={w} className={cn(chipTaste, "max-w-[min(100%,9rem)] sm:max-w-[min(100%,10rem)]")}>
+                    {w}
+                  </Badge>
+                ))}
+              </>
+            ) : null}
+          </div>
+
+          {hasEditActions ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="inline-flex h-9 min-h-9 shrink-0 items-center rounded-xl bg-secondary px-4 text-xs font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {t("editConditions")}
+                <ChevronDown className="ml-1 size-3.5" aria-hidden />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-[160px]">
+                {step >= 2 && onEditBasics ? (
+                  <DropdownMenuItem onClick={onEditBasics}>
+                    {isResults ? t("editConditions") : t("editAreaTheme")}
+                  </DropdownMenuItem>
+                ) : null}
+                {isResults && onEditSchedule ? (
+                  <DropdownMenuItem onClick={onEditSchedule}>
+                    {t("editScheduleShort")}
+                  </DropdownMenuItem>
+                ) : null}
+                {isResults && onEditTaste ? (
+                  <DropdownMenuItem onClick={onEditTaste}>
+                    {t("editTasteShort")}
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : null}
         </div>
-        <div className="flex w-full min-w-0 flex-col gap-2 min-[400px]:w-auto min-[400px]:flex-row min-[400px]:flex-wrap min-[400px]:justify-end">
-          {step >= 2 && onEditBasics ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-9 min-h-9 w-full shrink-0 rounded-xl px-3 text-xs font-semibold min-[400px]:w-auto"
-              onClick={onEditBasics}
-            >
-              {isResults ? t("editConditions") : t("editAreaTheme")}
-            </Button>
-          ) : null}
-          {isResults && onEditSchedule ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-9 min-h-9 w-full rounded-xl text-xs font-semibold min-[400px]:w-auto"
-              onClick={onEditSchedule}
-            >
-              {t("editScheduleShort")}
-            </Button>
-          ) : null}
-          {isResults && onEditTaste ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="text-muted-foreground h-9 min-h-9 w-full rounded-xl text-xs font-semibold min-[400px]:w-auto"
-              onClick={onEditTaste}
-            >
-              {t("editTasteShort")}
-            </Button>
-          ) : null}
-        </div>
-      </div>
-      {interpretLine ? (
-        <p className="text-foreground border-border/40 mt-1 border-t pt-2 text-xs leading-relaxed font-medium sm:text-sm">
-          {interpretLine}
-        </p>
-      ) : null}
       </div>
     </div>
   );

@@ -718,7 +718,7 @@ export function ExploreResultsDashboard(props: {
                   <Card className="border-primary/40 from-primary/[0.11] ring-primary/20 overflow-hidden rounded-[1.5rem] border-2 bg-gradient-to-br to-card shadow-[var(--shadow-xl)] ring-2">
                     <CardContent className="p-0">
                       <div className="flex flex-col lg:flex-row">
-                        <div className="relative aspect-[3/4] w-full min-h-0 overflow-hidden bg-muted max-[1023px]:max-h-[min(88vw,26rem)] sm:aspect-[5/4] lg:aspect-auto lg:max-h-none lg:max-w-[320px] lg:min-h-[300px] lg:shrink-0">
+                        <div className="relative aspect-[3/4] w-full min-h-0 overflow-hidden bg-muted max-[1023px]:max-h-[min(88vw,26rem)] sm:aspect-[5/4] lg:aspect-auto lg:max-h-[420px] lg:min-h-[320px] lg:max-w-[320px] lg:shrink-0">
                           <Image
                             src={guardianProfileImageUrls(featured).landscape}
                             alt=""
@@ -726,6 +726,7 @@ export function ExploreResultsDashboard(props: {
                             className={FILL_IMAGE_EXPLORE_TOP_PICK}
                             sizes="(max-width:1024px) 100vw, 320px"
                           />
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-1/3 bg-gradient-to-b from-transparent to-card/60" />
                           <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
                             <Badge className="rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-md">
                               {t("dashRankBadge")}
