@@ -8,7 +8,7 @@ import { isLaunchAreaSelectable } from "@/lib/launch-area-selectable";
 import { Badge } from "@/components/ui/badge";
 import { FILL_IMAGE_MARKETING_REGION_TILE } from "@/lib/ui/fill-image";
 import { cn } from "@/lib/utils";
-import { MapPin } from "lucide-react";
+import { Check, MapPin } from "lucide-react";
 
 const REGION_DESC_KEY: Record<LaunchAreaSlug, "regionDesc_gwanghwamun" | "regionDesc_gangnam" | "regionDesc_busan" | "regionDesc_jeju"> = {
   gwanghwamun: "regionDesc_gwanghwamun",
@@ -68,13 +68,19 @@ export function ExploreRegionStep({
                   !selectable && "from-black/80 via-black/35",
                 )}
               />
+              {selectable && !selected ? (
+                <div className="pointer-events-none absolute inset-0 bg-black/15" aria-hidden />
+              ) : null}
               <div className="absolute top-2.5 right-2.5 flex flex-wrap justify-end gap-1.5">
                 {!selectable ? (
                   <Badge className="border-0 bg-amber-500 px-2.5 py-1 text-[10px] font-bold tracking-wide text-white uppercase shadow-md">
                     {tHome("comingSectionBadge")}
                   </Badge>
                 ) : selected ? (
-                  <Badge className="bg-white/95 text-[10px] font-semibold text-[var(--brand-trust-blue)]">{tQuick("selected")}</Badge>
+                  <Badge className="flex items-center gap-1 border-0 bg-[var(--brand-trust-blue)] px-2.5 py-1 text-[10px] font-bold text-white shadow-md">
+                    <Check className="size-3 stroke-[2.5]" aria-hidden />
+                    {tQuick("selected")}
+                  </Badge>
                 ) : (
                   <Badge className="bg-[var(--success)] text-[10px] font-semibold text-white hover:bg-[var(--success)]">
                     {tHome("launchBadgeLive")}
@@ -101,7 +107,7 @@ export function ExploreRegionStep({
                   className={cn("size-4 shrink-0", selectable ? "text-[var(--brand-trust-blue)]" : "text-muted-foreground/70")}
                   aria-hidden
                 />
-                <span className={cn("font-semibold", selectable ? "text-foreground" : "text-foreground/80")}>{copy.name}</span>
+                <span className={cn("font-semibold", selectable ? (selected ? "text-[var(--brand-trust-blue)]" : "text-foreground") : "text-foreground/80")}>{copy.name}</span>
               </div>
               <p className={cn("mt-2 flex-1 text-[13px] leading-relaxed", selectable ? "text-muted-foreground" : "text-muted-foreground/75")}>
                 {desc}

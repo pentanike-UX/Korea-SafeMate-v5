@@ -443,8 +443,8 @@ export function ExploreTasteBuilderStep(props: {
                   className={cn(
                     "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
                     workTokens.includes(w)
-                      ? "border-transparent bg-muted text-muted-foreground"
-                      : "border-border/80 bg-card hover:border-primary/35",
+                      ? "border-transparent bg-muted text-muted-foreground cursor-default"
+                      : "border-border/80 bg-card cursor-pointer hover:border-primary/40 hover:bg-muted/50",
                   )}
                 >
                   {w}
@@ -492,8 +492,8 @@ export function ExploreTasteBuilderStep(props: {
                   className={cn(
                     "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
                     artistTokens.includes(w)
-                      ? "border-transparent bg-muted text-muted-foreground"
-                      : "border-border/80 bg-card hover:border-primary/35",
+                      ? "border-transparent bg-muted text-muted-foreground cursor-default"
+                      : "border-border/80 bg-card cursor-pointer hover:border-primary/40 hover:bg-muted/50",
                   )}
                 >
                   {w}

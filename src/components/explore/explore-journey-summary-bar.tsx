@@ -150,12 +150,9 @@ export function ExploreJourneySummaryBar({
           {step >= 2 && onEditBasics ? (
             <Button
               type="button"
-              variant={isResults ? "default" : "ghost"}
+              variant="outline"
               size="sm"
-              className={cn(
-                "h-9 min-h-9 w-full shrink-0 rounded-xl px-3 text-xs font-semibold min-[400px]:w-auto",
-                !isResults && "text-primary",
-              )}
+              className="h-9 min-h-9 w-full shrink-0 rounded-xl px-3 text-xs font-semibold min-[400px]:w-auto"
               onClick={onEditBasics}
             >
               {isResults ? t("editConditions") : t("editAreaTheme")}
@@ -175,9 +172,9 @@ export function ExploreJourneySummaryBar({
           {isResults && onEditTaste ? (
             <Button
               type="button"
-              variant="ghost"
+              variant="outline"
               size="sm"
-              className="h-9 min-h-9 w-full rounded-xl text-xs font-semibold text-muted-foreground min-[400px]:w-auto"
+              className="text-muted-foreground h-9 min-h-9 w-full rounded-xl text-xs font-semibold min-[400px]:w-auto"
               onClick={onEditTaste}
             >
               {t("editTasteShort")}

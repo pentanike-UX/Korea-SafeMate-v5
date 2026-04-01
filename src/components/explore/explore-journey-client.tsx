@@ -198,7 +198,7 @@ export function ExploreJourneyClient() {
   function StepIndicator({ current }: { current: number }) {
     const steps = Array.from({ length: STEPS }).map((_, i) => i);
     return (
-      <div className="mx-auto mb-8 w-full max-w-xl">
+      <div className="mx-auto mb-5 w-full max-w-xl">
         <div className="flex items-center justify-center">
           {steps.map((i) => {
             const isDone = i < current;
@@ -221,7 +221,7 @@ export function ExploreJourneyClient() {
                 </div>
                 {i < steps.length - 1 ? (
                   <div
-                    className={cn("mx-2 h-0.5 flex-1 rounded-full sm:mx-3", isFuture ? "bg-border/60" : "bg-primary/50")}
+                    className={cn("mx-2 h-0.5 flex-1 rounded-full sm:mx-3", isDone ? "bg-primary" : isCurrent ? "bg-primary/35" : "bg-border/60")}
                     aria-hidden
                   />
                 ) : null}
@@ -244,23 +244,23 @@ export function ExploreJourneyClient() {
           <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10">
             <ExploreResultsDecisionHeader />
             {region && theme ? (
-              <div className="mt-6 flex flex-col items-center justify-between gap-4 rounded-2xl border border-border/60 bg-background/70 p-4 sm:flex-row sm:gap-6 sm:p-5">
+              <div className="mt-6 flex flex-col items-center justify-between gap-4 rounded-2xl border border-border/60 bg-muted/35 p-4 sm:flex-row sm:gap-6 sm:p-5">
                 <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                  <span className="bg-muted text-muted-foreground inline-flex items-center rounded-full px-3 py-1 text-xs font-medium">
+                  <span className="bg-background text-muted-foreground ring-border inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ring-1">
                     {areaName || String(region)}
                   </span>
-                  <span className="bg-muted text-muted-foreground inline-flex items-center rounded-full px-3 py-1 text-xs font-medium">
+                  <span className="bg-background text-muted-foreground ring-border inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ring-1">
                     {themeTitle || String(theme)}
                   </span>
                 </div>
-                <Button asChild className="h-10 rounded-xl px-5 font-semibold">
+                <Button asChild variant="outline" className="h-10 rounded-xl px-5 font-semibold">
                   <Link
                     href={`/guardians?${new URLSearchParams({
                       region,
                       mood: String(theme).replaceAll("_", "-"),
                     }).toString()}`}
                   >
-                    결과 보기
+                    Guardian 목록으로
                   </Link>
                 </Button>
               </div>
@@ -273,7 +273,7 @@ export function ExploreJourneyClient() {
         </section>
       ) : (
         <section className="border-border/60 border-b bg-card/95">
-          <div className="mx-auto max-w-3xl px-4 py-12 text-center sm:px-6 sm:py-16">
+          <div className="mx-auto max-w-3xl px-4 py-8 text-center sm:px-6 sm:py-12">
             <p className="text-primary inline-flex items-center justify-center gap-1.5 text-[11px] font-semibold tracking-[0.2em] uppercase">
               <Sparkles className="size-3.5" aria-hidden />
               42 Guardians
@@ -461,6 +461,16 @@ export function ExploreJourneyClient() {
             >
               {t("back")}
             </Button>
+            {step >= 1 && step <= 3 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-muted-foreground flex-1 rounded-xl text-xs"
+                onClick={() => setStep((s) => s + 1)}
+              >
+                {t("skipStep")}
+              </Button>
+            ) : null}
             {step === 3 ? (
               <Button type="button" className="flex-[2] rounded-xl shadow-[var(--shadow-brand)]" onClick={() => setStep(4)}>
                 {t("seeResults")}

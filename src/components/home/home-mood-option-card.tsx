@@ -49,7 +49,7 @@ export function HomeMoodOptionCard({ selected, onToggle, icon: Icon, title, subt
             "flex size-9 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200",
             selected
               ? "border-[var(--brand-trust-blue)] bg-[var(--brand-trust-blue)] text-white shadow-sm"
-              : "border-border/55 bg-muted/15",
+              : "border-border bg-muted/30 group-hover:border-[var(--brand-trust-blue)]/40",
           )}
           aria-hidden
         >
