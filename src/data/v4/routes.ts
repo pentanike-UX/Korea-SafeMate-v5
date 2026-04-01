@@ -1,10 +1,12 @@
 import type { CuratedRoute } from "@/domain/curated-experience";
+import { FIRST_NIGHT_PATH_SEGMENTS, QUIET_LATE_PATH_SEGMENTS } from "@/data/v4/route-path-segments.generated";
 
 export const V4_ROUTES: CuratedRoute[] = [
   {
     id: "route-quiet-late-gangnam-alt",
     slug: "quiet-late-gangnam-corridor",
     title: "Quiet late corridor · Gangnam edge",
+    summary: "Tea → browse → river walk, sequenced for low noise after dark.",
     subtitle: "Tea, shelves, then open river—sequenced for low noise.",
     city: "Seoul",
     district: "Gangnam–Seocho",
@@ -15,6 +17,7 @@ export const V4_ROUTES: CuratedRoute[] = [
     budgetLevel: 2,
     transportMode: ["walk", "transit"],
     heroImage: "/images/hero/seoul2_MyLoveFromTheStar_NSeoulTower.jpg",
+    pathSegments: QUIET_LATE_PATH_SEGMENTS,
     stops: [
       {
         id: "rs-1",
@@ -56,6 +59,7 @@ export const V4_ROUTES: CuratedRoute[] = [
     id: "route-first-night-seoul",
     slug: "first-night-seoul-north-south",
     title: "First night · north to south balance",
+    summary: "Craft row calm, then tea, optional river exhale—arrival-day pacing.",
     subtitle: "Landmark-adjacent without queue chasing.",
     city: "Seoul",
     district: "Jongno–Yongsan",
@@ -66,6 +70,7 @@ export const V4_ROUTES: CuratedRoute[] = [
     budgetLevel: 3,
     transportMode: ["walk", "mixed"],
     heroImage: "/images/hero/seoul1_BTS_Sungnyemun.jpg",
+    pathSegments: FIRST_NIGHT_PATH_SEGMENTS,
     stops: [
       {
         id: "rs-f1",
@@ -107,6 +112,10 @@ export const V4_ROUTES: CuratedRoute[] = [
 
 export function getV4RouteBySlug(slug: string): CuratedRoute | undefined {
   return V4_ROUTES.find((r) => r.slug === slug);
+}
+
+export function getV4RouteById(id: string): CuratedRoute | undefined {
+  return V4_ROUTES.find((r) => r.id === id);
 }
 
 export function listPublishedV4Routes(): CuratedRoute[] {

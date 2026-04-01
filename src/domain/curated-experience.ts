@@ -13,6 +13,23 @@ export type TransportMode = "walk" | "transit" | "taxi" | "mixed";
 
 export type TimeOfDay = "morning" | "afternoon" | "evening" | "late_night";
 
+/** WGS84 — road-following geometry from OSRM (or compatible). */
+export interface LatLng {
+  lat: number;
+  lng: number;
+}
+
+/** Leg between two ordered stops; `polyline` must follow streets (not visual straight-line). */
+export interface PathSegment {
+  id: string;
+  fromStopId: string;
+  toStopId: string;
+  distanceMeters: number;
+  durationMinutes: number;
+  transportMode: TransportMode;
+  polyline: LatLng[];
+}
+
 export interface RouteStop {
   id: string;
   spotId: string;
@@ -26,6 +43,9 @@ export interface CuratedRoute {
   id: string;
   slug: string;
   title: string;
+  /** One-line route proposition (cards, map chrome). */
+  summary: string;
+  /** Longer deck; keep for editorial / SEO. */
   subtitle: string;
   city: string;
   district: string;
@@ -37,6 +57,8 @@ export interface CuratedRoute {
   transportMode: TransportMode[];
   heroImage: string;
   stops: RouteStop[];
+  /** Ordered legs with real-path polylines. */
+  pathSegments: PathSegment[];
   whyThisRoute: string;
   tips: string[];
   cautions: string[];
@@ -89,6 +111,8 @@ export interface GuardianProfileV4 {
 export type AIPlannerInput = {
   companions: "solo" | "couple" | "friends" | "family";
   timeBudget: "90m" | "half_day" | "full_evening";
+  /** Time-of-day intent (separate from duration budget). */
+  timeOfDay: TimeOfDay | "flex";
   vibe: "calm" | "lively" | "romantic" | "focused";
   budget: "low" | "medium" | "high";
   energy: "light" | "moderate" | "high";
@@ -103,6 +127,8 @@ export interface AIPlanOutput {
   id: string;
   userId?: string;
   inputs: AIPlannerInput;
+  /** Primary curated route id (stable, not slug). */
+  routeId: string;
   outputSummary: string;
   routesSuggested: string[];
   rationale: string;
@@ -120,6 +146,8 @@ export interface GuardianRequestV4 {
   userId?: string;
   guardianId: string;
   routeId?: string;
+  /** Serialized planner / route context for guardians. */
+  userSelections?: string;
   requestType: "ask" | "custom_route" | "availability";
   date: string;
   message: string;

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
-import type { AIPlannerInput } from "@/domain/curated-experience";
+import type { AIPlannerInput, TimeOfDay } from "@/domain/curated-experience";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -20,7 +20,7 @@ function moodDefaults(mood: string | null): Partial<AIPlannerInput> {
     case "calm":
       return { vibe: "calm", energy: "light" };
     case "late":
-      return { timeBudget: "full_evening", vibe: "calm" };
+      return { timeBudget: "full_evening", vibe: "calm", timeOfDay: "late_night" satisfies TimeOfDay };
     case "solo":
       return { companions: "solo", safetySensitive: "high" };
     case "rain":
@@ -40,6 +40,7 @@ export function PlannerV4Client({ mood }: { mood: string | null }) {
 
   const [companions, setCompanions] = useState<AIPlannerInput["companions"]>(() => seeded.companions ?? "solo");
   const [timeBudget, setTimeBudget] = useState<AIPlannerInput["timeBudget"]>(() => seeded.timeBudget ?? "half_day");
+  const [timeOfDay, setTimeOfDay] = useState<AIPlannerInput["timeOfDay"]>(() => seeded.timeOfDay ?? "flex");
   const [vibe, setVibe] = useState<AIPlannerInput["vibe"]>(() => seeded.vibe ?? "calm");
   const [budget, setBudget] = useState<AIPlannerInput["budget"]>("medium");
   const [energy, setEnergy] = useState<AIPlannerInput["energy"]>(() => seeded.energy ?? "moderate");
@@ -65,6 +66,7 @@ export function PlannerV4Client({ mood }: { mood: string | null }) {
     const input: AIPlannerInput = {
       companions,
       timeBudget,
+      timeOfDay,
       vibe,
       budget,
       energy,
@@ -120,6 +122,21 @@ export function PlannerV4Client({ mood }: { mood: string | null }) {
           ],
           timeBudget,
           setTimeBudget,
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-[var(--text-strong)] text-sm font-semibold tracking-wide uppercase">{t("sec.timeOfDay")}</h2>
+        {chipRow(
+          [
+            { key: "flex", label: t("timeOfDayOpt.flex") },
+            { key: "morning", label: t("timeOfDayOpt.morning") },
+            { key: "afternoon", label: t("timeOfDayOpt.afternoon") },
+            { key: "evening", label: t("timeOfDayOpt.evening") },
+            { key: "late_night", label: t("timeOfDayOpt.late_night") },
+          ] as ChipDef<AIPlannerInput["timeOfDay"]>[],
+          timeOfDay,
+          setTimeOfDay,
         )}
       </section>
 

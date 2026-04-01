@@ -1694,6 +1694,8 @@
     "spotDetail": {
       "notFound": "Spot",
       "whyInRoute": "Why it sits in the route",
+      "mapRegion": "On the map",
+      "routeInclusionMeta": "Stop {order} on {route}",
       "bestTime": "Best time",
       "crowdRisk": "Crowd risk",
       "photoTone": "Photo tone",
@@ -1790,7 +1792,78 @@
           "mixed": "Mixed"
         }
       },
-      "areaPlaceholder": "e.g. Gangnam, Hannam ridge…"
+      "areaPlaceholder": "e.g. Gangnam, Hannam ridge…",
+      "timeOfDay": "Time of day",
+      "timeOfDayOpt": {
+        "flex": "Flexible",
+        "morning": "Morning",
+        "afternoon": "Afternoon",
+        "evening": "Evening",
+        "late_night": "Late night"
+      }
+    },
+    "routeMap": {
+      "alt": {
+        "primary": "Recommended",
+        "calmer": "Quieter line",
+        "weather": "If it rains"
+      },
+      "view": {
+        "full": "Full route",
+        "segment": "This leg"
+      },
+      "whyTitle": "Why this route",
+      "timing": "Timing tips",
+      "cautions": "Cautions",
+      "stops": "Stops in order",
+      "openAlternative": "Open alternative · {title}",
+      "noAlternative": "No second line is published for this brief yet.",
+      "save": "Save route",
+      "adjust": "Adjust brief",
+      "summary": {
+        "tier1Label": "Route guide",
+        "totalGuideTime": "About {minutes} min overall",
+        "totalGuideHint": "Includes typical stays at each stop—not turn-by-turn navigation.",
+        "movementLabel": "Expected movement on the line",
+        "movementLine": "~{walkMin} min moving · ~{km} km on paths",
+        "movementDisclaimer": "Illustrative walking geometry, not live traffic or step-by-step directions.",
+        "stayLabel": "Time at stops (typical)",
+        "stayLine": "~{minutes} min combined on site",
+        "bestFor": "Best for",
+        "timingHeading": "Timing tips",
+        "cautionHeading": "Cautions"
+      },
+      "stopCard": {
+        "onSite": "On site (typical)",
+        "stayMinutes": "{n} min",
+        "expectedMove": "Expected next move",
+        "legHint": "Illustrative path to next stop · ~{meters} m · ~{minutes} min walk"
+      },
+      "activeStop": {
+        "label": "Focused stop",
+        "flowHint": "Following this order tends to feel natural—adjust if you are tired or late."
+      },
+      "states": {
+        "schematicMode": "Map preview uses WebGL. Unset NEXT_PUBLIC_MAP_PROVIDER for the full route map.",
+        "mapLoadFailed": "The map could not finish loading ({detail}).",
+        "retryMap": "Try again",
+        "directionsFailed": "We could not fetch a path for those points.",
+        "dirRateLimit": "Too many routing requests. Please try again in a moment.",
+        "dirInvalid": "The routing request was invalid.",
+        "dirEmpty": "No route was found for those points.",
+        "dirFailed": "The routing service failed. Please try again shortly.",
+        "planFailedTitle": "This plan could not be built",
+        "planFailedLead": "The brief was valid but no curated route matched. Go back and adjust inputs.",
+        "noSavedRoutesTitle": "No saved routes yet",
+        "noSavedRoutesLead": "Save a curated line from a route page or planner when you are signed in.",
+        "browseRoutes": "Browse routes",
+        "openPlanner": "Open planner"
+      },
+      "ask": {
+        "title": "Ask a guardian",
+        "lead": "Have someone sanity-check pacing, exits, and language friction before you commit.",
+        "cta": "Request a review"
+      }
     },
     "plannerResult": {
       "metaTitle": "Your plan",
@@ -1848,6 +1921,12 @@
       "fieldDate": "Preferred date",
       "fieldMessage": "What you need",
       "messagePlaceholder": "Context, constraints, and what ‘good’ looks like.",
+      "prefillRouteLine": "Route: {title} ({slug})",
+      "prefillPlanLine": "Planner output: {summary}",
+      "prefillVariantLine": "Variant focus: {variant}",
+      "prefillAsk": "I would like your read on timing, exits, and anything to soften or avoid.",
+      "urlRouteHint": "Opened from route: {slug}",
+      "urlPlanHint": "Plan id: {id}",
       "submit": "Send request",
       "successTitle": "Request queued",
       "successLead": "{name} sees structured requests first—we will mirror that in product mail next.",
@@ -1858,6 +1937,9 @@
       "metaDescription": "Routes, spots, and AI plans.",
       "title": "Saved",
       "lead": "Everything you bookmarked or generated—linked back to live detail pages.",
+      "emptyRoutesTitle": "No saved routes",
+      "emptyRoutesLead": "Save a curated line from the planner or a route page after sign-in.",
+      "emptyRoutesCta": "Browse curated routes",
       "routes": "Routes",
       "spots": "Spots",
       "aiPlans": "AI plans",

@@ -5,6 +5,7 @@ import { Link } from "@/i18n/navigation";
 import { getV4SpotBySlug, getV4RouteBySlug, getV4SpotById } from "@/data/v4";
 import { BRAND } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
+import { SpotDetailMapSection } from "@/components/route-curated/spot-detail-map-section";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -30,6 +31,8 @@ export default async function SpotDetailPage({ params }: Props) {
   const primaryRouteSlug = spot.routeRefs[0];
   const route = primaryRouteSlug ? getV4RouteBySlug(primaryRouteSlug) : null;
   const nextSpot = spot.nearbyNextStopId ? getV4SpotById(spot.nearbyNextStopId) : null;
+  const stopOnRoute = route?.stops.find((s) => s.spotId === spot.id);
+  const whyInRouteCopy = stopOnRoute?.whyHere ?? spot.routeInclusionNote ?? spot.shortDescription;
 
   return (
     <article className="mx-auto max-w-3xl pb-16">
@@ -46,8 +49,18 @@ export default async function SpotDetailPage({ params }: Props) {
 
       <section className="border-border/60 bg-card mt-8 rounded-[var(--radius-card)] border p-6 shadow-[var(--shadow-sm)]">
         <h2 className="text-[var(--text-strong)] text-sm font-semibold tracking-wide uppercase">{t("whyInRoute")}</h2>
-        <p className="text-foreground mt-3 leading-relaxed">{spot.routeInclusionNote ?? spot.shortDescription}</p>
+        <p className="text-foreground mt-3 leading-relaxed">{whyInRouteCopy}</p>
+        {route && stopOnRoute ? (
+          <p className="text-muted-foreground mt-3 text-xs">
+            {t("routeInclusionMeta", {
+              order: stopOnRoute.order,
+              route: route.title,
+            })}
+          </p>
+        ) : null}
       </section>
+
+      <SpotDetailMapSection lat={spot.coordinates.lat} lng={spot.coordinates.lng} label={spot.name} />
 
       <dl className="mt-8 grid gap-4 sm:grid-cols-2">
         <div className="bg-[var(--bg-surface-subtle)] rounded-[var(--radius-lg)] p-4">

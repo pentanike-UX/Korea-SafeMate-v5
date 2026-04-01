@@ -136,6 +136,7 @@ const COPY = {
   mapPanelHint: "핀을 눌러 스팟 선택 · 보조 「지도에서 직접 선택」 켠 뒤 빈 곳을 탭하면 스팟이 추가됩니다.",
   routeOsrm: "OSRM으로 경로 계산",
   routeOsrmHint: "도보/차량 기준 실제 도로 형상(데모 서버). 운영 시 OSRM_BASE_URL을 자체 인스턴스로 교체하세요.",
+  osrmRateLimited: "요청이 너무 잦습니다. 잠시 후 다시 시도하세요.",
   saving: "저장 중…",
   savedPending: "검토 대기(pending)로 저장됨",
   flowStep1: "유형",
@@ -413,6 +414,10 @@ export function GuardianRoutePostEditor({
         duration_s?: number;
       };
       if (!res.ok) {
+        if (res.status === 429) {
+          setSaveError(COPY.osrmRateLimited);
+          return;
+        }
         setSaveError(data.error ?? "경로 계산 실패");
         return;
       }

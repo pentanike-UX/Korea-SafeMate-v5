@@ -1,4 +1,5 @@
 import type { AIPlanOutput, AIPlannerInput } from "@/domain/curated-experience";
+import { getV4RouteBySlug } from "@/data/v4/routes";
 
 /** Deterministic mock: hash-ish from string for stable demo IDs */
 function shortId(s: string) {
@@ -9,13 +10,19 @@ function shortId(s: string) {
 
 export function buildMockAIPlan(inputs: AIPlannerInput): AIPlanOutput {
   const key = JSON.stringify(inputs);
-  const eveningLate = inputs.timeBudget === "full_evening" || inputs.vibe === "calm";
+  const eveningLate =
+    inputs.timeBudget === "full_evening" ||
+    inputs.vibe === "calm" ||
+    inputs.timeOfDay === "evening" ||
+    inputs.timeOfDay === "late_night";
   const primarySlug = eveningLate ? "quiet-late-gangnam-corridor" : "first-night-seoul-north-south";
   const altSlug = primarySlug === "quiet-late-gangnam-corridor" ? "first-night-seoul-north-south" : "quiet-late-gangnam-corridor";
+  const primaryRoute = getV4RouteBySlug(primarySlug);
 
   return {
     id: shortId(key),
     inputs,
+    routeId: primaryRoute?.id ?? "route-unknown",
     outputSummary:
       inputs.companions === "solo" && inputs.safetySensitive === "high"
         ? "A three-stop arc with wide paths after dark and minimal transfers."

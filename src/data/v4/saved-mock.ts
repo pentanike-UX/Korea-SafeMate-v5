@@ -2,6 +2,9 @@ import { listPublishedV4Routes } from "./routes";
 import { V4_SPOTS } from "./spots";
 
 export function getMockSavedRouteSlugs() {
+  if (process.env.SAFEMATE_DEMO_EMPTY_SAVED_ROUTES === "1") {
+    return [];
+  }
   return listPublishedV4Routes().map((r) => r.slug);
 }
 

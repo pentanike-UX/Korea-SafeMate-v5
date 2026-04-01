@@ -1694,6 +1694,8 @@
     "spotDetail": {
       "notFound": "장소",
       "whyInRoute": "루트 안에서의 역할",
+      "mapRegion": "지도에서",
+      "routeInclusionMeta": "「{route}」의 {order}번 경유",
       "bestTime": "좋은 시간",
       "crowdRisk": "혼잡 리스크",
       "photoTone": "사진 톤",
@@ -1790,7 +1792,78 @@
           "mixed": "혼합"
         }
       },
-      "areaPlaceholder": "예: 강남, 한남 능선…"
+      "areaPlaceholder": "예: 강남, 한남 능선…",
+      "timeOfDay": "시간대",
+      "timeOfDayOpt": {
+        "flex": "유연하게",
+        "morning": "아침",
+        "afternoon": "오후",
+        "evening": "저녁",
+        "late_night": "심야"
+      }
+    },
+    "routeMap": {
+      "alt": {
+        "primary": "추천",
+        "calmer": "한산한 동선",
+        "weather": "비 오는 날"
+      },
+      "view": {
+        "full": "전체 동선",
+        "segment": "이 구간"
+      },
+      "whyTitle": "이 동선인 이유",
+      "timing": "타이밍 팁",
+      "cautions": "주의",
+      "stops": "경유 순서",
+      "openAlternative": "대안 보기 · {title}",
+      "noAlternative": "이 브리프에 맞는 두 번째 동선은 아직 없습니다.",
+      "save": "동선 저장",
+      "adjust": "입력 수정",
+      "summary": {
+        "tier1Label": "동선 가이드",
+        "totalGuideTime": "전체 약 {minutes}분",
+        "totalGuideHint": "각 경유지 체류를 포함한 편집 가이드이며, 길 안내 앱 수준의 안내는 아닙니다.",
+        "movementLabel": "동선 위 이동(참고)",
+        "movementLine": "이동 합계 약 {walkMin}분 · 약 {km}km(경로 기준)",
+        "movementDisclaimer": "실제 길을 따른 예시 경로이며, 실시간 통행·신호는 반영되지 않습니다.",
+        "stayLabel": "경유지 체류(전형적)",
+        "stayLine": "합산 약 {minutes}분",
+        "bestFor": "이런 분께",
+        "timingHeading": "타이밍 팁",
+        "cautionHeading": "주의"
+      },
+      "stopCard": {
+        "onSite": "체류(전형)",
+        "stayMinutes": "{n}분",
+        "expectedMove": "다음 이동(예상)",
+        "legHint": "다음 경유까지 참고 경로 · 약 {meters}m · 도보 약 {minutes}분"
+      },
+      "activeStop": {
+        "label": "선택된 경유",
+        "flowHint": "이 순서로 움직이면 리듬이 자연스럽습니다. 피로·지연에 맞춰 조정하세요."
+      },
+      "states": {
+        "schematicMode": "지도는 WebGL이 필요합니다. NEXT_PUBLIC_MAP_PROVIDER를 비우면 전체 지도가 열립니다.",
+        "mapLoadFailed": "지도를 불러오지 못했습니다 ({detail}).",
+        "retryMap": "다시 시도",
+        "directionsFailed": "해당 지점들로 경로를 가져오지 못했습니다.",
+        "dirRateLimit": "경로 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+        "dirInvalid": "경로 요청 형식이 올바르지 않습니다.",
+        "dirEmpty": "해당 지점으로는 경로를 찾지 못했습니다.",
+        "dirFailed": "경로 서버 응답에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+        "planFailedTitle": "플랜을 동선으로 열 수 없습니다",
+        "planFailedLead": "브리프는 읽혔지만 매칭된 큐레이션 동선이 없습니다. 입력을 바꿔 다시 생성해 보세요.",
+        "noSavedRoutesTitle": "저장된 동선이 없습니다",
+        "noSavedRoutesLead": "로그인 후 플래너나 동선 페이지에서 저장해 보세요.",
+        "browseRoutes": "동선 둘러보기",
+        "openPlanner": "플래너 열기"
+      },
+      "ask": {
+        "title": "가디언에게 물어보기",
+        "lead": "확정 전에 이동 리듬, 출구, 언어 마찰을 한 번 더 점검해 보세요.",
+        "cta": "검토 요청"
+      }
     },
     "plannerResult": {
       "metaTitle": "플랜 결과",
@@ -1848,6 +1921,12 @@
       "fieldDate": "희망 날짜",
       "fieldMessage": "필요한 것",
       "messagePlaceholder": "맥락, 제약, 좋은 결과의 기준.",
+      "prefillRouteLine": "동선: {title} ({slug})",
+      "prefillPlanLine": "플래너 요약: {summary}",
+      "prefillVariantLine": "변형 포커스: {variant}",
+      "prefillAsk": "타이밍·출구·피하면 좋을 점에 대한 의견을 듣고 싶습니다.",
+      "urlRouteHint": "동선에서 열림: {slug}",
+      "urlPlanHint": "플랜 id: {id}",
       "submit": "보내기",
       "successTitle": "요청이 접수되었습니다",
       "successLead": "{name}은(는) 구조화된 요청을 먼저 봅니다.",
@@ -1858,6 +1937,9 @@
       "metaDescription": "동선·장소·AI 플랜.",
       "title": "저장",
       "lead": "북마크와 생성 결과가 여기로 모입니다.",
+      "emptyRoutesTitle": "저장된 동선이 없습니다",
+      "emptyRoutesLead": "로그인 후 플래너나 동선 페이지에서 저장해 보세요.",
+      "emptyRoutesCta": "큐레이션 동선 둘러보기",
       "routes": "동선",
       "spots": "장소",
       "aiPlans": "AI 플랜",

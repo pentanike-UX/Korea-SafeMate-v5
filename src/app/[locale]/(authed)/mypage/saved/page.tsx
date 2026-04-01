@@ -3,6 +3,7 @@ import { Link } from "@/i18n/navigation";
 import { getMockAiPlanSummaries, getMockSavedRouteSlugs, getMockSavedSpotSlugs } from "@/data/v4/saved-mock";
 import { getV4RouteBySlug, getV4SpotBySlug } from "@/data/v4";
 import { BRAND } from "@/lib/constants";
+import { RouteExperienceEmpty } from "@/components/route-curated/route-experience-states";
 
 export async function generateMetadata() {
   const t = await getTranslations("V4.savedPage");
@@ -24,19 +25,30 @@ export default async function MypageSavedHubPage() {
 
       <section>
         <h2 className="text-[var(--text-strong)] text-sm font-semibold tracking-wide uppercase">{t("routes")}</h2>
-        <ul className="mt-3 space-y-2">
-          {routeSlugs.map((slug) => {
-            const r = getV4RouteBySlug(slug);
-            if (!r) return null;
-            return (
-              <li key={slug}>
-                <Link href={`/explore/routes/${slug}`} className="text-[var(--brand-trust-blue)] text-sm font-medium hover:underline">
-                  {r.title}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        {routeSlugs.length === 0 ? (
+          <div className="mt-4">
+            <RouteExperienceEmpty
+              title={t("emptyRoutesTitle")}
+              description={t("emptyRoutesLead")}
+              ctaHref="/explore/routes"
+              ctaLabel={t("emptyRoutesCta")}
+            />
+          </div>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {routeSlugs.map((slug) => {
+              const r = getV4RouteBySlug(slug);
+              if (!r) return null;
+              return (
+                <li key={slug}>
+                  <Link href={`/explore/routes/${slug}`} className="text-[var(--brand-trust-blue)] text-sm font-medium hover:underline">
+                    {r.title}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       <section>

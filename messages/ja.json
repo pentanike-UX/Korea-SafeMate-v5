@@ -1694,6 +1694,8 @@
     "spotDetail": {
       "notFound": "Spot",
       "whyInRoute": "Why it sits in the route",
+      "mapRegion": "地図",
+      "routeInclusionMeta": "「{route}」の経由 {order}",
       "bestTime": "Best time",
       "crowdRisk": "Crowd risk",
       "photoTone": "Photo tone",
@@ -1790,7 +1792,78 @@
           "mixed": "Mixed"
         }
       },
-      "areaPlaceholder": "e.g. Gangnam, Hannam ridge…"
+      "areaPlaceholder": "例: カンナム、ハンナム…",
+      "timeOfDay": "時間帯",
+      "timeOfDayOpt": {
+        "flex": "特になし",
+        "morning": "朝",
+        "afternoon": "昼",
+        "evening": "夕方",
+        "late_night": "深夜"
+      }
+    },
+    "routeMap": {
+      "alt": {
+        "primary": "おすすめ",
+        "calmer": "静かめ",
+        "weather": "雨の日"
+      },
+      "view": {
+        "full": "ルート全体",
+        "segment": "この区間"
+      },
+      "whyTitle": "このルートの理由",
+      "timing": "タイミング",
+      "cautions": "注意",
+      "stops": "順番",
+      "openAlternative": "別案を開く · {title}",
+      "noAlternative": "このブリーフ用の第二ルートはまだありません。",
+      "save": "ルートを保存",
+      "adjust": "条件を変える",
+      "summary": {
+        "tier1Label": "ルートガイド",
+        "totalGuideTime": "全体 約{minutes}分",
+        "totalGuideHint": "各ストップの滞在を含む編集ガイドです。ナビのような逐次案内ではありません。",
+        "movementLabel": "線上の移動（参考）",
+        "movementLine": "移動の目安 約{walkMin}分 · 約{km}km（経路ベース）",
+        "movementDisclaimer": "道路に沿った参考経路で、リアルタイムの通行は反映されません。",
+        "stayLabel": "ストップ滞在（目安）",
+        "stayLine": "合計 約{minutes}分",
+        "bestFor": "向いている人",
+        "timingHeading": "タイミングのヒント",
+        "cautionHeading": "注意"
+      },
+      "stopCard": {
+        "onSite": "滞在（目安）",
+        "stayMinutes": "{n}分",
+        "expectedMove": "次の移動（目安）",
+        "legHint": "次のストップまでの参考経路 · 約{meters}m · 徒歩約{minutes}分"
+      },
+      "activeStop": {
+        "label": "フォーカス中のストップ",
+        "flowHint": "この順で動くと自然なリズムになります。疲労や遅れに合わせて調整してください。"
+      },
+      "states": {
+        "schematicMode": "地図にはWebGLが必要です。NEXT_PUBLIC_MAP_PROVIDERを空にすると全体地図が表示されます。",
+        "mapLoadFailed": "地図を読み込めませんでした（{detail}）。",
+        "retryMap": "再試行",
+        "directionsFailed": "その地点間の経路を取得できませんでした。",
+        "dirRateLimit": "ルート検索のリクエストが多すぎます。しばらくしてから再度お試しください。",
+        "dirInvalid": "ルート検索のリクエスト形式が正しくありません。",
+        "dirEmpty": "その地点では経路が見つかりませんでした。",
+        "dirFailed": "ルートサービスでエラーが発生しました。しばらくしてから再度お試しください。",
+        "planFailedTitle": "プランをルートとして開けません",
+        "planFailedLead": "ブリーフは読み取れましたが、一致するキュレーションルートがありません。条件を変えてください。",
+        "noSavedRoutesTitle": "保存されたルートはありません",
+        "noSavedRoutesLead": "サインイン後にプランナーやルートページから保存できます。",
+        "browseRoutes": "ルートを見る",
+        "openPlanner": "プランナーを開く"
+      },
+      "ask": {
+        "title": "ガーディアンに相談",
+        "lead": "決める前に、ペース・出口・言語のしわ寄せを一度見てもらえます。",
+        "cta": "レビューを依頼"
+      }
     },
     "plannerResult": {
       "metaTitle": "Your plan",
@@ -1848,6 +1921,12 @@
       "fieldDate": "Preferred date",
       "fieldMessage": "What you need",
       "messagePlaceholder": "Context, constraints, and what ‘good’ looks like.",
+      "prefillRouteLine": "ルート: {title} ({slug})",
+      "prefillPlanLine": "プランナー: {summary}",
+      "prefillVariantLine": "バリアント: {variant}",
+      "prefillAsk": "タイミング・出口・避けた方がよい点について意見を伺いたいです。",
+      "urlRouteHint": "ルートから: {slug}",
+      "urlPlanHint": "プラン id: {id}",
       "submit": "Send request",
       "successTitle": "Request queued",
       "successLead": "{name} sees structured requests first—we will mirror that in product mail next.",
@@ -1858,6 +1937,9 @@
       "metaDescription": "Routes, spots, and AI plans.",
       "title": "Saved",
       "lead": "Everything you bookmarked or generated—linked back to live detail pages.",
+      "emptyRoutesTitle": "保存されたルートがありません",
+      "emptyRoutesLead": "サインイン後にプランナーやルートページから保存できます。",
+      "emptyRoutesCta": "キュレーションルートを見る",
       "routes": "Routes",
       "spots": "Spots",
       "aiPlans": "AI plans",

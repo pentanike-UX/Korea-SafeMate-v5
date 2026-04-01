@@ -1,15 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
+import { readGuardianPlannerContext, type GuardianPlannerContextPayload } from "@/lib/v4/guardian-planner-context";
+
+function buildPrefillMessage(ctx: GuardianPlannerContextPayload, t: ReturnType<typeof useTranslations<"V4.guardianRequest">>) {
+  const lines: string[] = [];
+  lines.push(t("prefillRouteLine", { title: ctx.routeTitle, slug: ctx.routeSlug }));
+  if (ctx.plan?.outputSummary) lines.push(t("prefillPlanLine", { summary: ctx.plan.outputSummary }));
+  if (ctx.variant && ctx.variant !== "primary") lines.push(t("prefillVariantLine", { variant: ctx.variant }));
+  lines.push(t("prefillAsk"));
+  return lines.join("\n\n");
+}
 
 export function GuardianRequestV4Form({ guardianName, guardianSlug }: { guardianName: string; guardianSlug: string }) {
   const t = useTranslations("V4.guardianRequest");
+  const searchParams = useSearchParams();
+  const routeFromUrl = searchParams.get("route");
+  const planFromUrl = searchParams.get("plan");
+
   const [date, setDate] = useState("");
   const [message, setMessage] = useState("");
   const [done, setDone] = useState(false);
+  const didPrefill = useRef(false);
+
+  const urlHint = useMemo(() => {
+    const parts: string[] = [];
+    if (routeFromUrl) parts.push(t("urlRouteHint", { slug: routeFromUrl }));
+    if (planFromUrl) parts.push(t("urlPlanHint", { id: planFromUrl }));
+    return parts.length ? `${parts.join(" · ")}\n\n` : "";
+  }, [routeFromUrl, planFromUrl, t]);
+
+  useEffect(() => {
+    if (didPrefill.current) return;
+    didPrefill.current = true;
+    const ctx = readGuardianPlannerContext();
+    let next = "";
+    if (ctx && (!routeFromUrl || ctx.routeSlug === routeFromUrl)) {
+      next = `${urlHint}${buildPrefillMessage(ctx, t)}`;
+    } else if (urlHint) {
+      next = `${urlHint}${t("prefillAsk")}`;
+    }
+    if (next) queueMicrotask(() => setMessage(next));
+  }, [routeFromUrl, urlHint, t]);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();

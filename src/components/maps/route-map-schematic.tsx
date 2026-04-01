@@ -1,7 +1,6 @@
 "use client";
 
 import { useId, useMemo } from "react";
-import type { MapLatLng, RouteSpot } from "@/types/domain";
 import { boundsFromPoints, projectToUnitSquare } from "@/lib/maps/geo-project";
 import { cn } from "@/lib/utils";
 import type { RouteMapPreviewProps } from "@/components/maps/route-map-types";

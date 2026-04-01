@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { RouteMapSchematic } from "@/components/maps/route-map-schematic";
 import type { RouteMapPreviewProps } from "@/components/maps/route-map-types";
+import { isNaverDynamicMapEnabled } from "@/lib/maps/map-display-mode";
 
 export type { RouteMapPreviewProps };
 
@@ -14,14 +15,24 @@ const RouteMapLibreDynamic = dynamic(
   },
 );
 
+const RouteMapNaverDynamic = dynamic(
+  () => import("@/components/maps/route-map-naver-inner").then((mod) => ({ default: mod.RouteMapNaverInner })),
+  {
+    ssr: false,
+    loading: () => <div className="bg-muted/50 h-full min-h-[120px] w-full animate-pulse rounded-md" aria-hidden />,
+  },
+);
+
 /**
- * Interactive route map: **MapLibre GL** + OSM-based tiles (default: OpenFreeMap, no API key).
- * Set `NEXT_PUBLIC_MAP_PROVIDER=schematic` for SVG fallback (CI / no WebGL).
- * Set `NEXT_PUBLIC_MAP_STYLE_URL` for MapTiler, Mapbox, or other MapLibre-compatible styles.
+ * Interactive route map: **Naver Dynamic Map** when `NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID` is set (mock off),
+ * else **MapLibre**. `NEXT_PUBLIC_MAP_PROVIDER=schematic` → SVG fallback.
  */
 export function RouteMapPreview(props: RouteMapPreviewProps) {
   if (process.env.NEXT_PUBLIC_MAP_PROVIDER === "schematic") {
     return <RouteMapSchematic {...props} />;
+  }
+  if (isNaverDynamicMapEnabled()) {
+    return <RouteMapNaverDynamic {...props} />;
   }
   return <RouteMapLibreDynamic {...props} />;
 }
