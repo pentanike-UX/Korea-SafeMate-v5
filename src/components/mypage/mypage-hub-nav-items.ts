@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Calendar,
   Coins,
   Compass,
   FolderOpen,
@@ -21,7 +22,8 @@ export type HubNavLabelKey =
   | "guardianNavProfile"
   | "guardianNavNewPost"
   | "guardianNavPosts"
-  | "guardianNavMatches";
+  | "guardianNavMatches"
+  | "guardianNavAvailability";
 
 export type HubNavItem = {
   href: string;
@@ -82,6 +84,10 @@ function guardianMatchesMatch(p: string) {
   return p.startsWith("/mypage/guardian/matches");
 }
 
+function guardianAvailabilityMatch(p: string) {
+  return p.startsWith("/mypage/guardian/availability");
+}
+
 function guardianPointsMatch(p: string) {
   return p.startsWith("/mypage/guardian/points");
 }
@@ -107,6 +113,12 @@ export const GUARDIAN_WORKSPACE_NAV: HubNavItem[] = [
     match: guardianNewPostMatch,
   },
   { href: "/mypage/guardian/matches", labelKey: "guardianNavMatches", Icon: HeartHandshake, match: guardianMatchesMatch },
+  {
+    href: "/mypage/guardian/availability",
+    labelKey: "guardianNavAvailability",
+    Icon: Calendar,
+    match: guardianAvailabilityMatch,
+  },
   { href: "/mypage/guardian/points", labelKey: "guardianNavPoints", Icon: Coins, match: guardianPointsMatch },
   { href: "/mypage/guardian/settings", labelKey: "guardianNavSettings", Icon: Settings, match: guardianSettingsMatch },
 ];

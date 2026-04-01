@@ -82,8 +82,8 @@
     "disclaimerShort": "본 서비스는 현장 지원과 실용 정보 제공을 위한 것입니다. 의료·법률·긴급 구조를 대체하지 않으며, 24시간 보호를 보장하지 않습니다."
   },
   "Brand": {
-    "tagline": "화면 속 서울을 사랑했다면, 발로 만나는 서울도 함께할 수 있게.",
-    "description": "42 Guardians는 K-콘텐츠 팬과 검증된 서울 로컬 가디언을 잇습니다. 언어 맞춤, 걸을 수 있는 루트, 여행자 리뷰로 신뢰를 쌓습니다."
+    "tagline": "지금에 맞는 순서—또 하나의 장소 목록이 아닙니다.",
+    "description": "SafeMate는 한국의 동선을 순서·타이밍·주의로 큐레이션합니다. 필요하면 가디언의 판단을 덧붙입니다."
   },
   "GuardianTier": {
     "verified_guardian": "검증된 Guardian",
@@ -92,7 +92,7 @@
   },
   "Home": {
     "metaTitle": "홈",
-    "metaDescription": "상상한 서울을 현장에서—검증 가디언, 무드 맞춤, 실제 후기로 이어지는 동선.",
+    "metaDescription": "AI 브리프와 큐레이션 동선으로 한국의 순서형 이동—타이밍 맥락과 명확한 주의.",
     "eyebrow": "42 Guardians",
     "heroTitle": "스트리밍으로 만난 서울, 오늘은 발로 걷는 서울",
     "heroLead": "언어와 무드가 맞는 검증 가디언을 만나고, 브로슈어가 아니라 실제 루트·후기로 하루의 뼈대를 잡아 보세요.",
@@ -1257,6 +1257,7 @@
     "guardianNavPosts": "포스트 관리",
     "guardianNavNewPost": "포스팅 작성",
     "guardianNavMatches": "매칭 관리",
+    "guardianNavAvailability": "가능 시간",
     "guardianNavPoints": "포인트",
     "guardianNavSettings": "설정",
     "guardianApplyTeaser": "가디언으로 활동하려면 신청 후 승인이 필요합니다.",
@@ -1621,5 +1622,311 @@
     "saving": "저장 중…",
     "saved": "저장되었습니다.",
     "error": "저장에 실패했습니다. 잠시 후 다시 시도해 주세요."
+  },
+  "V4": {
+    "nav": {
+      "explore": "탐색",
+      "planner": "AI 플래너",
+      "guardians": "가디언",
+      "stories": "스토리",
+      "safety": "안전·에티켓",
+      "language": "언어",
+      "searchAria": "동선과 장소 검색"
+    },
+    "bottomNav": {
+      "aria": "주요 메뉴",
+      "home": "홈",
+      "explore": "탐색",
+      "ai": "AI",
+      "saved": "저장",
+      "my": "마이"
+    },
+    "exploreNav": {
+      "label": "탐색",
+      "routes": "동선",
+      "spots": "장소",
+      "neighborhoods": "동네",
+      "vibes": "무드",
+      "time": "밤·낮",
+      "hidden": "한적한 루트"
+    },
+    "home": {
+      "eyebrow": "큐레이션 동선",
+      "heroTitle": "지금 이 시간에 잘 맞는 동선.",
+      "heroLead": "함께하는 사람과 여유를 고르면, 순서·무드·주의가 붙은 동선을 돌려줍니다.",
+      "moodLabel": "무드로 시작",
+      "mood": {
+        "calm": "차분",
+        "late": "늦은 밤",
+        "solo": "혼자",
+        "rain": "비",
+        "firstNight": "첫날 밤"
+      },
+      "ctaPlanner": "AI 플래너 열기",
+      "ctaExplore": "큐레이션 동선 보기",
+      "routesTitle": "에디토리얼 시퀀스",
+      "routesLead": "카드 하나가 목록 한 줄이 아니라 결정 한 번입니다. 시간·적합·필요 시 신뢰도를 함께 둡니다.",
+      "routesAll": "전체 동선"
+    },
+    "exploreRoutes": {
+      "metaTitle": "동선 탐색",
+      "metaDescription": "무드·시간·속도에 맞춘 순서형 루트.",
+      "title": "동선",
+      "lead": "핀을 뿌리지 않고 줄을 고릅니다. 필터는 위 레일에 있습니다."
+    },
+    "routeDetail": {
+      "notFound": "동선",
+      "whyRoute": "이 순서인 이유",
+      "mood": "기대 무드",
+      "stops": "경유",
+      "tips": "타이밍 팁",
+      "cautions": "주의",
+      "askGuardian": "가디언에게 묻기",
+      "alternative": "대안 동선",
+      "similar": "비슷한 동선"
+    },
+    "exploreSpots": {
+      "metaTitle": "장소 탐색",
+      "metaDescription": "동선 안에서 읽히는 장소.",
+      "title": "장소",
+      "lead": "장소는 목록이 아니라 동선의 한 칸으로 설명합니다."
+    },
+    "spotDetail": {
+      "notFound": "장소",
+      "whyInRoute": "루트 안에서의 역할",
+      "bestTime": "좋은 시간",
+      "crowdRisk": "혼잡 리스크",
+      "photoTone": "사진 톤",
+      "vibeTags": "무드",
+      "nextStop": "다음 경유",
+      "viewRoute": "전체 동선 보기",
+      "planSimilar": "비슷하게 플래닝"
+    },
+    "exploreNeighborhoods": {
+      "metaTitle": "동네",
+      "metaDescription": "지역 단위 시퀀스.",
+      "title": "동네",
+      "lead": "발이 닿는 구역 기준으로 같은 동선 모델을 묶었습니다."
+    },
+    "exploreVibes": {
+      "metaTitle": "무드",
+      "metaDescription": "감정 우선 탐색.",
+      "title": "무드",
+      "lead": "홍보형 형용사가 아니라 속도·소음 기준으로 고릅니다."
+    },
+    "exploreTime": {
+      "metaTitle": "밤과 낮",
+      "metaDescription": "시간대를 고려한 동선.",
+      "title": "밤 / 낮",
+      "lead": "저녁·심야의 조명·혼잡 맥락을 포함합니다."
+    },
+    "exploreHidden": {
+      "metaTitle": "한적한 루트",
+      "metaDescription": "낮은 자극의 순서.",
+      "title": "히든 젬",
+      "lead": "조용함도 조건으로 설명합니다. 말장난 대신 타이밍과 적합."
+    },
+    "planner": {
+      "metaTitle": "AI 플래너",
+      "metaDescription": "선택형 브리프 → 순서형 결과.",
+      "title": "브리프 만들기",
+      "lead": "탭으로 고릅니다. 긴 글은 선택.",
+      "ctaGenerate": "동선 생성",
+      "sec": {
+        "companions": "누구와",
+        "time": "시간 예산",
+        "vibe": "무드",
+        "budget": "지출",
+        "energy": "체력",
+        "transport": "이동",
+        "sensitivity": "날씨",
+        "safety": "밤 편안함",
+        "language": "언어",
+        "area": "지역 힌트"
+      },
+      "opt": {
+        "companions": {
+          "solo": "혼자",
+          "couple": "둘이",
+          "friends": "친구",
+          "family": "가족"
+        },
+        "time": {
+          "90m": "약 90분",
+          "half": "반나절",
+          "evening": "저녁~밤 끝까지"
+        },
+        "vibe": {
+          "calm": "차분",
+          "lively": "활기",
+          "romantic": "가까운",
+          "focused": "집중"
+        },
+        "budget": {
+          "low": "가볍게",
+          "medium": "균형",
+          "high": "여유"
+        },
+        "energy": {
+          "light": "가벼움",
+          "moderate": "보통",
+          "high": "높음"
+        },
+        "transport": {
+          "walk": "도보",
+          "transit": "대중교통",
+          "taxi": "택시",
+          "mixed": "혼합"
+        },
+        "weather": "날씨 변하면 실내 비중을 올림",
+        "safety": {
+          "low": "보통",
+          "medium": "신중",
+          "high": "길 읽기 최우선"
+        },
+        "lang": {
+          "en": "영어 위주",
+          "ko": "한국어 편안",
+          "mixed": "혼합"
+        }
+      },
+      "areaPlaceholder": "예: 강남, 한남 능선…"
+    },
+    "plannerResult": {
+      "metaTitle": "플랜 결과",
+      "metaDescription": "근거가 붙은 순서.",
+      "eyebrow": "플랜",
+      "title": "이 순서로 가면 됩니다",
+      "rationale": "이 순서인 이유",
+      "mood": "무드",
+      "sequence": "경유 흐름",
+      "timing": "타이밍",
+      "cautions": "주의",
+      "openRoute": "큐레이션 동선 열기",
+      "alternative": "대안",
+      "askGuardian": "가디언에게",
+      "adjust": "입력 수정",
+      "invalidTitle": "브리프를 읽지 못했습니다",
+      "invalidLead": "플래너로 돌아가 다시 생성해 주세요.",
+      "back": "플래너로"
+    },
+    "stories": {
+      "metaTitle": "스토리·가이드",
+      "metaDescription": "짧은 의사결정 글.",
+      "title": "스토리",
+      "lead": "무엇을 볼까가 아니라 무엇을 최적화할까에 답합니다.",
+      "read": "읽기",
+      "notFound": "스토리"
+    },
+    "storyDetail": {
+      "decisionFocus": "결정 포인트",
+      "relatedRoute": "관련 동선",
+      "openPlanner": "플래너 열기"
+    },
+    "guardians": {
+      "metaTitle": "가디언",
+      "metaDescription": "요청형 로컬 판단.",
+      "title": "가디언",
+      "lead": "속도·언어·통로 선택을 돕습니다. 대화는 가볍게—요청이 먼저입니다.",
+      "viewProfile": "프로필",
+      "ask": "요청"
+    },
+    "guardianDetail": {
+      "notFound": "가디언",
+      "areas": "지역",
+      "vibes": "무드",
+      "trust": "신호",
+      "askCta": "요청 보내기",
+      "plannerCta": "먼저 AI 플래너"
+    },
+    "guardianRequest": {
+      "metaTitle": "요청",
+      "metaDescription": "구조화된 가디언 요청.",
+      "notFound": "요청",
+      "title": "요청 · {name}",
+      "lead": "짧은 브리프가 빠릅니다. 이 화면에서는 결제 없습니다.",
+      "fieldDate": "희망 날짜",
+      "fieldMessage": "필요한 것",
+      "messagePlaceholder": "맥락, 제약, 좋은 결과의 기준.",
+      "submit": "보내기",
+      "successTitle": "요청이 접수되었습니다",
+      "successLead": "{name}은(는) 구조화된 요청을 먼저 봅니다.",
+      "goRequests": "요청함 열기"
+    },
+    "savedPage": {
+      "metaTitle": "저장",
+      "metaDescription": "동선·장소·AI 플랜.",
+      "title": "저장",
+      "lead": "북마크와 생성 결과가 여기로 모입니다.",
+      "routes": "동선",
+      "spots": "장소",
+      "aiPlans": "AI 플랜",
+      "reopenPlanner": "새 플랜",
+      "legacy": "이전 저장",
+      "savedPosts": "레거시 포스트",
+      "savedGuardians": "레거시 가디언"
+    },
+    "safety": {
+      "metaTitle": "안전·에티켓",
+      "metaDescription": "범위와 존중.",
+      "title": "안전·에티켓",
+      "lead": "SafeMate는 비상 대응이 아니라 판단 보조입니다. 불안하면 공식 채널을 쓰세요.",
+      "bullet1": "동선은 통상적인 조건을 설명할 뿐 실시간 사건 정보가 아닙니다.",
+      "bullet2": "혼잡·조명 표현은 비교적이며 보장이 아닙니다.",
+      "bullet3": "가디언에게 이동·감각 필요를 구체적으로 알려 주세요.",
+      "helpLink": "도움말"
+    },
+    "help": {
+      "metaTitle": "도움말",
+      "metaDescription": "다음 행동.",
+      "title": "도움말",
+      "lead": "가장 짧은 경로를 고르세요.",
+      "cardPlanner": "AI 플래너",
+      "cardPlannerDesc": "선택형 브리프 → 순서형 결과.",
+      "cardExplore": "큐레이션 동선",
+      "cardExploreDesc": "필터가 있는 에디토리얼 시퀀스.",
+      "cardGuardians": "가디언",
+      "cardGuardiansDesc": "구조화된 로컬 판단 요청.",
+      "cardAbout": "소개",
+      "cardAboutDesc": "제품 범위와 한계."
+    },
+    "cityHub": {
+      "notFound": "도시",
+      "hubEyebrow": "시티 허브",
+      "seoulTitle": "서울",
+      "seoulDescription": "서울 동선 허브.",
+      "seoulLead": "공개된 호부터—플래너가 개인화를 이어갑니다.",
+      "plannerCta": "AI 플래너로 개인화 →"
+    },
+    "search": {
+      "metaTitle": "검색",
+      "metaDescription": "동선·장소 빠르게.",
+      "title": "검색",
+      "label": "검색어",
+      "placeholder": "제목·구·슬러그 일부",
+      "routes": "동선",
+      "spots": "장소",
+      "empty": "결과 없음"
+    },
+    "guardianAvailability": {
+      "metaTitle": "가능 시간",
+      "metaDescription": "요청 수락 가능 시간.",
+      "title": "가능 시간",
+      "lead": "여행자가 프로필과 함께 봅니다. 솔직하고 구체적으로.",
+      "save": "저장",
+      "saved": "이 세션에만 저장되었습니다(MVP)."
+    },
+    "footer": {
+      "product": "제품",
+      "explore": "동선 탐색",
+      "planner": "AI 플래너",
+      "stories": "스토리",
+      "safety": "안전",
+      "cities": "시티 허브",
+      "company": "회사",
+      "about": "소개",
+      "help": "도움말",
+      "pitch": "타이밍 맥락이 붙은 순서형 로컬 동선—필요할 때 가디언 판단을 더합니다."
+    }
   }
 }

@@ -25,6 +25,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "check": "tsc --noEmit && eslint \"src/components/v4/**/*.{ts,tsx}\" \"src/data/v4/**/*.{ts,tsx}\" \"src/domain/**/*.ts\" \"src/lib/v4/**/*.ts\" \"src/components/admin/curated-routes-admin-client.tsx\" \"src/components/admin/admin-prompt-policy-client.tsx\" \"src/components/admin/admin-localization-client.tsx\" \"src/components/admin/admin-publish-panel-client.tsx\" \"src/components/mypage/guardian-availability-client.tsx\" \"src/components/home/home-v4-page.tsx\" \"src/components/layout/site-footer.tsx\" \"src/components/layout/public-site-shell.tsx\"",
+    "preview": "next build && next start",
     "deploy": "bash deploy.sh",
     "deploy:skip-migration": "bash deploy.sh --skip-migration",
     "deploy:skip-push": "bash deploy.sh --skip-push"

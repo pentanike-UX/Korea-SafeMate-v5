@@ -82,8 +82,8 @@
     "disclaimerShort": "This service is designed for practical local support and useful information. It does not replace medical, legal, or emergency services, and does not guarantee 24/7 protection."
   },
   "Brand": {
-    "tagline": "When the city you love is on screen, we help you meet it on the ground.",
-    "description": "42 Guardians connects international K-culture fans with verified Seoul guardians—language-fit matching, curated routes, and traveler reviews you can actually use."
+    "tagline": "Sequences that fit the moment—not another place list.",
+    "description": "SafeMate curates ordered local movement for Korea: timing, mood, cautions, and guardian-backed judgment when you want a second pair of eyes."
   },
   "GuardianTier": {
     "verified_guardian": "Verified Guardian",
@@ -92,7 +92,7 @@
   },
   "Home": {
     "metaTitle": "Home",
-    "metaDescription": "Meet Seoul the way you imagined it—verified local guardians, mood-first matching, and routes written for real days.",
+    "metaDescription": "AI-assisted route briefs and curated sequences for Korea—ordered movement with timing context and clear cautions.",
     "eyebrow": "42 Guardians",
     "heroTitle": "The Seoul you streamed. The streets you’ll walk.",
     "heroLead": "Match with verified local guardians who speak your language and your vibe—then plan from real routes and reviews, not brochure noise.",
@@ -1257,6 +1257,7 @@
     "guardianNavPosts": "Post management",
     "guardianNavNewPost": "Write post",
     "guardianNavMatches": "Match management",
+    "guardianNavAvailability": "Availability",
     "guardianNavPoints": "Points",
     "guardianNavSettings": "Settings",
     "guardianApplyTeaser": "Apply and get approved to publish and match as a guardian.",
@@ -1621,5 +1622,311 @@
     "saving": "Saving…",
     "saved": "Saved.",
     "error": "Could not save. Please try again."
+  },
+  "V4": {
+    "nav": {
+      "explore": "Explore",
+      "planner": "AI Planner",
+      "guardians": "Guardians",
+      "stories": "Stories",
+      "safety": "Safety",
+      "language": "Language",
+      "searchAria": "Search routes and spots"
+    },
+    "bottomNav": {
+      "aria": "Primary",
+      "home": "Home",
+      "explore": "Explore",
+      "ai": "AI",
+      "saved": "Saved",
+      "my": "My"
+    },
+    "exploreNav": {
+      "label": "Explore",
+      "routes": "Routes",
+      "spots": "Spots",
+      "neighborhoods": "Neighborhoods",
+      "vibes": "Vibes",
+      "time": "Night / Day",
+      "hidden": "Hidden gems"
+    },
+    "home": {
+      "eyebrow": "Curated movement",
+      "heroTitle": "A route for right now—not a longer list.",
+      "heroLead": "Pick how you feel and how much bandwidth you have. We return an ordered sequence with timing, mood, and cautions.",
+      "moodLabel": "Start from a mood",
+      "mood": {
+        "calm": "Calm",
+        "late": "Late",
+        "solo": "Solo",
+        "rain": "Rain",
+        "firstNight": "First night"
+      },
+      "ctaPlanner": "Open AI Planner",
+      "ctaExplore": "Browse curated routes",
+      "routesTitle": "Editorial sequences",
+      "routesLead": "Each card is a decision, not a catalog entry—duration, best-for, and confidence where it helps.",
+      "routesAll": "All routes"
+    },
+    "exploreRoutes": {
+      "metaTitle": "Explore routes",
+      "metaDescription": "Curated sequences with filters for vibe, time, and pace.",
+      "title": "Routes",
+      "lead": "Choose a line, not a scatter of pins. Filters live in the rail above."
+    },
+    "routeDetail": {
+      "notFound": "Route",
+      "whyRoute": "Why this sequence",
+      "mood": "Expected mood",
+      "stops": "Stops",
+      "tips": "Timing tips",
+      "cautions": "Cautions",
+      "askGuardian": "Ask a guardian",
+      "alternative": "Alternative route",
+      "similar": "Explore similar"
+    },
+    "exploreSpots": {
+      "metaTitle": "Explore spots",
+      "metaDescription": "Places explained inside routes—context first.",
+      "title": "Spots",
+      "lead": "Every place here is readable as part of a sequence, not an isolated highlight."
+    },
+    "spotDetail": {
+      "notFound": "Spot",
+      "whyInRoute": "Why it sits in the route",
+      "bestTime": "Best time",
+      "crowdRisk": "Crowd risk",
+      "photoTone": "Photo tone",
+      "vibeTags": "Vibe",
+      "nextStop": "Nearby next stop",
+      "viewRoute": "View full route",
+      "planSimilar": "Plan something similar"
+    },
+    "exploreNeighborhoods": {
+      "metaTitle": "Neighborhoods",
+      "metaDescription": "Area-scoped sequences.",
+      "title": "Neighborhoods",
+      "lead": "Same route model, grouped by where your feet actually land."
+    },
+    "exploreVibes": {
+      "metaTitle": "Vibes",
+      "metaDescription": "Mood-first browsing.",
+      "title": "Vibes",
+      "lead": "Filter by emotional target—not marketing adjectives, but pacing and noise level."
+    },
+    "exploreTime": {
+      "metaTitle": "Night & day",
+      "metaDescription": "Time-of-day aware routes.",
+      "title": "Night / day",
+      "lead": "Evening and late-night arcs with lighting and crowd context."
+    },
+    "exploreHidden": {
+      "metaTitle": "Quieter lines",
+      "metaDescription": "Lower-noise sequences without the cliché.",
+      "title": "Hidden gems",
+      "lead": "We still explain timing and suitability—quiet is a property, not a gimmick."
+    },
+    "planner": {
+      "metaTitle": "AI Planner",
+      "metaDescription": "Selection-first route brief that returns an ordered plan.",
+      "title": "Build your brief",
+      "lead": "Tap answers. Free text is optional—this is built to reduce decision fatigue.",
+      "ctaGenerate": "Generate route",
+      "sec": {
+        "companions": "Who is moving",
+        "time": "Time budget",
+        "vibe": "Vibe",
+        "budget": "Spend posture",
+        "energy": "Energy",
+        "transport": "Transport",
+        "sensitivity": "Weather",
+        "safety": "Night comfort",
+        "language": "Language comfort",
+        "area": "Area hint"
+      },
+      "opt": {
+        "companions": {
+          "solo": "Solo",
+          "couple": "Pair",
+          "friends": "Friends",
+          "family": "Family"
+        },
+        "time": {
+          "90m": "~90 minutes",
+          "half": "Half day",
+          "evening": "Full evening"
+        },
+        "vibe": {
+          "calm": "Calm",
+          "lively": "Lively",
+          "romantic": "Close / quiet",
+          "focused": "Focused"
+        },
+        "budget": {
+          "low": "Lean",
+          "medium": "Balanced",
+          "high": "Flexible"
+        },
+        "energy": {
+          "light": "Light",
+          "moderate": "Moderate",
+          "high": "High"
+        },
+        "transport": {
+          "walk": "Walk",
+          "transit": "Transit",
+          "taxi": "Taxi",
+          "mixed": "Mixed"
+        },
+        "weather": "Prefer indoor pivots if weather shifts",
+        "safety": {
+          "low": "Standard",
+          "medium": "Careful",
+          "high": "Maximum legibility"
+        },
+        "lang": {
+          "en": "English-first",
+          "ko": "Korean-comfort",
+          "mixed": "Mixed"
+        }
+      },
+      "areaPlaceholder": "e.g. Gangnam, Hannam ridge…"
+    },
+    "plannerResult": {
+      "metaTitle": "Your plan",
+      "metaDescription": "Ordered route with rationale.",
+      "eyebrow": "Plan output",
+      "title": "Here is your sequence",
+      "rationale": "Why this order",
+      "mood": "Mood",
+      "sequence": "Stop flow",
+      "timing": "Timing tips",
+      "cautions": "Cautions",
+      "openRoute": "Open curated route",
+      "alternative": "Alternative",
+      "askGuardian": "Ask a guardian",
+      "adjust": "Adjust inputs",
+      "invalidTitle": "We could not read that brief",
+      "invalidLead": "Return to the planner and generate again.",
+      "back": "Back to planner"
+    },
+    "stories": {
+      "metaTitle": "Stories & guides",
+      "metaDescription": "Short decision-support articles.",
+      "title": "Stories",
+      "lead": "Guides that answer ‘what should I optimize for?’—not generic travel blogging.",
+      "read": "Read",
+      "notFound": "Story"
+    },
+    "storyDetail": {
+      "decisionFocus": "Decision focus",
+      "relatedRoute": "Open related route",
+      "openPlanner": "Open planner"
+    },
+    "guardians": {
+      "metaTitle": "Guardians",
+      "metaDescription": "Local judgment on request.",
+      "title": "Guardians",
+      "lead": "Specialists for pacing, language, and corridor choice. Chat stays lightweight—requests first.",
+      "viewProfile": "Profile",
+      "ask": "Ask"
+    },
+    "guardianDetail": {
+      "notFound": "Guardian",
+      "areas": "Areas",
+      "vibes": "Vibes",
+      "trust": "Signals",
+      "askCta": "Send a request",
+      "plannerCta": "Try AI planner first"
+    },
+    "guardianRequest": {
+      "metaTitle": "Request",
+      "metaDescription": "Structured ask to a guardian.",
+      "notFound": "Request",
+      "title": "Request · {name}",
+      "lead": "Short briefs get faster replies. No payment on this screen.",
+      "fieldDate": "Preferred date",
+      "fieldMessage": "What you need",
+      "messagePlaceholder": "Context, constraints, and what ‘good’ looks like.",
+      "submit": "Send request",
+      "successTitle": "Request queued",
+      "successLead": "{name} sees structured requests first—we will mirror that in product mail next.",
+      "goRequests": "Open requests"
+    },
+    "savedPage": {
+      "metaTitle": "Saved",
+      "metaDescription": "Routes, spots, and AI plans.",
+      "title": "Saved",
+      "lead": "Everything you bookmarked or generated—linked back to live detail pages.",
+      "routes": "Routes",
+      "spots": "Spots",
+      "aiPlans": "AI plans",
+      "reopenPlanner": "New plan",
+      "legacy": "Earlier saves",
+      "savedPosts": "Legacy posts",
+      "savedGuardians": "Legacy guardians"
+    },
+    "safety": {
+      "metaTitle": "Safety & etiquette",
+      "metaDescription": "Scope and respectful use.",
+      "title": "Safety & etiquette",
+      "lead": "SafeMate supports judgment, not emergencies. Use official channels when safety is uncertain.",
+      "bullet1": "Routes describe typical conditions—they are not real-time incident data.",
+      "bullet2": "Crowd and lighting language is comparative, not a guarantee.",
+      "bullet3": "Be explicit about mobility and sensory needs when asking a guardian.",
+      "helpLink": "Help center"
+    },
+    "help": {
+      "metaTitle": "Help",
+      "metaDescription": "Where to go next.",
+      "title": "Help",
+      "lead": "Pick the shortest path to an answer.",
+      "cardPlanner": "AI Planner",
+      "cardPlannerDesc": "Selection-first brief → ordered output.",
+      "cardExplore": "Curated routes",
+      "cardExploreDesc": "Editorial sequences with filters.",
+      "cardGuardians": "Guardians",
+      "cardGuardiansDesc": "Structured requests to local judgment.",
+      "cardAbout": "About",
+      "cardAboutDesc": "Product scope and limits."
+    },
+    "cityHub": {
+      "notFound": "City",
+      "hubEyebrow": "City hub",
+      "seoulTitle": "Seoul",
+      "seoulDescription": "Hub for Seoul sequences.",
+      "seoulLead": "Start from published arcs—planner personalizes from here.",
+      "plannerCta": "Personalize with AI Planner →"
+    },
+    "search": {
+      "metaTitle": "Search",
+      "metaDescription": "Find a route or spot quickly.",
+      "title": "Search",
+      "label": "Query",
+      "placeholder": "Type a title, district, or slug fragment",
+      "routes": "Routes",
+      "spots": "Spots",
+      "empty": "No matches"
+    },
+    "guardianAvailability": {
+      "metaTitle": "Availability",
+      "metaDescription": "When you accept requests.",
+      "title": "Availability",
+      "lead": "Travelers see this alongside your profile. Keep it honest and specific.",
+      "save": "Save",
+      "saved": "Saved for this session (MVP)."
+    },
+    "footer": {
+      "product": "Product",
+      "explore": "Explore routes",
+      "planner": "AI Planner",
+      "stories": "Stories",
+      "safety": "Safety",
+      "cities": "City hubs",
+      "company": "Company",
+      "about": "About",
+      "help": "Help",
+      "pitch": "Ordered local movement with timing context—AI briefs plus guardian judgment when you want it."
+    }
   }
 }

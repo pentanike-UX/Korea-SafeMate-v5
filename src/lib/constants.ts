@@ -1,10 +1,10 @@
 import type { ServiceTypeCode } from "@/types/domain";
 
 export const BRAND = {
-  name: "42 Guardians",
-  tagline: "Local companions for K-culture journeys",
+  name: "SafeMate",
+  tagline: "Sequences that fit the moment—not another place list.",
   description:
-    "42 Guardians connects international travelers with curated local guardians for K-drama, K-pop, and film-inspired Seoul experiences — trust through verification, languages, and traveler reviews.",
+    "SafeMate is an AI-assisted local movement curator for Korea: ordered routes, timing context, and guardian-backed judgment when you want a second pair of eyes.",
 } as const;
 
 export const PRODUCT_LAYERS = [
@@ -45,11 +45,11 @@ export const SERVICE_SCOPE = {
 } as const;
 
 export const NAV_MAIN = [
-  { href: "/explore", label: "Explore" },
+  { href: "/explore/routes", label: "Explore" },
+  { href: "/planner", label: "AI Planner" },
   { href: "/guardians", label: "Guardians" },
-  { href: "/services", label: "Services" },
-  { href: "/book", label: "Book" },
-  { href: "/guardians/apply", label: "Contribute" },
+  { href: "/stories", label: "Stories" },
+  { href: "/safety", label: "Safety" },
 ] as const;
 
 /** Canonical entry paths for web now; mirror in a future app for the same flows (trust → first conversion → retention). */

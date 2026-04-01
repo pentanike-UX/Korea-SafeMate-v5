@@ -58,63 +58,64 @@
 }
 
 :root {
-  /* Brand — v3: neutral base, blue accents only */
-  --brand-primary: #18181b;
-  --brand-primary-hover: #27272a;
-  --brand-primary-pressed: #09090b;
-  --brand-primary-soft: #f4f4f5;
-  --brand-primary-soft-2: #e4e4e7;
+  /* SafeMate v4 — warm pearl base, restrained cobalt accent */
+  --brand-primary: #1c1c1e;
+  --brand-primary-hover: #2c2c2e;
+  --brand-primary-pressed: #0f0f10;
+  --brand-primary-soft: #f2f1ee;
+  --brand-primary-soft-2: #e8e6e1;
 
-  /* Support / trust (point color) */
-  --brand-trust-blue: #2563eb;
-  --brand-trust-blue-hover: #1d4ed8;
-  --brand-trust-blue-soft: #eff6ff;
+  /* Accent — muted cobalt (not harsh UI blue) */
+  --brand-trust-blue: #2f4f8f;
+  --brand-trust-blue-hover: #243c6e;
+  --brand-trust-blue-soft: #e8eef8;
 
   /* Accent (sparingly) */
   --accent-pink: #e11d48;
   --accent-purple-blue: #4f46e5;
 
   /* Text */
-  --text-strong: #09090b;
-  --text-primary: #18181b;
-  --text-secondary: #52525b;
-  --text-muted: #71717a;
-  --text-on-brand: #fafafa;
+  --text-strong: #141414;
+  --text-primary: #1c1c1e;
+  --text-secondary: #5c5c63;
+  --text-muted: #7a7a82;
+  --text-on-brand: #fafaf8;
 
-  /* Surface */
-  --bg-page: #f4f4f5;
-  --bg-surface: #ffffff;
-  --bg-surface-subtle: #fafafa;
-  --bg-elevated: #ffffff;
+  /* Surface — pearl / soft lift */
+  --bg-page: #f7f6f3;
+  --bg-surface: #fdfcfa;
+  --bg-surface-subtle: #f3f2ef;
+  --bg-elevated: #fffcf8;
 
   /* Border */
-  --border-default: #e4e4e7;
-  --border-strong: #d4d4d8;
-  --border-focus: #2563eb;
+  --border-default: #e6e4df;
+  --border-strong: #d8d5ce;
+  --border-focus: var(--brand-trust-blue);
 
-  /* Status */
-  --success: #16c47f;
-  --success-soft: #e9fbf3;
-  --warning: #ffb020;
-  --warning-soft: #fff6df;
-  --error: #ff5a5f;
-  --error-soft: #ffeded;
-  --info: #2563eb;
-  --info-soft: #eff6ff;
+  /* Status — low saturation */
+  --success: #3d8b6a;
+  --success-soft: #e8f4ee;
+  --warning: #c4923a;
+  --warning-soft: #faf4e6;
+  --error: #c45c5c;
+  --error-soft: #f8ecec;
+  --info: var(--brand-trust-blue);
+  --info-soft: var(--brand-trust-blue-soft);
 
   /* Gradient */
   --gradient-brand: linear-gradient(135deg, #18181b 0%, #3b82f6 100%);
   --gradient-brand-soft: linear-gradient(180deg, #fafafa 0%, #f4f4f5 100%);
 
-  /* Shadow */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
-  --shadow-brand: 0 8px 20px rgba(0, 0, 0, 0.12);
+  /* Shadow — soft, wide */
+  --shadow-sm: 0 2px 8px rgba(20, 20, 20, 0.04), 0 12px 40px rgba(20, 20, 20, 0.06);
+  --shadow-md: 0 16px 48px rgba(20, 20, 20, 0.08);
+  --shadow-brand: 0 12px 36px rgba(20, 20, 20, 0.1);
 
-  /* Radius (component scale) */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  /* Radius (v4 cards 20–28px) */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-card: 24px;
 
   /* Component bridges */
   --button-primary-bg: var(--brand-primary);

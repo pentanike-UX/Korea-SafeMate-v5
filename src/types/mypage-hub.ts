@@ -31,6 +31,7 @@ export const GUARDIAN_WORKSPACE_NAV_BADGE_KEYS = [
   "guardianNavNewPost",
   "guardianNavPosts",
   "guardianNavMatches",
+  "guardianNavAvailability",
   "guardianNavPoints",
   "guardianNavSettings",
 ] as const;

@@ -62,7 +62,8 @@ function lnbBadgeCount(
     item.labelKey !== "guardianNavProfile" &&
     item.labelKey !== "guardianNavNewPost" &&
     item.labelKey !== "guardianNavPosts" &&
-    item.labelKey !== "guardianNavMatches"
+    item.labelKey !== "guardianNavMatches" &&
+    item.labelKey !== "guardianNavAvailability"
   ) {
     return 0;
   }

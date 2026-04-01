@@ -1,1 +1,1 @@
-export { HomeFortyTwoPage as HomePageContent } from "./home-forty-two-page";
+export { HomeV4Page as HomePageContent } from "./home-v4-page";

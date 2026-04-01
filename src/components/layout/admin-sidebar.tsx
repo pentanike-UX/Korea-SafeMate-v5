@@ -7,11 +7,15 @@ import { cn } from "@/lib/utils";
 import {
   CalendarCheck,
   Coins,
+  Globe,
   LayoutDashboard,
   MailPlus,
+  Map,
   Newspaper,
+  Rocket,
   Settings,
   Shield,
+  Sparkles,
   Star,
   Users,
 } from "lucide-react";
@@ -50,6 +54,18 @@ const buildGroups = (showSuper: boolean): NavGroup[] => {
       label: "Content",
       description: "Moderation queue",
       items: [{ href: "/admin/posts", label: "Posts", icon: Newspaper }],
+    },
+    {
+      label: "Curated (v4)",
+      description: "Routes, spots, AI policy",
+      items: [
+        { href: "/admin/curated/routes", label: "Routes", icon: Map },
+        { href: "/admin/curated/spots", label: "Spots", icon: Map },
+        { href: "/admin/curated/guardians", label: "Guardians", icon: Users },
+        { href: "/admin/curated/prompt-policy", label: "AI policy", icon: Sparkles },
+        { href: "/admin/curated/localization", label: "Localization", icon: Globe },
+        { href: "/admin/curated/publish", label: "Publish", icon: Rocket },
+      ],
     },
     {
       label: "Economy",
