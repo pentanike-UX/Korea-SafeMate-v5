@@ -284,6 +284,25 @@ export function ExploreJourneyClient() {
         </section>
       )}
 
+      <ExploreJourneySummaryBar
+        step={step}
+        region={region}
+        theme={theme}
+        days={days}
+        partySize={partySize}
+        pace={pace}
+        langPref={langPref}
+        tripWhenPreset={tripWhenPreset}
+        sceneMoods={sceneMoods}
+        guardianStylePrefs={guardianStylePrefs}
+        workTokens={workTokens}
+        artistTokens={artistTokens}
+        variant={step === 4 ? "results" : "journey"}
+        onEditBasics={step >= 2 ? () => setStep(0) : undefined}
+        onEditSchedule={step === 4 ? () => setStep(2) : undefined}
+        onEditTaste={step === 4 ? () => setStep(3) : undefined}
+      />
+
       <div
         id="journey-steps"
         className={cn(
@@ -297,25 +316,6 @@ export function ExploreJourneyClient() {
         {enteredExploreViaPreset && step >= 2 && region && theme ? (
           <p className="text-muted-foreground mb-2 text-center text-[11px] font-medium">{t("presetFromHome")}</p>
         ) : null}
-
-        <ExploreJourneySummaryBar
-          step={step}
-          region={region}
-          theme={theme}
-          days={days}
-          partySize={partySize}
-          pace={pace}
-          langPref={langPref}
-          tripWhenPreset={tripWhenPreset}
-          sceneMoods={sceneMoods}
-          guardianStylePrefs={guardianStylePrefs}
-          workTokens={workTokens}
-          artistTokens={artistTokens}
-          variant={step === 4 ? "results" : "journey"}
-          onEditBasics={step >= 2 ? () => setStep(0) : undefined}
-          onEditSchedule={step === 4 ? () => setStep(2) : undefined}
-          onEditTaste={step === 4 ? () => setStep(3) : undefined}
-        />
 
         {step === 0 ? <ExploreRegionStep value={region} onChange={(slug) => setRegion(slug)} /> : null}
 
