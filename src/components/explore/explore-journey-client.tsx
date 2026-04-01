@@ -183,7 +183,7 @@ export function ExploreJourneyClient() {
     setArtistTokens((prev) => prev.filter((x) => x !== w));
   }
 
-  const showMobileStickyCta = step === 2 || step === 3;
+  const showMobileStickyCta = step <= 3;
   const areaName = useMemo(() => {
     if (!region) return "";
     const raw = tLaunch.raw(region) as any;
@@ -456,18 +456,24 @@ export function ExploreJourneyClient() {
               type="button"
               variant="outline"
               className="flex-1 rounded-xl"
+              disabled={step === 0}
               onClick={() => setStep((s) => Math.max(0, s - 1))}
             >
               {t("back")}
             </Button>
-            {step === 2 ? (
-              <Button type="button" className="flex-[2] rounded-xl shadow-[var(--shadow-brand)]" onClick={() => setStep(3)}>
-                {t("next")}
-                <ArrowRight className="size-4" />
-              </Button>
-            ) : (
+            {step === 3 ? (
               <Button type="button" className="flex-[2] rounded-xl shadow-[var(--shadow-brand)]" onClick={() => setStep(4)}>
                 {t("seeResults")}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                className="flex-[2] rounded-xl shadow-[var(--shadow-brand)]"
+                disabled={step === 0 && !isLaunchAreaSelectable(region)}
+                onClick={() => setStep((s) => s + 1)}
+              >
+                {t("next")}
+                <ArrowRight className="size-4" />
               </Button>
             )}
           </div>
