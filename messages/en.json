@@ -1060,6 +1060,8 @@
     "relatedReasonSameCategory": "Similar topic",
     "relatedReasonSameFormat": "Same format",
     "articleOneLineTipEyebrow": "Before you read",
+    "ctaRequestCourseBody": "Plan a session with {name}",
+    "ctaRequestBtn": "Request",
     "articleOneLineFromTagPrefix": "Quick focus:",
     "articleKeyTakeawayEyebrow": "Key takeaway",
     "articleTopicGuideEyebrow": "Keyword guide",
@@ -1641,6 +1643,73 @@
       "saved": "Saved",
       "my": "My"
     },
+    "workspace": {
+      "shell": {
+        "loading": "Loading…"
+      },
+      "rail": {
+        "aria": "Primary navigation",
+        "mainNavAria": "Main sections",
+        "home": "Home",
+        "explore": "Explore",
+        "planner": "AI Planner",
+        "saved": "Saved",
+        "my": "My",
+        "help": "Help",
+        "info": "Info",
+        "language": "Language",
+        "account": "Account"
+      },
+      "utility": {
+        "account": "Account",
+        "language": "Language",
+        "help": "Help",
+        "info": "Info"
+      },
+      "accountDrawer": {
+        "title": "Account",
+        "navAria": "Account navigation"
+      },
+      "infoDrawer": {
+        "title": "Information",
+        "navAria": "Legal and information links",
+        "links": {
+          "about": "About",
+          "safety": "Safety",
+          "help": "Help center",
+          "terms": "Terms of service",
+          "privacy": "Privacy policy",
+          "contact": "Contact / book"
+        }
+      },
+      "languageSheet": {
+        "title": "Language",
+        "lead": "Applies across the public site for this browser."
+      },
+      "helpSheet": {
+        "title": "Quick help",
+        "b1": "Use AI Planner when you want an ordered route, not a list of pins.",
+        "b2": "Tap stops on the map or in the panel to keep the highlight in sync.",
+        "b3": "Booking and guardian flows live under Book and Guardians.",
+        "openHelp": "Open help center"
+      },
+      "explore": {
+        "metaTitle": "Explore",
+        "metaDescription": "Curated routes, spots, and stories on the map.",
+        "title": "Explore",
+        "lead": "Switch tabs, filter lightly, open a card to continue on the map.",
+        "tabRoutes": "Routes",
+        "tabSpots": "Spots",
+        "tabStories": "Stories",
+        "filters": "Quick filters",
+        "filter": {
+          "calm": "Calm",
+          "night": "Night",
+          "solo": "Solo",
+          "river": "River"
+        }
+      }
+    },
     "exploreNav": {
       "label": "Explore",
       "routes": "Routes",
@@ -1664,6 +1733,13 @@
       },
       "ctaPlanner": "Open AI Planner",
       "ctaExplore": "Browse curated routes",
+      "mapHeroLead": "Choose how you move—then we line up timing, mood, and cautions on the map.",
+      "mapRegionLabel": "Map focus",
+      "mapRegions": {
+        "seoulCore": "Seoul core",
+        "hanRiver": "River belt",
+        "gangnam": "Gangnam edge"
+      },
       "routesTitle": "Editorial sequences",
       "routesLead": "Each card is a decision, not a catalog entry—duration, best-for, and confidence where it helps.",
       "routesAll": "All routes"
@@ -1702,7 +1778,8 @@
       "vibeTags": "Vibe",
       "nextStop": "Nearby next stop",
       "viewRoute": "View full route",
-      "planSimilar": "Plan something similar"
+      "planSimilar": "Plan something similar",
+      "saveCta": "Save to My page"
     },
     "exploreNeighborhoods": {
       "metaTitle": "Neighborhoods",

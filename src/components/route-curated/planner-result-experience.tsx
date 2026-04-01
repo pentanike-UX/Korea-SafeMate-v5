@@ -7,7 +7,8 @@ import type { AIPlanOutput, CuratedRoute } from "@/domain/curated-experience";
 import { AlternativeRouteTabs, type AlternativeTabId } from "@/components/route-curated/alternative-route-tabs";
 import { AskGuardianPanel, persistPlannerContext } from "@/components/route-curated/ask-guardian-panel";
 import { CuratedRouteSummaryStack } from "@/components/route-curated/curated-route-summary-stack";
-import { RouteBottomSheet } from "@/components/route-curated/route-bottom-sheet";
+import { MapOverlayStats } from "@/components/app-shell/map-overlay-stats";
+import { WorkspaceBinder, type WorkspaceRegistration } from "@/components/app-shell/workspace-registry";
 import { RouteMap } from "@/components/route-curated/route-map";
 import { RouteSummaryCard } from "@/components/route-curated/route-summary-card";
 import { SegmentToggle, type RouteViewMode } from "@/components/route-curated/segment-toggle";
@@ -16,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { getV4SpotById } from "@/data/v4";
 import { buildCuratedMapStops } from "@/lib/route-curated/build-stops";
 import { aggregatePathStats } from "@/lib/route-curated/geometry";
-import { cn } from "@/lib/utils";
 
 function guardianSlugForRoute(route: CuratedRoute) {
   return route.slug === "first-night-seoul-north-south" ? "minseo" : "jun";
@@ -193,7 +193,6 @@ function PlannerResultInteractive({
   const stats = useMemo(() => aggregatePathStats(displayRoute.pathSegments), [displayRoute.pathSegments]);
 
   const mapKey = `${displayRoute.slug}-${altTab}`;
-  const tabDisabled = useMemo(() => ({ calmer: !alternativeRoute }), [alternativeRoute]);
 
   const panel = (
     <RoutePanelBody
@@ -236,13 +235,14 @@ function PlannerResultInteractive({
     </div>
   );
 
-  return (
-    <div className="bg-[var(--bg-page)] flex min-h-[100dvh] flex-col lg:grid lg:min-h-[calc(100dvh-4rem)] lg:grid-cols-[minmax(300px,420px)_1fr] lg:gap-0">
-      <div
-        className={cn(
-          "relative z-0 h-[38vh] min-h-[220px] w-full shrink-0 lg:sticky lg:top-16 lg:order-2 lg:h-[calc(100dvh-4rem)] lg:min-h-0",
-        )}
-      >
+  const registration: WorkspaceRegistration = {
+    contextKey: "planner-result",
+    panelTitle: displayRoute.title,
+    panelSubtitle: plan.expectedMood,
+    panelBody: panel,
+    panelFooterPrimary: footer,
+    map: (
+      <div className="relative h-full w-full">
         <RouteMap
           mapKey={mapKey}
           stops={mapStops}
@@ -251,43 +251,18 @@ function PlannerResultInteractive({
           viewMode={viewMode}
           activeStopId={activeStopId}
           onStopSelect={setActiveStopId}
-          className="h-full w-full rounded-none lg:rounded-l-[var(--radius-card)]"
+          className="h-full w-full"
         />
-        <div className="pointer-events-none absolute top-3 left-3 right-3 flex flex-wrap items-start justify-between gap-2 lg:top-4 lg:left-4 lg:right-4">
-          <AlternativeRouteTabs
-            value={altTab}
-            onChange={setAltTab}
-            disabled={tabDisabled}
-            labels={{
-              primary: t("alt.primary"),
-              calmer: t("alt.calmer"),
-              weather: t("alt.weather"),
-            }}
-            className="pointer-events-auto"
-          />
-          <SegmentToggle
-            value={viewMode}
-            onChange={setViewMode}
-            labels={{ full: t("view.full"), segment: t("view.segment") }}
-            className="pointer-events-auto hidden sm:inline-flex"
-          />
-        </div>
+        <MapOverlayStats distanceMeters={stats.distanceMeters} durationMinutes={stats.durationMinutes} />
       </div>
+    ),
+    initialSheetSnap: "half",
+  };
 
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col lg:order-1 lg:border-r lg:border-[var(--border-default)] lg:bg-[var(--bg-surface)]">
-        <div className="hidden min-h-0 flex-1 flex-col lg:flex">
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-6">{panel}</div>
-          <div className="border-border/60 bg-[color-mix(in_srgb,var(--bg-surface)_96%,transparent)] shrink-0 border-t px-5 py-4 shadow-[0_-8px_24px_rgba(15,23,42,0.05)]">
-            {footer}
-          </div>
-        </div>
-        <div className="flex min-h-0 flex-1 flex-col lg:hidden">
-          <RouteBottomSheet initialSnap="half" footer={footer}>
-            {panel}
-          </RouteBottomSheet>
-        </div>
-      </div>
-    </div>
+  return (
+    <>
+      <WorkspaceBinder registration={registration} />
+    </>
   );
 }
 

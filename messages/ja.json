@@ -1060,6 +1060,8 @@
     "relatedReasonSameCategory": "近いテーマ",
     "relatedReasonSameFormat": "同じ形式",
     "articleOneLineTipEyebrow": "読む前の一行",
+    "ctaRequestCourseBody": "{name}にコース相談を依頼",
+    "ctaRequestBtn": "依頼する",
     "articleOneLineFromTagPrefix": "この記事のポイント:",
     "articleKeyTakeawayEyebrow": "要点",
     "articleTopicGuideEyebrow": "キーワードガイド",
@@ -1641,6 +1643,73 @@
       "saved": "Saved",
       "my": "My"
     },
+    "workspace": {
+      "shell": {
+        "loading": "読み込み中…"
+      },
+      "rail": {
+        "aria": "ワークスペース",
+        "mainNavAria": "メイン",
+        "home": "ホーム",
+        "explore": "探索",
+        "planner": "AIプランナー",
+        "saved": "保存",
+        "my": "マイ",
+        "help": "ヘルプ",
+        "info": "情報",
+        "language": "言語",
+        "account": "アカウント"
+      },
+      "utility": {
+        "account": "アカウント",
+        "language": "言語",
+        "help": "ヘルプ",
+        "info": "情報"
+      },
+      "accountDrawer": {
+        "title": "アカウント",
+        "navAria": "アカウントメニュー"
+      },
+      "infoDrawer": {
+        "title": "情報",
+        "navAria": "案内リンク",
+        "links": {
+          "about": "について",
+          "safety": "安全",
+          "help": "ヘルプセンター",
+          "terms": "利用規約",
+          "privacy": "プライバシー",
+          "contact": "お問い合わせ・予約"
+        }
+      },
+      "languageSheet": {
+        "title": "言語",
+        "lead": "表示言語を切り替えます（このブラウザに適用）。"
+      },
+      "helpSheet": {
+        "title": "クイックヘルプ",
+        "b1": "ルートは順番がある動線です。ピンの一覧ではなく、順に進むイメージで。",
+        "b2": "地図のマーカーとパネルのストップを同期して選べます。",
+        "b3": "ガーディアンや予約は各メニューから続けられます。",
+        "openHelp": "ヘルプセンターを開く"
+      },
+      "explore": {
+        "metaTitle": "探索",
+        "metaDescription": "地図上でルート・スポット・ストーリーを見る。",
+        "title": "探索",
+        "lead": "タブで切り替え、地図のフォーカスと合わせて選びます。",
+        "tabRoutes": "ルート",
+        "tabSpots": "スポット",
+        "tabStories": "ストーリー",
+        "filters": "クイックフィルター",
+        "filter": {
+          "calm": "落ち着き",
+          "night": "夜",
+          "solo": "ソロ",
+          "river": "川沿い"
+        }
+      }
+    },
     "exploreNav": {
       "label": "Explore",
       "routes": "Routes",
@@ -1664,6 +1733,13 @@
       },
       "ctaPlanner": "Open AI Planner",
       "ctaExplore": "Browse curated routes",
+      "mapHeroLead": "動き方を選ぶと、地図上でタイミング・雰囲気・注意点を一列に整えます。",
+      "mapRegionLabel": "地図の焦点",
+      "mapRegions": {
+        "seoulCore": "ソウル中心",
+        "hanRiver": "漢江帯",
+        "gangnam": "江南エッジ"
+      },
       "routesTitle": "Editorial sequences",
       "routesLead": "Each card is a decision, not a catalog entry—duration, best-for, and confidence where it helps.",
       "routesAll": "All routes"
@@ -1702,7 +1778,8 @@
       "vibeTags": "Vibe",
       "nextStop": "Nearby next stop",
       "viewRoute": "View full route",
-      "planSimilar": "Plan something similar"
+      "planSimilar": "Plan something similar",
+      "saveCta": "マイページに保存"
     },
     "exploreNeighborhoods": {
       "metaTitle": "Neighborhoods",

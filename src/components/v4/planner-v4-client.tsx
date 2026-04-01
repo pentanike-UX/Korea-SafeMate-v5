@@ -4,8 +4,18 @@ import { useMemo, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import type { AIPlannerInput, TimeOfDay } from "@/domain/curated-experience";
+import { WorkspaceBinder, type WorkspaceRegistration } from "@/components/app-shell/workspace-registry";
+import { FullBleedAmbientMap } from "@/components/map-shell/full-bleed-ambient-map";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+type MapRegion = "seoul_core" | "han_river" | "gangnam";
+
+const MAP_REGIONS: { key: MapRegion; labelKey: "seoulCore" | "hanRiver" | "gangnam" }[] = [
+  { key: "seoul_core", labelKey: "seoulCore" },
+  { key: "han_river", labelKey: "hanRiver" },
+  { key: "gangnam", labelKey: "gangnam" },
+];
 
 type ChipDef<K extends string> = { key: K; label: string };
 
@@ -34,7 +44,9 @@ function moodDefaults(mood: string | null): Partial<AIPlannerInput> {
 
 export function PlannerV4Client({ mood }: { mood: string | null }) {
   const t = useTranslations("V4.planner");
+  const tHome = useTranslations("V4.home");
   const router = useRouter();
+  const [mapRegion, setMapRegion] = useState<MapRegion>("seoul_core");
 
   const seeded = useMemo(() => moodDefaults(mood), [mood]);
 
@@ -100,12 +112,28 @@ export function PlannerV4Client({ mood }: { mood: string | null }) {
     </div>
   );
 
-  return (
-    <div className="mx-auto max-w-2xl space-y-10 pb-24">
-      <header>
-        <h1 className="text-[var(--text-strong)] text-3xl font-semibold tracking-tight sm:text-4xl">{t("title")}</h1>
-        <p className="text-muted-foreground mt-3 text-base leading-relaxed">{t("lead")}</p>
-      </header>
+  const panelBody = (
+    <div className="space-y-8">
+      <section className="space-y-2">
+        <h2 className="text-[var(--text-strong)] text-xs font-semibold tracking-wide uppercase">{tHome("mapRegionLabel")}</h2>
+        <div className="flex flex-wrap gap-2">
+          {MAP_REGIONS.map((r) => (
+            <button
+              key={r.key}
+              type="button"
+              onClick={() => setMapRegion(r.key)}
+              className={cn(
+                "rounded-full px-3 py-1.5 text-xs font-medium sm:text-sm",
+                mapRegion === r.key
+                  ? "bg-[var(--text-strong)] text-[var(--text-on-brand)]"
+                  : "bg-card text-[var(--text-strong)]/85 ring-1 ring-[var(--border-default)] hover:bg-[var(--brand-primary-soft)]",
+              )}
+            >
+              {tHome(`mapRegions.${r.labelKey}`)}
+            </button>
+          ))}
+        </div>
+      </section>
 
       <section className="space-y-3">
         <h2 className="text-[var(--text-strong)] text-sm font-semibold tracking-wide uppercase">{t("sec.companions")}</h2>
@@ -259,12 +287,31 @@ export function PlannerV4Client({ mood }: { mood: string | null }) {
           className="border-input bg-card text-foreground placeholder:text-muted-foreground w-full rounded-[var(--radius-lg)] border px-4 py-3 text-sm shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)]"
         />
       </section>
-
-      <div className="border-border/60 bg-[var(--bg-surface-subtle)]/90 supports-[backdrop-filter]:bg-[color-mix(in_srgb,var(--bg-surface)_90%,transparent)] sticky bottom-[calc(var(--touch-target)+env(safe-area-inset-bottom)+12px)] z-10 rounded-[var(--radius-card)] border p-4 shadow-[var(--shadow-sm)] backdrop-blur-md lg:static lg:bottom-auto">
-        <Button type="button" size="lg" className="w-full rounded-[var(--radius-lg)] text-base font-semibold" onClick={submit}>
-          {t("ctaGenerate")}
-        </Button>
-      </div>
     </div>
+  );
+
+  const registration: WorkspaceRegistration = {
+    contextKey: "planner",
+    panelTitle: t("title"),
+    panelSubtitle: t("lead"),
+    panelBody,
+    stickyAction: (
+      <Button
+        type="button"
+        size="lg"
+        className="h-12 w-full rounded-[20px] text-base font-semibold shadow-[0_16px_40px_rgba(15,23,42,0.08)]"
+        onClick={submit}
+      >
+        {t("ctaGenerate")}
+      </Button>
+    ),
+    map: <FullBleedAmbientMap region={mapRegion} className="h-full w-full" />,
+    initialSheetSnap: "half",
+  };
+
+  return (
+    <>
+      <WorkspaceBinder registration={registration} />
+    </>
   );
 }

@@ -58,37 +58,50 @@ function V4HeaderNavRow({
   );
 }
 
-export function V4PublicHeader() {
+export function V4PublicHeader({ variant = "default" }: { variant?: "default" | "mapPrimary" }) {
   const pathname = usePathname();
   const user = useAuthUser();
   const t = useTranslations("V4.nav");
   const tHeader = useTranslations("Header");
   const [solid, setSolid] = useState(false);
+  const mapPrimary = variant === "mapPrimary";
 
   useEffect(() => {
+    if (mapPrimary) return;
     const onScroll = () => setSolid(window.scrollY > 8);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  }, [mapPrimary]);
 
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 border-b transition-[background-color,backdrop-filter,box-shadow] duration-500 ease-out",
-        solid
-          ? "border-[var(--border-default)] bg-[color-mix(in_srgb,var(--bg-surface)_92%,transparent)] shadow-[var(--shadow-sm)] backdrop-blur-xl supports-[backdrop-filter]:bg-[color-mix(in_srgb,var(--bg-surface)_86%,transparent)]"
-          : "border-transparent bg-[color-mix(in_srgb,var(--bg-page)_78%,transparent)] backdrop-blur-md",
+        "z-50 border-b transition-[background-color,backdrop-filter,box-shadow] duration-500 ease-out",
+        mapPrimary
+          ? "fixed top-0 right-0 left-0 border-[color-mix(in_srgb,var(--border-default)_65%,transparent)] bg-[color-mix(in_srgb,var(--bg-surface)_90%,transparent)] shadow-[0_12px_40px_rgba(15,23,42,0.05)] backdrop-blur-xl supports-[backdrop-filter]:bg-[color-mix(in_srgb,var(--bg-surface)_84%,transparent)]"
+          : "sticky top-0",
+        !mapPrimary &&
+          (solid
+            ? "border-[var(--border-default)] bg-[color-mix(in_srgb,var(--bg-surface)_92%,transparent)] shadow-[var(--shadow-sm)] backdrop-blur-xl supports-[backdrop-filter]:bg-[color-mix(in_srgb,var(--bg-surface)_86%,transparent)]"
+            : "border-transparent bg-[color-mix(in_srgb,var(--bg-page)_78%,transparent)] backdrop-blur-md"),
       )}
     >
-      <div className="mx-auto flex h-14 min-h-14 w-full max-w-[100rem] items-center gap-2 px-4 sm:h-16 sm:min-h-16 sm:gap-4 sm:px-6 lg:px-10">
+      <div
+        className={cn(
+          "mx-auto flex w-full max-w-[100rem] items-center gap-2 px-4 sm:gap-4 sm:px-6 lg:px-10",
+          mapPrimary ? "h-12 min-h-12 sm:h-[3.25rem] sm:min-h-[3.25rem]" : "h-14 min-h-14 sm:h-16 sm:min-h-16",
+        )}
+      >
         <Link href="/" className="flex min-w-0 shrink items-center gap-2.5 rounded-xl active:opacity-90">
           <span className="bg-[var(--brand-primary)] flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-lg)] text-xs font-semibold tracking-tight text-[var(--text-on-brand)] shadow-[var(--shadow-sm)]">
             SM
           </span>
           <div className="min-w-0 leading-tight">
             <span className="text-[var(--text-strong)] block truncate text-sm font-semibold tracking-tight">{BRAND.name}</span>
-            <span className="text-muted-foreground hidden truncate text-[10px] font-medium sm:block">{BRAND.tagline}</span>
+            {!mapPrimary ? (
+              <span className="text-muted-foreground hidden truncate text-[10px] font-medium sm:block">{BRAND.tagline}</span>
+            ) : null}
           </div>
         </Link>
 

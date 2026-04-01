@@ -1060,6 +1060,8 @@
     "relatedReasonSameCategory": "비슷한 주제",
     "relatedReasonSameFormat": "같은 포맷",
     "articleOneLineTipEyebrow": "읽기 전 한 줄",
+    "ctaRequestCourseBody": "{name}와 코스 상담 요청",
+    "ctaRequestBtn": "요청하기",
     "articleOneLineFromTagPrefix": "이 글의 포인트:",
     "articleKeyTakeawayEyebrow": "핵심 요약",
     "articleTopicGuideEyebrow": "키워드 가이드",
@@ -1641,6 +1643,73 @@
       "saved": "저장",
       "my": "마이"
     },
+    "workspace": {
+      "shell": {
+        "loading": "불러오는 중…"
+      },
+      "rail": {
+        "aria": "주요 워크스페이스",
+        "mainNavAria": "주요 섹션",
+        "home": "홈",
+        "explore": "탐색",
+        "planner": "AI 플래너",
+        "saved": "저장",
+        "my": "마이",
+        "help": "도움말",
+        "info": "정보",
+        "language": "언어",
+        "account": "계정"
+      },
+      "utility": {
+        "account": "계정",
+        "language": "언어",
+        "help": "도움말",
+        "info": "정보"
+      },
+      "accountDrawer": {
+        "title": "계정",
+        "navAria": "계정 메뉴"
+      },
+      "infoDrawer": {
+        "title": "정보",
+        "navAria": "약관·안내 링크",
+        "links": {
+          "about": "소개",
+          "safety": "안전",
+          "help": "도움말 센터",
+          "terms": "이용약관",
+          "privacy": "개인정보 처리방침",
+          "contact": "문의·예약"
+        }
+      },
+      "languageSheet": {
+        "title": "언어",
+        "lead": "표시 언어를 바꿉니다. 이 브라우저에 적용됩니다."
+      },
+      "helpSheet": {
+        "title": "빠른 도움말",
+        "b1": "동선은 순서가 있는 루트입니다. 핀 목록이 아니라 순서대로 이동해 보세요.",
+        "b2": "지도의 마커나 패널의 스톱을 누르면 강조가 함께 움직입니다.",
+        "b3": "가디언·예약은 예약·가디언 메뉴에서 이어갈 수 있습니다.",
+        "openHelp": "도움말 센터 열기"
+      },
+      "explore": {
+        "metaTitle": "탐색",
+        "metaDescription": "지도 위에서 큐레이션 동선·장소·스토리를 둘러보세요.",
+        "title": "탐색",
+        "lead": "탭을 바꿔 동선·장소·스토리를 보고, 지도 초점을 맞춥니다.",
+        "tabRoutes": "동선",
+        "tabSpots": "장소",
+        "tabStories": "스토리",
+        "filters": "빠른 필터",
+        "filter": {
+          "calm": "차분",
+          "night": "밤",
+          "solo": "솔로",
+          "river": "한강"
+        }
+      }
+    },
     "exploreNav": {
       "label": "탐색",
       "routes": "동선",
@@ -1664,6 +1733,13 @@
       },
       "ctaPlanner": "AI 플래너 열기",
       "ctaExplore": "큐레이션 동선 보기",
+      "mapHeroLead": "어떻게 움직일지 고르면, 지도 위에서 타이밍·무드·주의를 한 줄로 맞춥니다.",
+      "mapRegionLabel": "지도 초점",
+      "mapRegions": {
+        "seoulCore": "서울 중심",
+        "hanRiver": "한강 띠",
+        "gangnam": "강남·변두리"
+      },
       "routesTitle": "에디토리얼 시퀀스",
       "routesLead": "카드 하나가 목록 한 줄이 아니라 결정 한 번입니다. 시간·적합·필요 시 신뢰도를 함께 둡니다.",
       "routesAll": "전체 동선"
@@ -1702,7 +1778,8 @@
       "vibeTags": "무드",
       "nextStop": "다음 경유",
       "viewRoute": "전체 동선 보기",
-      "planSimilar": "비슷하게 플래닝"
+      "planSimilar": "비슷하게 플래닝",
+      "saveCta": "마이에 저장"
     },
     "exploreNeighborhoods": {
       "metaTitle": "동네",

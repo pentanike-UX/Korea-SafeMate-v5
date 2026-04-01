@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import type { CuratedRoute } from "@/domain/curated-experience";
 import { AskGuardianPanel } from "@/components/route-curated/ask-guardian-panel";
 import { CuratedRouteSummaryStack } from "@/components/route-curated/curated-route-summary-stack";
-import { RouteBottomSheet } from "@/components/route-curated/route-bottom-sheet";
+import { MapOverlayStats } from "@/components/app-shell/map-overlay-stats";
+import { WorkspaceBinder, type WorkspaceRegistration } from "@/components/app-shell/workspace-registry";
 import { RouteMap } from "@/components/route-curated/route-map";
 import { RouteSummaryCard } from "@/components/route-curated/route-summary-card";
 import { SegmentToggle, type RouteViewMode } from "@/components/route-curated/segment-toggle";
@@ -17,7 +17,6 @@ import { getV4SpotById } from "@/data/v4";
 import { buildCuratedMapStops } from "@/lib/route-curated/build-stops";
 import { aggregatePathStats } from "@/lib/route-curated/geometry";
 import { writeGuardianPlannerContext } from "@/lib/v4/guardian-planner-context";
-import { cn } from "@/lib/utils";
 
 function guardianSlugForRoute(route: CuratedRoute) {
   return route.slug === "first-night-seoul-north-south" ? "minseo" : "jun";
@@ -65,14 +64,10 @@ function RouteDetailPanel({
 
   return (
     <div className="space-y-5 pb-2">
-      <div className="relative mb-1 hidden aspect-[2/1] w-full overflow-hidden rounded-[var(--radius-lg)] shadow-[var(--shadow-sm)] lg:block">
-        <Image src={route.heroImage} alt="" fill className="object-cover" sizes="420px" />
-      </div>
       <header className="space-y-2">
         <p className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">
           {route.city} · {route.district}
         </p>
-        <h1 className="text-[var(--text-strong)] text-2xl font-semibold tracking-tight sm:text-3xl">{route.title}</h1>
         <p className="text-muted-foreground text-sm leading-relaxed">{route.subtitle}</p>
       </header>
 
@@ -214,13 +209,14 @@ export function RouteDetailExperience({
     </div>
   );
 
-  return (
-    <div className="bg-[var(--bg-page)] flex min-h-[100dvh] flex-col lg:grid lg:min-h-[calc(100dvh-4rem)] lg:grid-cols-[minmax(300px,420px)_1fr] lg:gap-0">
-      <div
-        className={cn(
-          "relative z-0 h-[38vh] min-h-[220px] w-full shrink-0 lg:sticky lg:top-16 lg:order-2 lg:h-[calc(100dvh-4rem)] lg:min-h-0",
-        )}
-      >
+  const registration: WorkspaceRegistration = {
+    contextKey: "route-detail",
+    panelTitle: route.title,
+    panelSubtitle: `${route.city} · ${route.district}`,
+    panelBody: panel,
+    panelFooterPrimary: footer,
+    map: (
+      <div className="relative h-full w-full">
         <RouteMap
           mapKey={route.slug}
           stops={mapStops}
@@ -229,31 +225,17 @@ export function RouteDetailExperience({
           viewMode={viewMode}
           activeStopId={activeStopId}
           onStopSelect={setActiveStopId}
-          className="h-full w-full rounded-none lg:rounded-l-[var(--radius-card)]"
+          className="h-full w-full"
         />
-        <div className="pointer-events-none absolute top-3 left-3 right-3 flex flex-wrap items-start justify-end gap-2 lg:top-4 lg:left-4 lg:right-4">
-          <SegmentToggle
-            value={viewMode}
-            onChange={setViewMode}
-            labels={{ full: tMap("view.full"), segment: tMap("view.segment") }}
-            className="pointer-events-auto hidden sm:inline-flex"
-          />
-        </div>
+        <MapOverlayStats distanceMeters={stats.distanceMeters} durationMinutes={stats.durationMinutes} />
       </div>
+    ),
+    initialSheetSnap: "half",
+  };
 
-      <div className="relative z-10 flex min-h-0 flex-1 flex-col lg:order-1 lg:border-r lg:border-[var(--border-default)] lg:bg-[var(--bg-surface)]">
-        <div className="hidden min-h-0 flex-1 flex-col lg:flex">
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-6">{panel}</div>
-          <div className="border-border/60 bg-[color-mix(in_srgb,var(--bg-surface)_96%,transparent)] shrink-0 border-t px-5 py-4 shadow-[0_-8px_24px_rgba(15,23,42,0.05)]">
-            {footer}
-          </div>
-        </div>
-        <div className="flex flex-1 flex-col lg:hidden">
-          <RouteBottomSheet initialSnap="half" footer={footer}>
-            {panel}
-          </RouteBottomSheet>
-        </div>
-      </div>
-    </div>
+  return (
+    <>
+      <WorkspaceBinder registration={registration} />
+    </>
   );
 }
