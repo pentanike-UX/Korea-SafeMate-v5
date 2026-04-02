@@ -191,14 +191,18 @@
   --brand-primary-soft: #27272a;
   --brand-primary-soft-2: #3f3f46;
 
-  --brand-trust-blue: #60a5fa;
-  --brand-trust-blue-hover: #93c5fd;
-  --brand-trust-blue-soft: #172554;
+  --brand-trust-blue: #7cb6fc;
+  --brand-trust-blue-hover: #a8ccfd;
+  --brand-trust-blue-soft: #1e2f5c;
+
+  /* 밝은 primary/CTA 배경 위 본문 (라이트에서 상속 시 대비 붕괴 방지) */
+  --text-on-brand: #18181b;
+  --button-primary-text: var(--text-on-brand);
 
   --text-strong: #fafafa;
   --text-primary: #e4e4e7;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
+  --text-secondary: #b4b4bd;
+  --text-muted: #9ca3af;
 
   --bg-page: #09090b;
   --bg-surface: #18181b;
@@ -209,10 +213,13 @@
   --border-strong: #52525b;
   --border-focus: #60a5fa;
 
+  --success: #4ade80;
   --success-soft: #0f2a22;
+  --warning: #fbbf24;
   --warning-soft: #2a2410;
+  --error: #f87171;
   --error-soft: #2a1518;
-  --info-soft: #172554;
+  --info-soft: #1e2f5c;
 
   --gradient-brand: linear-gradient(135deg, #fafafa 0%, #3b82f6 100%);
   --gradient-brand-soft: linear-gradient(180deg, #18181b 0%, #27272a 100%);
@@ -229,7 +236,7 @@
   --popover: var(--bg-elevated);
   --popover-foreground: var(--text-primary);
   --primary: var(--brand-primary);
-  --primary-foreground: #18181b;
+  --primary-foreground: var(--text-on-brand);
   --secondary: var(--brand-primary-soft);
   --secondary-foreground: var(--text-strong);
   --muted: var(--bg-surface-subtle);
@@ -250,7 +257,7 @@
   --sidebar: var(--bg-surface);
   --sidebar-foreground: var(--text-primary);
   --sidebar-primary: var(--brand-primary);
-  --sidebar-primary-foreground: #18181b;
+  --sidebar-primary-foreground: var(--text-on-brand);
   --sidebar-accent: var(--brand-primary-soft);
   --sidebar-accent-foreground: var(--text-strong);
   --sidebar-border: var(--border-default);

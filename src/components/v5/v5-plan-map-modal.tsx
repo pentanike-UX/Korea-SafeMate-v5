@@ -909,16 +909,18 @@ function PlanSpotListBody({
           <div className="space-y-2 pt-2">
             {plan.weatherNote && (
               <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-[var(--bg-surface-subtle)]">
-                <CloudSun className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <CloudSun className="w-3.5 h-3.5 text-[var(--warning)] flex-shrink-0 mt-0.5" />
                 <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
                   {plan.weatherNote}
                 </p>
               </div>
             )}
             {plan.alternativeNote && (
-              <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-amber-50">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
-                <p className="text-[11px] text-amber-700 leading-relaxed">{plan.alternativeNote}</p>
+              <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-[var(--warning-soft)]">
+                <Sparkles className="w-3.5 h-3.5 text-[var(--warning)] flex-shrink-0 mt-0.5" />
+                <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                  {plan.alternativeNote}
+                </p>
               </div>
             )}
           </div>

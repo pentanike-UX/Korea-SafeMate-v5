@@ -19,6 +19,7 @@ import { V5PlanMapModal } from "./v5-plan-map-modal";
 import { consumeTravelChatSse } from "@/lib/travel-chat/consume-chat-sse";
 import { BRAND } from "@/lib/constants";
 import { Link } from "@/i18n/navigation";
+import { AppleThemeToggle } from "@/components/theme/apple-theme-toggle";
 import { V5ChatPricingModal, type PricingModalFocus } from "./v5-chat-pricing-modal";
 import {
   HybridTripComposer,
@@ -427,11 +428,13 @@ function SpotIcon({ type }: { type: SpotType }) {
     hotel: <Hotel className="w-3.5 h-3.5" />,
   };
   const colorMap: Record<SpotType, string> = {
-    attraction: "bg-blue-50 text-blue-600",
-    food: "bg-orange-50 text-orange-500",
-    cafe: "bg-amber-50 text-amber-600",
-    transport: "bg-slate-100 text-slate-500",
-    hotel: "bg-purple-50 text-purple-600",
+    attraction:
+      "bg-blue-50 text-blue-600 dark:bg-blue-950/70 dark:text-blue-300",
+    food: "bg-orange-50 text-orange-500 dark:bg-orange-950/60 dark:text-orange-300",
+    cafe: "bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300",
+    transport:
+      "bg-slate-100 text-slate-500 dark:bg-zinc-700 dark:text-zinc-300",
+    hotel: "bg-purple-50 text-purple-600 dark:bg-purple-950/65 dark:text-purple-300",
   };
   return (
     <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${colorMap[type]}`}>
@@ -508,7 +511,7 @@ function TravelRouteCard({
   );
 
   return (
-    <div className="mt-3 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] overflow-hidden shadow-[0_2px_12px_rgba(20,20,20,0.06)]">
+    <div className="mt-3 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] overflow-hidden shadow-[0_2px_12px_rgba(20,20,20,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.35)]">
       <div className="px-4 pt-4 pb-3 border-b border-[var(--border-default)]">
         <div className="flex items-start justify-between gap-2">
           <div>
@@ -595,14 +598,14 @@ function TravelRouteCard({
       <div className="px-4 pb-3 space-y-2">
         {plan.weatherNote && (
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--bg-surface-subtle)]">
-            <CloudSun className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+            <CloudSun className="w-3.5 h-3.5 text-[var(--warning)] flex-shrink-0" />
             <p className="text-[12px] text-[var(--text-secondary)]">{plan.weatherNote}</p>
           </div>
         )}
         {plan.alternativeNote && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-            <p className="text-[12px] text-amber-700">{plan.alternativeNote}</p>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[var(--warning-soft)]">
+            <Sparkles className="w-3.5 h-3.5 text-[var(--warning)] flex-shrink-0" />
+            <p className="text-[12px] text-[var(--text-secondary)]">{plan.alternativeNote}</p>
           </div>
         )}
         {plan.totalTime && (
@@ -624,7 +627,7 @@ function TravelRouteCard({
           onClick={() => hasMapCoords && onViewMap(plan)}
           className={`flex items-center justify-center gap-2 py-3 px-4 rounded-2xl text-[13px] font-semibold transition-all duration-200 border ${
             hasMapCoords
-              ? "border-[var(--brand-trust-blue)]/35 bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] hover:bg-blue-100 active:scale-[0.98]"
+              ? "border-[var(--brand-trust-blue)]/35 bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] hover:bg-[color-mix(in_srgb,var(--brand-trust-blue)_18%,var(--bg-surface))] active:scale-[0.98]"
               : "border-[var(--border-default)] bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] cursor-not-allowed"
           }`}
         >
@@ -731,7 +734,7 @@ function PlanPreviewTimelineBody({
           onClick={() => hasMapCoords && onViewMap(plan)}
           className={`flex w-full items-center justify-center gap-2 rounded-2xl py-3 px-4 text-[13px] font-semibold transition-all duration-200 border ${
             hasMapCoords
-              ? "border-[var(--brand-trust-blue)]/35 bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] hover:bg-blue-100 active:scale-[0.98]"
+              ? "border-[var(--brand-trust-blue)]/35 bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] hover:bg-[color-mix(in_srgb,var(--brand-trust-blue)_18%,var(--bg-surface))] active:scale-[0.98]"
               : "border-[var(--border-default)] bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] cursor-not-allowed"
           }`}
         >
@@ -911,12 +914,14 @@ function PreferenceChipsCard({
   const canSubmit = displayChips.length > 0 && hasCoreSlots && !isGenerating;
 
   return (
-    <div className="mt-3 w-full max-w-[480px] rounded-[20px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-4 shadow-[0_4px_24px_rgba(20,20,20,0.06)]">
+    <div className="mt-3 w-full max-w-[480px] rounded-[20px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-4 shadow-[0_4px_24px_rgba(20,20,20,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.32)]">
       <div className="flex items-center gap-2 mb-2">
         <Sparkles className="w-3.5 h-3.5 text-[var(--brand-trust-blue)]" />
         <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">정리한 여행 조건</span>
         {readyToGenerateRoute && (
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">동선 생성 가능</span>
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--success-soft)] text-[var(--success)]">
+            동선 생성 가능
+          </span>
         )}
       </div>
       <p className="text-[12px] text-[var(--text-secondary)] mb-3 leading-relaxed">
@@ -931,14 +936,14 @@ function PreferenceChipsCard({
           displayChips.map((c) => (
             <span
               key={c.id}
-              className="v5-prompt-chip-item inline-flex shrink-0 items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full text-[12px] font-medium bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] border border-blue-100"
+              className="v5-prompt-chip-item inline-flex shrink-0 items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full text-[12px] font-medium bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] border border-[color-mix(in_srgb,var(--brand-trust-blue)_24%,var(--border-default))]"
             >
               <span className="text-[10px] opacity-80">{c.label}</span>
               <span className="text-[var(--text-strong)]">{c.value}</span>
               <button
                 type="button"
                 onClick={() => onRemoveChip(c.id)}
-                className="ml-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:bg-white/80 hover:text-[var(--error)] transition-colors"
+                className="ml-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--error)] transition-colors"
                 aria-label={`${c.label} 칩 제거`}
               >
                 <X className="w-3 h-3" />
@@ -1005,7 +1010,7 @@ function MessageBubble({
         <div className={`px-4 py-3 rounded-2xl text-[14px] leading-relaxed ${
           isUser
             ? "bg-[var(--brand-primary)] text-[var(--text-on-brand)] rounded-br-sm"
-            : "bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-bl-sm shadow-[0_1px_6px_rgba(20,20,20,0.05)]"
+            : "bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-bl-sm shadow-[0_1px_6px_rgba(20,20,20,0.05)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.28)]"
         }`}>
           {message.isStreaming && !message.content ? (
             <span className="text-[13px] text-[var(--text-muted)]">답변을 이어서 쓰는 중…</span>
@@ -1139,7 +1144,7 @@ function EmptyStateHybridCard({
     draft.region.trim().length > 0 && draft.schedule.trim().length > 0 && !disabled;
 
   return (
-    <div className="w-full max-w-[480px] rounded-[20px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-4 shadow-[0_4px_24px_rgba(20,20,20,0.06)] select-text mb-6">
+    <div className="w-full max-w-[480px] rounded-[20px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-4 shadow-[0_4px_24px_rgba(20,20,20,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.32)] select-text mb-6">
       <div className="flex items-center gap-2 mb-2">
         <Sparkles className="w-3.5 h-3.5 text-[var(--brand-trust-blue)] shrink-0" aria-hidden />
         <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
@@ -1160,7 +1165,7 @@ function EmptyStateHybridCard({
               return (
                 <span
                   key={key}
-                  className="v5-prompt-chip-item inline-flex shrink-0 items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full text-[12px] font-medium bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] border border-blue-100 max-w-full"
+                  className="v5-prompt-chip-item inline-flex shrink-0 items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full text-[12px] font-medium bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] border border-[color-mix(in_srgb,var(--brand-trust-blue)_24%,var(--border-default))] max-w-full"
                 >
                   <span className="text-[10px] opacity-80 shrink-0">{hint}</span>
                   <span className="text-[var(--text-strong)] truncate min-w-0 max-w-[10rem] sm:max-w-[14rem]">
@@ -1172,7 +1177,7 @@ function EmptyStateHybridCard({
                       onDraftChange({ ...draft, [key]: "" });
                       setOpenKey((k) => (k === key ? null : k));
                     }}
-                    className="ml-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:bg-white/80 hover:text-[var(--error)] transition-colors shrink-0 touch-manipulation"
+                    className="ml-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--error)] transition-colors shrink-0 touch-manipulation"
                     aria-label={`${hint} 선택 취소`}
                   >
                     <X className="w-3 h-3" />
@@ -1183,7 +1188,7 @@ function EmptyStateHybridCard({
             return (
               <div
                 key={key}
-                className="v5-prompt-chip-item inline-flex shrink-0 items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full text-[12px] font-medium bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] border border-blue-100"
+                className="v5-prompt-chip-item inline-flex shrink-0 items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full text-[12px] font-medium bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] border border-[color-mix(in_srgb,var(--brand-trust-blue)_24%,var(--border-default))]"
               >
                 <button
                   type="button"
@@ -1200,7 +1205,7 @@ function EmptyStateHybridCard({
                     e.stopPropagation();
                     setOpenKey((k) => (k === key ? null : k));
                   }}
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:bg-white/80 transition-colors touch-manipulation"
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] transition-colors touch-manipulation"
                   aria-label={openKey === key ? `${hint} 후보 닫기` : `${hint} 고르기`}
                   title={openKey === key ? "닫기" : "후보 보기"}
                 >
@@ -2377,11 +2382,12 @@ export function V5ChatShell() {
               </span>
             </div>
             <div ref={chatHeaderMenuRef} className="flex items-center gap-2 relative">
+              <AppleThemeToggle />
               {!isLg && latestPlanForSplitPanel && (
                 <button
                   type="button"
                   onClick={() => setMobilePlanFullscreenOpen(true)}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--brand-trust-blue)]/35 bg-[var(--brand-trust-blue-soft)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--brand-trust-blue)] hover:bg-blue-100/80 touch-manipulation"
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--brand-trust-blue)]/35 bg-[var(--brand-trust-blue-soft)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--brand-trust-blue)] hover:bg-[color-mix(in_srgb,var(--brand-trust-blue)_18%,var(--bg-surface))] touch-manipulation"
                   title="동선 타임라인 전체 보기"
                 >
                   <Map className="h-3.5 w-3.5 shrink-0" aria-hidden />
