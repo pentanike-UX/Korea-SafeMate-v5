@@ -123,7 +123,7 @@ Gemini generateObject → planResponseSchema
 
 **프로덕션**: `OPENAI_API_KEY`는 Vercel(또는 호스트) 환경 변수에 넣어야 하며, `.env.local`만 있으면 배포 URL 요청에서는 OpenAI가 호출되지 않습니다.
 
-**Structured Outputs / strict `json_schema`**: Groq 등은 `properties`에 있는 키를 `required`에도 전부 넣어야 합니다. Zod에서 `.optional()`만 쓰면 스키마 불일치로 400이 날 수 있어, `travel-chat-schema.server.ts`는 빈 문자열·`null`·`default()`로 맞춥니다.
+**Structured Outputs / strict `json_schema`**: Groq 등은 `properties`에 있는 키를 `required`에도 전부 넣어야 합니다. Vercel AI SDK는 Zod 필드가 `isOptional()`이면 JSON Schema `required`에서 빼는데, **`z.string().default("")`도 optional로 간주**되어 `category` 등이 누락될 수 있습니다. 그래서 `travel-chat-schema.server.ts`는 칩·스팟·플랜 필드를 **`.default()` 없이 필수**로 두고, 프롬프트에서 빈 문자열·`null`을 쓰도록 안내합니다.
 
 ---
 
