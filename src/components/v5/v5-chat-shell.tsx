@@ -15,6 +15,7 @@ import {
   type DBConversation, type DBMessage, type DBSavedPlan,
 } from "@/lib/v5/chat-persistence";
 import { V5PlanMapModal } from "./v5-plan-map-modal";
+import { consumeTravelChatSse } from "@/lib/travel-chat/consume-chat-sse";
 
 // ─── Domain Types ──────────────────────────────────────────────────────────────
 
@@ -46,6 +47,8 @@ interface Message {
   canGenerateRoute?: boolean;
   /** DB에 저장된 경우 row ID */
   dbId?: string;
+  /** `/api/chat` 스트리밍 수신 중 */
+  isStreaming?: boolean;
 }
 
 interface Conversation {
@@ -435,7 +438,19 @@ function MessageBubble({
             ? "bg-[var(--brand-primary)] text-[var(--text-on-brand)] rounded-br-sm"
             : "bg-[var(--bg-elevated)] text-[var(--text-primary)] border border-[var(--border-default)] rounded-bl-sm shadow-[0_1px_6px_rgba(20,20,20,0.05)]"
         }`}>
-          {message.content}
+          {message.isStreaming && !message.content ? (
+            <span className="text-[13px] text-[var(--text-muted)]">답변을 이어서 쓰는 중…</span>
+          ) : (
+            <>
+              {message.content}
+              {message.isStreaming && (
+                <span
+                  className="inline-block w-0.5 h-4 ml-0.5 align-[-2px] bg-[var(--brand-trust-blue)]/80 animate-pulse rounded-sm"
+                  aria-hidden
+                />
+              )}
+            </>
+          )}
         </div>
         {showChips && (
           <PreferenceChipsCard
@@ -683,6 +698,10 @@ export function V5ChatShell() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const streamRafRef = useRef<number | null>(null);
+  const streamBufferRef = useRef("");
+  const streamMsgIdRef = useRef<string | null>(null);
+  const streamConvIdRef = useRef<string | null>(null);
   // 마지막으로 데이터를 로드한 userId (재로드 방지)
   const loadedForUserRef = useRef<string | null>(undefined as unknown as null);
 
@@ -765,6 +784,52 @@ export function V5ChatShell() {
   // ── 대화 전환 (로그인 유저는 messages 로드 필요 표시) ─────────────────────────
   const setActiveConvId = useCallback((id: string) => {
     setActiveConvIdRaw(id);
+  }, []);
+
+  const flushStreamBufferToConversations = useCallback(() => {
+    const id = streamMsgIdRef.current;
+    const convId = streamConvIdRef.current;
+    const text = streamBufferRef.current;
+    if (!id || !convId) return;
+    setConversations((prev) =>
+      prev.map((c) => {
+        if (c.id !== convId) return c;
+        return {
+          ...c,
+          messages: c.messages.map((m) =>
+            m.id === id ? { ...m, content: text } : m
+          ),
+        };
+      })
+    );
+  }, []);
+
+  const scheduleStreamFlush = useCallback(() => {
+    if (streamRafRef.current != null) return;
+    streamRafRef.current = requestAnimationFrame(() => {
+      streamRafRef.current = null;
+      flushStreamBufferToConversations();
+      queueMicrotask(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      });
+    });
+  }, [flushStreamBufferToConversations]);
+
+  const finalizeStreamRaf = useCallback(() => {
+    if (streamRafRef.current != null) {
+      cancelAnimationFrame(streamRafRef.current);
+      streamRafRef.current = null;
+    }
+    flushStreamBufferToConversations();
+  }, [flushStreamBufferToConversations]);
+
+  useEffect(() => {
+    return () => {
+      if (streamRafRef.current != null) {
+        cancelAnimationFrame(streamRafRef.current);
+        streamRafRef.current = null;
+      }
+    };
   }, []);
 
   // ── Auto-scroll ───────────────────────────────────────────────────────────
@@ -880,6 +945,133 @@ export function V5ChatShell() {
         if (newTitle) void updateConversationTitle(activeConvId, newTitle);
       }
 
+      const convId = activeConvId;
+
+      if (userId) {
+        setIsTyping(true);
+        let res: Response | null = null;
+        try {
+          res = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ message: content }),
+          });
+        } catch {
+          res = null;
+        }
+
+        const ct = res?.headers.get("content-type") ?? "";
+        const canStream = Boolean(
+          res?.ok && res.body && ct.includes("text/event-stream")
+        );
+
+        if (canStream && res?.body) {
+          const aiMsgId = `tmp-ai-${Date.now()}`;
+          streamMsgIdRef.current = aiMsgId;
+          streamConvIdRef.current = convId;
+          streamBufferRef.current = "";
+
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id !== convId
+                ? c
+                : {
+                    ...c,
+                    messages: [
+                      ...c.messages,
+                      {
+                        id: aiMsgId,
+                        role: "assistant",
+                        content: "",
+                        timestamp: new Date(),
+                        isStreaming: true,
+                      },
+                    ],
+                  }
+            )
+          );
+          setIsTyping(false);
+
+          const reader = res.body.getReader();
+          const result = await consumeTravelChatSse(reader, (delta) => {
+            streamBufferRef.current += delta;
+            scheduleStreamFlush();
+          });
+
+          finalizeStreamRaf();
+          queueMicrotask(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+          });
+
+          streamMsgIdRef.current = null;
+          streamConvIdRef.current = null;
+          const finalText = streamBufferRef.current.trim();
+          streamBufferRef.current = "";
+
+          if (!result.ok) {
+            const errMsg =
+              result.message ||
+              (result.code === "ABORTED"
+                ? "요청이 취소되었습니다."
+                : "응답을 받지 못했습니다.");
+            const errContent = finalText
+              ? `${finalText}\n\n[${errMsg}]`
+              : errMsg;
+            const aiErr: Message = {
+              id: aiMsgId,
+              role: "assistant",
+              content: errContent,
+              timestamp: new Date(),
+            };
+            setConversations((prev) =>
+              prev.map((c) => {
+                if (c.id !== convId) return c;
+                return {
+                  ...c,
+                  messages: c.messages.map((m) =>
+                    m.id === aiMsgId ? { ...aiErr, isStreaming: false } : m
+                  ),
+                };
+              })
+            );
+            setIsTyping(false);
+            return;
+          }
+
+          let displayText = finalText;
+          if (result.warning) {
+            displayText = displayText
+              ? `${displayText}\n\n⚠ ${result.warning}`
+              : `⚠ ${result.warning}`;
+          }
+          if (!displayText) displayText = "응답이 비어 있습니다.";
+
+          const aiMsg: Message = {
+            id: aiMsgId,
+            role: "assistant",
+            content: displayText,
+            timestamp: new Date(),
+          };
+
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== convId) return c;
+              return {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === aiMsgId ? { ...aiMsg, isStreaming: false } : m
+                ),
+              };
+            })
+          );
+
+          persistAssistantMessage(aiMsg, convId);
+          setIsTyping(false);
+          return;
+        }
+      }
+
       setIsTyping(true);
 
       const apiMessages = messagesToApiPayload([...priorMsgs, userMsg]);
@@ -927,11 +1119,11 @@ export function V5ChatShell() {
       };
 
       setConversations((prev) =>
-        prev.map((c) => (c.id !== activeConvId ? c : { ...c, messages: [...c.messages, aiMsg] }))
+        prev.map((c) => (c.id !== convId ? c : { ...c, messages: [...c.messages, aiMsg] }))
       );
       setIsTyping(false);
 
-      persistAssistantMessage(aiMsg, activeConvId);
+      persistAssistantMessage(aiMsg, convId);
     },
     [
       inputValue,
@@ -941,6 +1133,8 @@ export function V5ChatShell() {
       userId,
       conversations,
       persistAssistantMessage,
+      scheduleStreamFlush,
+      finalizeStreamRaf,
     ]
   );
 
