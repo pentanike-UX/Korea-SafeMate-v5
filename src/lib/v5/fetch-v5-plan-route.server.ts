@@ -12,22 +12,40 @@ import {
 import type { DirectionsProfile } from "@/lib/routing/directions-types";
 import { getServerSupabaseForUser } from "@/lib/supabase/server-user";
 import { recordWaylyUsageFireAndForget } from "@/lib/wayly/record-usage.server";
+import type { PlanTransitMode } from "@/lib/v5/plan-transit-estimate.server";
+import {
+  estimateFerryLegSeconds,
+  estimateFlightLegSeconds,
+  inferTransitModeFromSpotText,
+} from "@/lib/v5/plan-transit-estimate.server";
 
 const MAX_COORDS = 25;
 
-/** 스팟 i → i+1 구간 (도로 기준, OSRM/네이버·캐시) */
+/** 라우팅 입력 — 스팟 i→i+1 이동은 spots[i].transitMode / transitToNext 로 판별 */
+export type PlanRouteSpotInput = {
+  lat: number;
+  lng: number;
+  transitMode?: PlanTransitMode;
+  transitToNext?: string;
+};
+
+/** 스팟 i → i+1 구간 */
 export type V5PlanRouteLegSummary = {
   durationSeconds: number | null;
   distanceMeters: number | null;
+  mode?: PlanTransitMode;
 };
 
 export type V5PlanRouteSuccess = {
   ok: true;
-  /** GeoJSON LineString coordinates: [lng, lat][] */
   coordinates: [number, number][];
-  /** UI/디버그용 */
-  kind: "full-foot" | "full-driving" | "chained-foot" | "chained-driving" | "chained-mixed";
-  /** 스팟 순서대로 n-1개 구간의 이동 시간·거리 */
+  kind:
+    | "full-foot"
+    | "full-driving"
+    | "chained-foot"
+    | "chained-driving"
+    | "chained-mixed"
+    | "chained-air";
   legs: V5PlanRouteLegSummary[];
 };
 
@@ -58,7 +76,6 @@ function maxLegMeters(coords: { lat: number; lng: number }[]): number {
   return m;
 }
 
-/** OSRM/네이버 구간을 이어 [lng,lat] 하나의 LineString으로 */
 function mergeLngLatPaths(segments: [number, number][][]): [number, number][] {
   const out: [number, number][] = [];
   for (const seg of segments) {
@@ -80,11 +97,28 @@ function validateCoords(coordinates: { lat: number; lng: number }[]): V5PlanRout
   if (coordinates.length < 2) return { ok: false, code: "TOO_FEW_POINTS" };
   if (coordinates.length > MAX_COORDS) return { ok: false, code: "INVALID" };
   for (const c of coordinates) {
-    if (typeof c.lat !== "number" || typeof c.lng !== "number" || !Number.isFinite(c.lat) || !Number.isFinite(c.lng)) {
+    if (
+      typeof c.lat !== "number" ||
+      typeof c.lng !== "number" ||
+      !Number.isFinite(c.lat) ||
+      !Number.isFinite(c.lng)
+    ) {
       return { ok: false, code: "INVALID" };
     }
   }
   return null;
+}
+
+/** 스팟 i → i+1 레그의 이동 모드 (spots[i] 메타 기준) */
+function resolveLegModeFromSpot(spot: PlanRouteSpotInput): PlanTransitMode {
+  return spot.transitMode ?? inferTransitModeFromSpotText(spot.transitToNext);
+}
+
+function allSurfaceLegs(spots: PlanRouteSpotInput[]): boolean {
+  for (let i = 0; i < spots.length - 1; i++) {
+    if (resolveLegModeFromSpot(spots[i]!) !== "surface") return false;
+  }
+  return true;
 }
 
 async function tryFullRoute(
@@ -115,25 +149,35 @@ async function collectLegSummaries(
     out.push({
       durationSeconds: data?.durationSeconds ?? null,
       distanceMeters: data?.distanceMeters ?? null,
+      mode: "surface",
     });
   }
   return out;
 }
 
-async function tryLeg(
+async function resolveSurfaceLeg(
   a: { lat: number; lng: number },
   b: { lat: number; lng: number },
   primary: DirectionsProfile,
   hooks?: ResolveDirectionsHooks,
-): Promise<{ path: [number, number][]; straight: boolean }> {
-  const pair = [a, b];
-  let data = await resolveDirections(pair, primary, hooks);
+): Promise<{
+  path: [number, number][];
+  straight: boolean;
+  durationSeconds: number | null;
+  distanceMeters: number | null;
+}> {
+  let data = await resolveDirections([a, b], primary, hooks);
   if (!data?.path?.length || data.path.length < 2) {
     const alt: DirectionsProfile = primary === "foot" ? "driving" : "foot";
-    data = await resolveDirections(pair, alt, hooks);
+    data = await resolveDirections([a, b], alt, hooks);
   }
   if (data?.path?.length && data.path.length >= 2) {
-    return { path: data.path.map((p) => [p.lng, p.lat] as [number, number]), straight: false };
+    return {
+      path: data.path.map((p) => [p.lng, p.lat] as [number, number]),
+      straight: false,
+      durationSeconds: data.durationSeconds ?? null,
+      distanceMeters: data.distanceMeters ?? null,
+    };
   }
   return {
     path: [
@@ -141,18 +185,93 @@ async function tryLeg(
       [b.lng, b.lat],
     ],
     straight: true,
+    durationSeconds: data?.durationSeconds ?? null,
+    distanceMeters: data?.distanceMeters ?? haversineMeters(a, b),
   };
 }
 
 /**
- * 플랜 스팟 좌표 순서대로 실제 도로(도보/주행) 기준 경로를 만든다.
- * - `resolveDirections`: 다지점 OSRM, 2점+주행은 네이버 우선 가능.
- * - 한 사용자 액션당 rate limit 1회만 소모한 뒤 내부에서 여러 `resolveDirections` 호출(캐시 활용).
- * - 대중교통 레그는 별도 API가 없어 반영하지 않는다.
+ * 구간별 이어 붙이기 — 항공·페리는 직선 + 블록 시간, 지상은 도로 라우팅.
+ */
+async function buildChainedRoute(
+  spots: PlanRouteSpotInput[],
+  primary: DirectionsProfile,
+  hooks?: ResolveDirectionsHooks,
+): Promise<{
+  merged: [number, number][];
+  legs: V5PlanRouteLegSummary[];
+  anyStraight: boolean;
+  hasAirOrFerry: boolean;
+}> {
+  const pieces: [number, number][][] = [];
+  const legs: V5PlanRouteLegSummary[] = [];
+  let anyStraight = false;
+  let hasAirOrFerry = false;
+
+  for (let i = 0; i < spots.length - 1; i++) {
+    const a = spots[i]!;
+    const b = spots[i + 1]!;
+    const mode = resolveLegModeFromSpot(a);
+
+    if (mode === "flight") {
+      hasAirOrFerry = true;
+      const est = estimateFlightLegSeconds(a, b);
+      pieces.push([
+        [a.lng, a.lat],
+        [b.lng, b.lat],
+      ]);
+      legs.push({
+        durationSeconds: est.seconds,
+        distanceMeters: est.distanceMeters,
+        mode: "flight",
+      });
+      anyStraight = true;
+      continue;
+    }
+
+    if (mode === "ferry") {
+      hasAirOrFerry = true;
+      const est = estimateFerryLegSeconds(a, b);
+      pieces.push([
+        [a.lng, a.lat],
+        [b.lng, b.lat],
+      ]);
+      legs.push({
+        durationSeconds: est.seconds,
+        distanceMeters: est.distanceMeters,
+        mode: "ferry",
+      });
+      anyStraight = true;
+      continue;
+    }
+
+    const leg = await resolveSurfaceLeg(a, b, primary, hooks);
+    pieces.push(leg.path);
+    if (leg.straight) anyStraight = true;
+    legs.push({
+      durationSeconds: leg.durationSeconds,
+      distanceMeters: leg.distanceMeters,
+      mode: "surface",
+    });
+  }
+
+  return {
+    merged: mergeLngLatPaths(pieces),
+    legs,
+    anyStraight,
+    hasAirOrFerry,
+  };
+}
+
+/**
+ * 플랜 스팟 순서대로 경로·레그 시간을 만든다.
+ * - 지상: OSRM/네이버 도보·주행
+ * - 항공·페리: 대권 직선 표시 + 문-투-문 블록 추정(도로 API 미호출)
  */
 export async function fetchV5PlanRouteGeometry(
-  coordinates: { lat: number; lng: number }[],
+  spots: PlanRouteSpotInput[],
 ): Promise<V5PlanRouteResult> {
+  const coordinates = spots.map((s) => ({ lat: s.lat, lng: s.lng }));
   const invalid = validateCoords(coordinates);
   if (invalid) return invalid;
 
@@ -182,54 +301,69 @@ export async function fetchV5PlanRouteGeometry(
     });
   };
 
-  const fullPrimary = await tryFullRoute(coordinates, primary, routeHooks);
-  if (fullPrimary) {
-    const legs = await collectLegSummaries(coordinates, primary, routeHooks);
+  const surfaceOnly = allSurfaceLegs(spots);
+
+  if (surfaceOnly) {
+    const fullPrimary = await tryFullRoute(coordinates, primary, routeHooks);
+    if (fullPrimary) {
+      const legs = await collectLegSummaries(coordinates, primary, routeHooks);
+      await flushRoutingUsage();
+      return {
+        ok: true,
+        coordinates: fullPrimary,
+        kind: primary === "foot" ? "full-foot" : "full-driving",
+        legs,
+      };
+    }
+
+    const fullSecondary = await tryFullRoute(coordinates, secondary, routeHooks);
+    if (fullSecondary) {
+      const legs = await collectLegSummaries(coordinates, secondary, routeHooks);
+      await flushRoutingUsage();
+      return {
+        ok: true,
+        coordinates: fullSecondary,
+        kind: secondary === "foot" ? "full-foot" : "full-driving",
+        legs,
+      };
+    }
+  }
+
+  const chainedPrimary = await buildChainedRoute(spots, primary, routeHooks);
+  if (chainedPrimary.merged.length < 2) {
+    const chainedSecondary = await buildChainedRoute(spots, secondary, routeHooks);
+    if (chainedSecondary.merged.length < 2) {
+      await flushRoutingUsage();
+      return { ok: false, code: "EMPTY" };
+    }
     await flushRoutingUsage();
+    let kind: V5PlanRouteSuccess["kind"] = "chained-mixed";
+    if (!chainedSecondary.anyStraight && surfaceOnly) {
+      kind = secondary === "foot" ? "chained-foot" : "chained-driving";
+    } else if (chainedSecondary.hasAirOrFerry) {
+      kind = "chained-air";
+    }
     return {
       ok: true,
-      coordinates: fullPrimary,
-      kind: primary === "foot" ? "full-foot" : "full-driving",
-      legs,
+      coordinates: chainedSecondary.merged,
+      kind,
+      legs: chainedSecondary.legs,
     };
   }
-
-  const fullSecondary = await tryFullRoute(coordinates, secondary, routeHooks);
-  if (fullSecondary) {
-    const legs = await collectLegSummaries(coordinates, secondary, routeHooks);
-    await flushRoutingUsage();
-    return {
-      ok: true,
-      coordinates: fullSecondary,
-      kind: secondary === "foot" ? "full-foot" : "full-driving",
-      legs,
-    };
-  }
-
-  const pieces: [number, number][][] = [];
-  let anyStraight = false;
-
-  for (let i = 0; i < coordinates.length - 1; i++) {
-    const a = coordinates[i]!;
-    const b = coordinates[i + 1]!;
-    const leg = await tryLeg(a, b, primary, routeHooks);
-    pieces.push(leg.path);
-    if (leg.straight) anyStraight = true;
-  }
-
-  const merged = mergeLngLatPaths(pieces);
-  if (merged.length < 2) {
-    await flushRoutingUsage();
-    return { ok: false, code: "EMPTY" };
-  }
-
-  let kind: V5PlanRouteSuccess["kind"] = "chained-mixed";
-  if (!anyStraight) {
-    kind = primary === "foot" ? "chained-foot" : "chained-driving";
-  }
-
-  const legs = await collectLegSummaries(coordinates, primary, routeHooks);
 
   await flushRoutingUsage();
-  return { ok: true, coordinates: merged, kind, legs };
+
+  let kind: V5PlanRouteSuccess["kind"] = "chained-mixed";
+  if (!chainedPrimary.anyStraight && surfaceOnly) {
+    kind = primary === "foot" ? "chained-foot" : "chained-driving";
+  } else if (chainedPrimary.hasAirOrFerry) {
+    kind = "chained-air";
+  }
+
+  return {
+    ok: true,
+    coordinates: chainedPrimary.merged,
+    kind,
+    legs: chainedPrimary.legs,
+  };
 }

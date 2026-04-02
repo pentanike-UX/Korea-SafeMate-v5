@@ -74,7 +74,10 @@ type SpotType = "attraction" | "food" | "cafe" | "transport" | "hotel";
 
 interface TravelSpot {
   id: string; name: string; type: SpotType; duration: string;
-  note?: string; transitToNext?: string; lat?: number; lng?: number;
+  note?: string;
+  transitToNext?: string;
+  transitMode?: "surface" | "flight" | "ferry";
+  lat?: number; lng?: number;
 }
 
 interface TravelPlan {
@@ -499,7 +502,165 @@ function TravelRouteCard({
   );
 }
 
+/** 태블릿 가로 2분할 우측: 타임라인 + 지도 진입 (투어 API 미호출 — 채팅 카드와 중복 요청 방지) */
+function TabletPlanPreviewPane({
+  plan,
+  isSaved,
+  onSave,
+  onViewMap,
+}: {
+  plan: TravelPlan | null;
+  isSaved: boolean;
+  onSave: (p: TravelPlan) => void;
+  onViewMap: (p: TravelPlan) => void;
+}) {
+  const hasMapCoords =
+    plan != null &&
+    plan.spots.some(
+      (s) =>
+        s.lat != null &&
+        s.lng != null &&
+        Number.isFinite(s.lat) &&
+        Number.isFinite(s.lng),
+    );
+
+  if (!plan) {
+    return (
+      <aside
+        className="v5-chat-split-preview border-l border-[var(--border-default)] bg-[var(--bg-surface)]"
+        aria-label="동선 미리보기"
+      >
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-5 py-8 text-center">
+          <Map className="h-8 w-8 text-[var(--text-muted)]/40" aria-hidden />
+          <p className="text-[13px] font-medium text-[var(--text-secondary)] leading-snug">
+            동선이 생성되면
+          </p>
+          <p className="text-[12px] text-[var(--text-muted)] leading-relaxed max-w-[220px]">
+            이 패널에 타임라인이 보이고, 지도로 바로 열 수 있어요.
+          </p>
+        </div>
+      </aside>
+    );
+  }
+
+  return (
+    <aside
+      className="v5-chat-split-preview border-l border-[var(--border-default)] bg-[var(--bg-surface)]"
+      aria-label="지도 및 타임라인"
+    >
+      <div className="flex-shrink-0 px-4 py-3 border-b border-[var(--border-default)] bg-[var(--bg-elevated)]/50">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
+          지도 · 타임라인
+        </p>
+        <p className="text-[15px] font-semibold text-[var(--text-strong)] leading-snug mt-1 line-clamp-2">
+          {plan.title}
+        </p>
+        <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+          {plan.region} · {plan.days}일 코스
+        </p>
+      </div>
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3">
+        <ol className="space-y-0 list-none m-0 p-0">
+          {plan.spots.map((spot, idx) => (
+            <li key={spot.id} className="relative">
+              <div className="flex gap-2.5 py-2 pl-1">
+                <div className="flex flex-col items-center flex-shrink-0 w-6">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--text-strong)] text-[10px] font-bold text-white">
+                    {idx + 1}
+                  </span>
+                  {idx < plan.spots.length - 1 && (
+                    <span className="w-px flex-1 min-h-[0.75rem] bg-[var(--border-strong)] my-0.5" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1 pb-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-[13px] font-semibold text-[var(--text-strong)] leading-snug line-clamp-2">
+                      {spot.name}
+                    </p>
+                    <span className="flex-shrink-0 text-[10px] text-[var(--text-muted)] tabular-nums whitespace-nowrap">
+                      {spot.duration}
+                    </span>
+                  </div>
+                  {spot.note && (
+                    <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 line-clamp-3 leading-relaxed">
+                      {spot.note}
+                    </p>
+                  )}
+                  {spot.transitToNext && idx < plan.spots.length - 1 && (
+                    <p className="text-[10px] text-[var(--text-muted)] mt-1 flex items-center gap-1">
+                      <Navigation className="w-3 h-3 flex-shrink-0" aria-hidden />
+                      {spot.transitToNext}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <div className="flex-shrink-0 p-3 border-t border-[var(--border-default)] bg-[var(--bg-page)] flex flex-col gap-2">
+        <button
+          type="button"
+          disabled={!hasMapCoords}
+          title={
+            hasMapCoords
+              ? "동선을 지도에서 봅니다."
+              : "스팟에 좌표가 있어야 지도를 열 수 있어요."
+          }
+          onClick={() => hasMapCoords && onViewMap(plan)}
+          className={`flex w-full items-center justify-center gap-2 rounded-2xl py-3 px-4 text-[13px] font-semibold transition-all duration-200 border ${
+            hasMapCoords
+              ? "border-[var(--brand-trust-blue)]/35 bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] hover:bg-blue-100 active:scale-[0.98]"
+              : "border-[var(--border-default)] bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] cursor-not-allowed"
+          }`}
+        >
+          <Map className="w-4 h-4" />
+          지도 보기
+        </button>
+        <button
+          type="button"
+          onClick={() => !isSaved && onSave(plan)}
+          className={`flex w-full items-center justify-center gap-2 rounded-2xl py-2.5 text-[12px] font-semibold transition-all duration-200 ${
+            isSaved
+              ? "bg-[var(--success-soft)] text-[var(--success)] cursor-default"
+              : "bg-[var(--brand-primary)] text-[var(--text-on-brand)] hover:bg-[var(--brand-primary-hover)] active:scale-[0.98]"
+          }`}
+        >
+          {isSaved ? (
+            <>
+              <BookmarkCheck className="w-4 h-4" />
+              저장됨
+            </>
+          ) : (
+            <>
+              <Bookmark className="w-4 h-4" />
+              동선 저장
+            </>
+          )}
+        </button>
+      </div>
+    </aside>
+  );
+}
+
 const DEPARTURE_CHIP_ID = "trip_departure_origin";
+
+/**
+ * Gemini가 주는 칩 id는 snake_case로 매번 달라질 수 있음.
+ * UI에서는 label(출발·귀경지 등)으로도 동일 슬롯을 인식한다.
+ */
+function isDeparturePreferenceChip(c: PreferenceChip): boolean {
+  if (c.id === DEPARTURE_CHIP_ID) return true;
+  const raw = c.label.trim();
+  const compact = raw.replace(/\s+/g, "");
+  if (compact.includes("출발·귀경지") || compact.includes("출발/귀경지")) return true;
+  if (raw === "출발지" || compact === "출발지") return true;
+  if (/출발/.test(compact) && (/귀경/.test(compact) || /복귀/.test(compact))) return true;
+  const idLower = c.id.toLowerCase();
+  if (idLower.includes("departure") && (idLower.includes("origin") || idLower.includes("return")))
+    return true;
+  return false;
+}
 
 function PreferenceChipsCard({
   chips,
@@ -514,7 +675,8 @@ function PreferenceChipsCard({
   onConfirm: (slots: PreferenceChip[]) => void;
   isGenerating: boolean;
 }) {
-  const depFromChip = chips.find((c) => c.id === DEPARTURE_CHIP_ID)?.value ?? "";
+  const depFromChip =
+    chips.find((c) => isDeparturePreferenceChip(c))?.value?.trim() ?? "";
   const [departure, setDeparture] = useState(depFromChip);
 
   useEffect(() => {
@@ -522,7 +684,7 @@ function PreferenceChipsCard({
   }, [depFromChip]);
 
   const displayChips = useMemo(
-    () => chips.filter((c) => c.id !== DEPARTURE_CHIP_ID),
+    () => chips.filter((c) => !isDeparturePreferenceChip(c)),
     [chips],
   );
 
@@ -570,14 +732,15 @@ function PreferenceChipsCard({
         />
       </label>
 
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="v5-prompt-chips-strip overflow-x-auto -mx-1 px-1 pb-1 mb-4 touch-pan-x">
+        <div className="flex flex-nowrap gap-2 pr-3 w-max max-w-none">
         {displayChips.length === 0 ? (
-          <span className="text-[12px] text-[var(--text-muted)]">남은 칩이 없어요. 다시 대화로 알려 주세요.</span>
+          <span className="text-[12px] text-[var(--text-muted)] shrink-0 py-1">남은 칩이 없어요. 다시 대화로 알려 주세요.</span>
         ) : (
           displayChips.map((c) => (
             <span
               key={c.id}
-              className="inline-flex items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full text-[12px] font-medium bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] border border-blue-100"
+              className="v5-prompt-chip-item inline-flex shrink-0 items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full text-[12px] font-medium bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] border border-blue-100"
             >
               <span className="text-[10px] opacity-80">{c.label}</span>
               <span className="text-[var(--text-strong)]">{c.value}</span>
@@ -592,6 +755,7 @@ function PreferenceChipsCard({
             </span>
           ))
         )}
+        </div>
       </div>
       <button
         type="button"
@@ -995,6 +1159,8 @@ export function V5ChatShell() {
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
   const [pricingModalFocus, setPricingModalFocus] = useState<PricingModalFocus>("overview");
   const [composerFocused, setComposerFocused] = useState(false);
+  const [keyboardOverlapPx, setKeyboardOverlapPx] = useState(0);
+  const [isNarrowViewport, setIsNarrowViewport] = useState(false);
 
   const promptChecklist = useMemo(() => evaluateTravelPromptChecklist(inputValue), [inputValue]);
   const showComposerGuide = composerFocused || inputValue.trim().length > 0;
@@ -1002,6 +1168,7 @@ export function V5ChatShell() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatHeaderMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const composerShellRef = useRef<HTMLDivElement>(null);
   const streamRafRef = useRef<number | null>(null);
   const streamBufferRef = useRef("");
   const streamMsgIdRef = useRef<string | null>(null);
@@ -1182,6 +1349,41 @@ export function V5ChatShell() {
     document.body.style.overflow = mobileSidebarOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [mobileSidebarOpen]);
+
+  // ── 모바일: visualViewport로 키보드 가림 보정 ─────────────────────────────
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!vv) return;
+    const update = () => {
+      const ih = window.innerHeight;
+      const overlap = ih - (vv.height + vv.offsetTop);
+      setKeyboardOverlapPx(Math.max(0, Math.round(overlap)));
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const sync = () => setIsNarrowViewport(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.style.setProperty(
+      "--v5-keyboard-overlap",
+      `${keyboardOverlapPx}px`,
+    );
+  }, [keyboardOverlapPx]);
 
   const handleRemovePreferenceChip = useCallback(
     (messageId: string, chipId: string) => {
@@ -1650,6 +1852,17 @@ export function V5ChatShell() {
   const messages = activeConv?.messages ?? [];
   const hasUserMessage = messages.some((m) => m.role === "user");
 
+  const latestPlanForSplitPanel = useMemo((): TravelPlan | null => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m?.role === "assistant" && m.travelPlan) return m.travelPlan;
+    }
+    return null;
+  }, [messages]);
+
+  const composerKeyboardTight =
+    composerFocused && keyboardOverlapPx >= 72 && isNarrowViewport;
+
   const sidebarProps = {
     conversations, savedPlans, activeConvId,
     onSelectConv: setActiveConvId, onNewChat: handleNewChat,
@@ -1689,8 +1902,9 @@ export function V5ChatShell() {
           </>
         )}
 
-        {/* ── Main Chat ────────────────────────────────────────── */}
-        <div className="flex-1 flex flex-col min-w-0 h-full">
+        {/* ── Main Chat (태블릿 가로: 우측 타임라인·지도 패널) ── */}
+        <div className="v5-chat-split-root flex-1 flex flex-col min-w-0 min-h-0 h-full">
+          <div className="v5-chat-split-chat flex flex-col min-w-0 min-h-0 flex-1 h-full overflow-hidden">
           {/* Top Bar */}
           <div className="flex items-center justify-between px-5 py-3.5 md:py-4 border-b border-[var(--border-default)] bg-[var(--bg-surface)] flex-shrink-0 min-h-[52px]">
             <div className="flex items-center gap-3 min-w-0">
@@ -1828,54 +2042,83 @@ export function V5ChatShell() {
           </div>
 
           {/* Input Bar */}
-          <div className="flex-shrink-0 px-5 pb-6 md:pb-8 pt-5 md:pt-7 bg-[var(--bg-page)] border-t border-[var(--border-default)]/40">
+          <div
+            ref={composerShellRef}
+            className={`v5-composer-dock flex-shrink-0 bg-[var(--bg-page)] border-t border-[var(--border-default)]/40 transition-[padding] duration-150 ease-out ${
+              composerKeyboardTight
+                ? "v5-composer-keyboard-tight"
+                : "px-5 pb-6 md:pb-8 pt-5 md:pt-7"
+            }`}
+          >
             <div className="max-w-[720px] mx-auto space-y-3">
               {showComposerGuide && (
                 <div
-                  className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)]/90 px-3.5 py-3 md:px-4 md:py-3.5 shadow-[0_2px_16px_rgba(20,20,20,0.04)] backdrop-blur-sm transition-all duration-200 ease-out"
+                  className="v5-composer-guide-box rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)]/90 px-3 py-2.5 md:px-4 md:py-3.5 shadow-[0_2px_16px_rgba(20,20,20,0.04)] backdrop-blur-sm transition-all duration-200 ease-out"
                   role="status"
                   aria-live="polite"
                   aria-label="입력 가이드"
                 >
-                  <p className="text-[11px] md:text-[12px] font-medium text-[var(--text-muted)] tracking-tight mb-2.5">
-                    알려주시면 동선 짜기가 수월해요
-                  </p>
-                  <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-2">
-                    {TRAVEL_PROMPT_CHECKLIST.map(({ key, label, hint }) => {
-                      const done = promptChecklist[key];
-                      return (
-                        <li
-                          key={key}
-                          className={`flex items-start gap-2 min-w-0 transition-colors duration-150 ${
-                            done ? "text-[var(--text-strong)]" : "text-[var(--text-muted)]"
-                          }`}
-                        >
-                          <span
-                            className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-all duration-200 ${
+                  <div className="flex items-center justify-between gap-2 mb-2 md:mb-2.5">
+                    <p className="text-[11px] md:text-[12px] font-medium text-[var(--text-muted)] tracking-tight">
+                      알려주시면 동선 짜기가 수월해요
+                    </p>
+                    <span className="md:hidden text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)]/80 shrink-0">
+                      스와이프
+                    </span>
+                  </div>
+                  <div className="v5-prompt-chips-strip overflow-x-auto -mx-1 px-1 pb-0.5 touch-pan-x">
+                    <ul
+                      className="flex flex-nowrap gap-2 pr-4 list-none m-0 p-0 w-max max-w-none"
+                      role="list"
+                      aria-label="여행 조건 체크 항목"
+                    >
+                      {TRAVEL_PROMPT_CHECKLIST.map(({ key, label, hint }) => {
+                        const done = promptChecklist[key];
+                        return (
+                          <li
+                            key={key}
+                            className={`v5-prompt-chip-item flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 min-h-[42px] max-w-[min(200px,78vw)] snap-start transition-colors duration-150 touch-manipulation ${
                               done
-                                ? "border-[var(--success)] bg-[var(--success)] text-white scale-100"
-                                : "border-[var(--border-strong)] bg-transparent"
+                                ? "border-[var(--success)]/35 bg-[var(--success-soft)] text-[var(--text-strong)]"
+                                : "border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/90 text-[var(--text-muted)]"
                             }`}
-                            aria-hidden
                           >
-                            {done && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                          </span>
-                          <span className="min-w-0 leading-snug">
-                            <span className="block text-[12px] md:text-[13px] font-semibold">{label}</span>
-                            <span className="block text-[10px] md:text-[11px] opacity-80 font-normal">{hint}</span>
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                            <span
+                              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-200 ${
+                                done
+                                  ? "border-[var(--success)] bg-[var(--success)] text-white"
+                                  : "border-[var(--border-strong)] bg-transparent"
+                              }`}
+                              aria-hidden
+                            >
+                              {done && <Check className="w-3 h-3 stroke-[3]" />}
+                            </span>
+                            <span className="min-w-0 text-left leading-tight">
+                              <span className="block text-[12px] md:text-[13px] font-semibold truncate">{label}</span>
+                              <span className="block text-[9px] md:text-[10px] opacity-80 font-normal truncate">{hint}</span>
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
                 </div>
               )}
-              <div className="flex items-end gap-2.5 px-4 py-3.5 md:px-5 md:py-4 rounded-[1.25rem] bg-[var(--bg-elevated)] border border-[var(--border-default)] shadow-[0_4px_24px_rgba(20,20,20,0.06)] focus-within:border-[var(--brand-trust-blue)] focus-within:shadow-[0_6px_28px_rgba(47,79,143,0.1)] transition-all duration-200">
+              <div className="v5-composer-input-shell flex items-end gap-2.5 px-4 py-3.5 md:px-5 md:py-4 rounded-[1.25rem] bg-[var(--bg-elevated)] border border-[var(--border-default)] shadow-[0_4px_24px_rgba(20,20,20,0.06)] focus-within:border-[var(--brand-trust-blue)] focus-within:shadow-[0_6px_28px_rgba(47,79,143,0.1)] transition-all duration-200">
                 <textarea ref={textareaRef} value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  onFocus={() => setComposerFocused(true)}
+                  onFocus={() => {
+                    setComposerFocused(true);
+                    requestAnimationFrame(() => {
+                      composerShellRef.current?.scrollIntoView({
+                        block: "end",
+                        behavior: "smooth",
+                      });
+                    });
+                  }}
                   onBlur={() => setComposerFocused(false)}
+                  enterKeyHint="send"
                   placeholder="출발지·지역·일정·인원·교통 등을 알려주세요 (예: 서울역 출발 경주 2박 3일 맛집·도보)"
                   rows={1}
                   className="flex-1 bg-transparent resize-none outline-none text-[14px] md:text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] leading-relaxed py-1 min-h-[22px]" />
@@ -1891,7 +2134,7 @@ export function V5ChatShell() {
                   <Send className="w-4 h-4" />
                 </button>
               </div>
-              <p className="text-center text-[11px] text-[var(--text-muted)] mt-1 hidden md:block">
+              <p className="v5-composer-footnote text-center text-[11px] text-[var(--text-muted)] mt-1 hidden md:block">
                 Enter로 전송 · Shift+Enter 줄바꿈 ·{" "}
                 <button
                   type="button"
@@ -1901,7 +2144,7 @@ export function V5ChatShell() {
                   요금·한도 안내
                 </button>
               </p>
-              <p className="text-center text-[10px] text-[var(--text-muted)] mt-1.5 md:hidden px-2">
+              <p className="v5-composer-footnote text-center text-[10px] text-[var(--text-muted)] mt-1.5 md:hidden px-2">
                 무료 한도는 정책에 따라 달라질 수 있어요.{" "}
                 <button
                   type="button"
@@ -1913,6 +2156,18 @@ export function V5ChatShell() {
               </p>
             </div>
           </div>
+          </div>
+
+          <TabletPlanPreviewPane
+            plan={latestPlanForSplitPanel}
+            isSaved={
+              latestPlanForSplitPanel
+                ? savedPlanIds.has(latestPlanForSplitPanel.id)
+                : false
+            }
+            onSave={handleSavePlan}
+            onViewMap={setMapModalPlan}
+          />
         </div>
       </div>
 

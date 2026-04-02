@@ -36,6 +36,8 @@ import {
 
 type SpotType = "attraction" | "food" | "cafe" | "transport" | "hotel";
 
+type TransitMode = "surface" | "flight" | "ferry";
+
 interface TravelSpot {
   id: string;
   name: string;
@@ -43,6 +45,8 @@ interface TravelSpot {
   duration: string;
   note?: string;
   transitToNext?: string;
+  /** 스팟 i → i+1 이동 (도로 라우팅 생략 시 블록 추정) */
+  transitMode?: TransitMode;
   lat?: number;
   lng?: number;
 }
@@ -228,6 +232,41 @@ function setRouteGeoJSON(map: maplibregl.Map, coordinates: [number, number][]) {
   });
 }
 
+/** 항공·페리 구간: 대권 직선 + 점선 (도로와 구분) */
+function setAirRouteGeoJSON(map: maplibregl.Map, lineSegments: [number, number][][]) {
+  const features = lineSegments.map((coordinates) => ({
+    type: "Feature" as const,
+    properties: {},
+    geometry: { type: "LineString" as const, coordinates },
+  }));
+  const data = {
+    type: "FeatureCollection" as const,
+    features,
+  };
+  const empty = { type: "FeatureCollection" as const, features: [] as typeof features };
+
+  const existing = map.getSource("route-air-src");
+  if (existing?.type === "geojson") {
+    (existing as maplibregl.GeoJSONSource).setData(lineSegments.length ? data : empty);
+    return;
+  }
+  if (lineSegments.length === 0) return;
+
+  map.addSource("route-air-src", { type: "geojson", data });
+  map.addLayer({
+    id: "route-air-line",
+    type: "line",
+    source: "route-air-src",
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": "#0891ff",
+      "line-width": 4,
+      "line-opacity": 0.9,
+      "line-dasharray": [1.8, 1.8],
+    },
+  });
+}
+
 // ─── PlanMap (표시 전용: 마커는 제거 없이 스타일만 갱신) ───────────────────────
 
 function PlanMap({
@@ -236,6 +275,7 @@ function PlanMap({
   easeToRevision,
   onSpotSelectFromMap,
   routeCoordinates,
+  routeLegs,
   routeLoading,
   routeKind,
 }: {
@@ -245,6 +285,7 @@ function PlanMap({
   easeToRevision: number;
   onSpotSelectFromMap: (id: string) => void;
   routeCoordinates: [number, number][] | null;
+  routeLegs: V5PlanRouteLegSummary[] | null;
   routeLoading: boolean;
   routeKind: string | null;
 }) {
@@ -384,6 +425,25 @@ function PlanMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!mapReady || !map?.isStyleLoaded()) return;
+    const airLines: [number, number][][] = [];
+    const legs = routeLegs ?? [];
+    for (let i = 0; i < legs.length; i++) {
+      const leg = legs[i];
+      if (leg?.mode !== "flight" && leg?.mode !== "ferry") continue;
+      const a = spotsWithCoords[i];
+      const b = spotsWithCoords[i + 1];
+      if (!a?.lng || !a?.lat || !b?.lng || !b?.lat) continue;
+      airLines.push([
+        [a.lng, a.lat],
+        [b.lng, b.lat],
+      ]);
+    }
+    setAirRouteGeoJSON(map, airLines);
+  }, [mapReady, routeLegs, spotsWithCoords]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map?.isStyleLoaded()) return;
     syncMarkers(map);
   }, [mapReady, spotsFingerprint, selectedSpotId, syncMarkers]);
 
@@ -422,17 +482,19 @@ function PlanMap({
 
   const routeHint = routeLoading
     ? "실제 도로·보행 네트워크로 경로를 계산하는 중…"
-    : routeKind?.startsWith("full-")
-      ? "도로를 따라 이은 경로예요."
-      : routeKind?.startsWith("chained-")
-        ? "구간별로 이어 붙인 경로예요."
-        : routeKind === "rate-limit-fallback"
-          ? "요청이 많아 직선으로만 표시했어요. 잠시 후 다시 열어 보세요."
-          : routeKind === "straight-fallback"
-            ? "경로 API를 쓰지 못해 직선으로 표시했어요."
-            : spotsWithCoords.length < 2
-              ? "좌표가 2곳 이상이면 동선을 그려요."
-              : null;
+    : routeKind === "chained-air"
+      ? "항공·페리 구간은 직선(점선)이며, 시간은 공항·선착장 대기를 포함한 추정이에요."
+      : routeKind?.startsWith("full-")
+        ? "도로를 따라 이은 경로예요."
+        : routeKind?.startsWith("chained-")
+          ? "구간별로 이어 붙인 경로예요."
+          : routeKind === "rate-limit-fallback"
+            ? "요청이 많아 직선으로만 표시했어요. 잠시 후 다시 열어 보세요."
+            : routeKind === "straight-fallback"
+              ? "경로 API를 쓰지 못해 직선으로 표시했어요."
+              : spotsWithCoords.length < 2
+                ? "좌표가 2곳 이상이면 동선을 그려요."
+                : null;
 
   return (
     <div
@@ -497,9 +559,35 @@ export function V5PlanMapModal({
   );
 
   const spotCoordsKey = useMemo(
-    () => spotsWithCoords.map((s) => `${s.id}:${s.lat},${s.lng}`).join("|"),
+    () =>
+      spotsWithCoords
+        .map(
+          (s) =>
+            `${s.id}:${s.lat},${s.lng}:${s.transitMode ?? ""}:${(s.transitToNext ?? "").slice(0, 48)}`,
+        )
+        .join("|"),
     [spotsWithCoords],
   );
+
+  /** routeLegs[k] = spotsWithCoords[k]→[k+1], 플랜 원래 순서 idx에 맞춤 */
+  const planLegByFromIndex = useMemo(() => {
+    const n = plan.spots.length;
+    const out: (V5PlanRouteLegSummary | undefined)[] = Array.from(
+      { length: Math.max(0, n - 1) },
+      () => undefined,
+    );
+    const legs = routeLegs;
+    if (!legs?.length || spotsWithCoords.length < 2) return out;
+    for (let k = 0; k < spotsWithCoords.length - 1; k++) {
+      const a = spotsWithCoords[k]!;
+      const b = spotsWithCoords[k + 1]!;
+      const ia = plan.spots.findIndex((s) => s.id === a.id);
+      if (ia >= 0 && plan.spots[ia + 1]?.id === b.id) {
+        out[ia] = legs[k];
+      }
+    }
+    return out;
+  }, [plan.spots, spotsWithCoords, routeLegs]);
 
   const spotsWikiFetchKey = useMemo(
     () => plan.spots.map((s) => `${s.id}:${s.name}`).join("|"),
@@ -602,8 +690,13 @@ export function V5PlanMapModal({
     }
     setRouteLoading(true);
     setRouteKind(null);
-    const pts = spotsWithCoords.map((s) => ({ lat: s.lat!, lng: s.lng! }));
-    void fetchV5PlanRouteGeometry(pts).then((res) => {
+    const routeInputs = spotsWithCoords.map((s) => ({
+      lat: s.lat!,
+      lng: s.lng!,
+      transitMode: s.transitMode,
+      transitToNext: s.transitToNext,
+    }));
+    void fetchV5PlanRouteGeometry(routeInputs).then((res) => {
       if (cancelled) return;
       setRouteLoading(false);
       if (res.ok && res.coordinates.length >= 2) {
@@ -626,7 +719,6 @@ export function V5PlanMapModal({
   const spotTimes = useMemo(() => {
     const startMin = parseTimeToMinutes(departureTime) ?? 9 * 60;
     const labels: { arrive: string; depart: string }[] = [];
-    const legs = routeLegs ?? [];
     let t = startMin;
     for (let i = 0; i < plan.spots.length; i++) {
       const spot = plan.spots[i]!;
@@ -639,7 +731,7 @@ export function V5PlanMapModal({
       });
       t = departMin;
       if (i < plan.spots.length - 1) {
-        const leg = legs[i];
+        const leg = planLegByFromIndex[i];
         if (leg?.durationSeconds != null) {
           t += Math.max(1, Math.round(leg.durationSeconds / 60));
         } else {
@@ -648,7 +740,7 @@ export function V5PlanMapModal({
       }
     }
     return labels;
-  }, [plan.spots, departureTime, routeLegs]);
+  }, [plan.spots, departureTime, planLegByFromIndex]);
 
   const selectedSpot = plan.spots.find((s) => s.id === selectedSpotId) ?? null;
   const detailSpot = detailSpotId ? plan.spots.find((s) => s.id === detailSpotId) ?? null : null;
@@ -778,6 +870,7 @@ export function V5PlanMapModal({
                 setEaseToRevision((k) => k + 1);
               }}
               routeCoordinates={routeCoordinates}
+              routeLegs={routeLegs}
               routeLoading={routeLoading}
               routeKind={routeKind}
             />
@@ -868,7 +961,7 @@ export function V5PlanMapModal({
               <div className="overflow-y-auto flex-1 px-3 pb-5 md:px-4 space-y-3 md:space-y-3.5 scroll-smooth">
                 {plan.spots.map((spot, idx) => {
                   const st = spotTimes[idx];
-                  const legAfter = routeLegs?.[idx];
+                  const legAfter = planLegByFromIndex[idx];
                   const wiki = wikiBySpotId[spot.id];
                   const tour = tourBySpotId[spot.id];
                   const tourImg =
@@ -955,19 +1048,38 @@ export function V5PlanMapModal({
                           </button>
                         </div>
                       </div>
-                      {spot.transitToNext && idx < plan.spots.length - 1 && (
+                      {idx < plan.spots.length - 1 &&
+                        (spot.transitToNext ||
+                          legAfter?.mode === "flight" ||
+                          legAfter?.mode === "ferry") && (
                         <div className="flex items-start gap-2.5 py-2.5 pl-4 ml-2">
                           <div className="flex flex-col items-center pt-1">
                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--border-strong)]" />
                             <span className="w-px flex-1 min-h-[1.25rem] bg-gradient-to-b from-[var(--border-default)] to-transparent" />
                           </div>
                           <div className="min-w-0 pt-0.5">
-                            <p className="text-[12px] text-[var(--text-secondary)] leading-snug">{spot.transitToNext}</p>
+                            <p className="text-[12px] text-[var(--text-secondary)] leading-snug">
+                              {spot.transitToNext ||
+                                (legAfter?.mode === "flight"
+                                  ? "항공 이동 (공항 대기·비행·하기 포함 추정)"
+                                  : legAfter?.mode === "ferry"
+                                    ? "페리·여객선 이동 (선착장 대기 포함 추정)"
+                                    : "")}
+                            </p>
                             {legAfter && (
                               <p className="text-[11px] text-[var(--brand-trust-blue)] font-medium mt-1 tabular-nums">
+                                {legAfter.mode === "flight" || legAfter.mode === "ferry" ? (
+                                  <span className="mr-1.5 rounded bg-[var(--brand-trust-blue-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--brand-trust-blue)]">
+                                    {legAfter.mode === "flight" ? "항공" : "페리"}
+                                  </span>
+                                ) : null}
                                 약 {formatLegDuration(legAfter.durationSeconds)}
                                 {legAfter.distanceMeters != null
-                                  ? ` · ${(legAfter.distanceMeters / 1000).toFixed(1)}km`
+                                  ? ` · ${(legAfter.distanceMeters / 1000).toFixed(1)}km${
+                                      legAfter.mode === "flight" || legAfter.mode === "ferry"
+                                        ? " 직선"
+                                        : ""
+                                    }`
                                   : ""}
                               </p>
                             )}

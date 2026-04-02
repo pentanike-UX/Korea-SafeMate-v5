@@ -10,6 +10,8 @@ export const travelSpotSchema = z.object({
   duration: z.string(),
   note: z.string().optional(),
   transitToNext: z.string().optional(),
+  /** 스팟 i → i+1 이동이 항공·해상이면 도로 라우팅 대신 블록 시간 추정 */
+  transitMode: z.enum(["surface", "flight", "ferry"]).optional(),
   lat: z.number().optional(),
   lng: z.number().optional(),
 });

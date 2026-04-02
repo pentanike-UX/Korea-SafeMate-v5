@@ -177,6 +177,11 @@
   --page-gutter-x: 1.25rem;
   --section-gap: 1.5rem;
   --stack-relaxed: 1.25rem;
+
+  /* Composer: visualViewport / 키보드 보정 (JS에서 --v5-keyboard-overlap 갱신) */
+  --v5-keyboard-overlap: 0px;
+  --v5-composer-pad-y: 1.25rem;
+  --v5-composer-pad-x: 1.25rem;
 }
 
 .dark {
@@ -286,6 +291,87 @@
   .section-stack {
     @apply flex flex-col gap-10 sm:gap-12 md:gap-14;
   }
+}
+
+/* ── V5 채팅: 스와이프 칩 스트립 (가로 스크롤, 스크롤 스냅) ── */
+.v5-prompt-chips-strip {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  touch-action: pan-x;
+}
+.v5-prompt-chips-strip::-webkit-scrollbar {
+  display: none;
+}
+.v5-prompt-chip-item {
+  scroll-snap-align: start;
+}
+
+/* ── V5 채팅: 태블릿 가로 모드 2분할 (채팅 | 미리보기) ── */
+.v5-chat-split-root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.v5-chat-split-preview {
+  display: none;
+}
+
+@media (min-width: 900px) and (max-width: 1368px) and (orientation: landscape) and (min-height: 520px) {
+  .v5-chat-split-root {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, min(42vw, 440px));
+    grid-template-rows: 1fr;
+    align-items: stretch;
+    column-gap: 0;
+  }
+
+  .v5-chat-split-chat {
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .v5-chat-split-preview {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+    align-self: stretch;
+  }
+}
+
+/* 모바일: 키보드가 올라온 것으로 감지되면 입력 영역 패딩 축소 */
+.v5-composer-keyboard-tight .v5-composer-input-shell {
+  padding-top: 0.5rem;
+  padding-bottom: max(0.375rem, env(safe-area-inset-bottom, 0px));
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+}
+
+.v5-composer-keyboard-tight .v5-composer-guide-box {
+  margin-bottom: 0.375rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.v5-composer-keyboard-tight .v5-composer-footnote {
+  display: none;
+}
+
+/* 키보드 대응 시 입력 독 전체 여백 (Tailwind와 병행 가능) */
+.v5-composer-keyboard-tight.v5-composer-dock {
+  padding-top: 0.5rem;
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
 }
 
 @layer utilities {
