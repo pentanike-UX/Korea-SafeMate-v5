@@ -1,10 +1,15 @@
 import type { ServiceTypeCode } from "@/types/domain";
 
 export const BRAND = {
-  name: "SafeMate",
-  tagline: "Sequences that fit the moment—not another place list.",
+  name: "Wayly",
+  tagline: "Your route, timed and grounded—not another place dump.",
   description:
-    "SafeMate is an AI-assisted local movement curator for Korea: ordered routes, timing context, and guardian-backed judgment when you want a second pair of eyes.",
+    "Wayly is an AI travel planner for Korea: ordered routes, real-road paths, timing hints, and clear next steps between spots.",
+  /** 로고 마크: 블랙 배경 + 일렉트릭 블루 심볼 */
+  logo: {
+    background: "#09090b",
+    electricBlue: "#0dc2ff",
+  },
 } as const;
 
 export const PRODUCT_LAYERS = [

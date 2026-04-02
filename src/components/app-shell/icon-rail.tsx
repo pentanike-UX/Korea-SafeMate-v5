@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { BRAND } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { CircleHelp, CircleUser, Compass, Heart, Home, Info, UserRound } from "lucide-react";
+import { CircleHelp, CircleUser, Compass, Heart, Home, Info, MapPinned, UserRound } from "lucide-react";
 import { RailItem } from "@/components/app-shell/rail-item";
 
 const RAIL_W = "w-[72px]";
@@ -40,10 +40,17 @@ export function IconRail({
       <div className="flex flex-col items-center px-2">
         <Link
           href="/chat"
-          className="mb-5 flex size-11 items-center justify-center rounded-[14px] bg-[var(--brand-primary)] text-xs font-semibold tracking-tight text-[var(--text-on-brand)] shadow-[var(--shadow-sm)]"
+          className="mb-5 flex size-11 items-center justify-center rounded-[14px] border border-white/[0.08] shadow-[var(--shadow-sm)] transition-transform hover:scale-[1.03] active:scale-[0.98]"
+          style={{ backgroundColor: BRAND.logo.background }}
           title={BRAND.name}
         >
-          SM
+          <Compass
+            className="size-[22px] shrink-0"
+            style={{ color: BRAND.logo.electricBlue }}
+            strokeWidth={2.35}
+            aria-hidden
+          />
+          <span className="sr-only">{BRAND.name}</span>
         </Link>
       </div>
 
@@ -52,7 +59,7 @@ export function IconRail({
           <Home className="size-[22px] shrink-0" aria-hidden />
         </RailItem>
         <RailItem href="/explore" label={t("explore")} active={active("/explore")} title={t("explore")}>
-          <Compass className="size-[22px] shrink-0" aria-hidden />
+          <MapPinned className="size-[22px] shrink-0" aria-hidden />
         </RailItem>
         <RailItem href="/mypage/saved" label={t("saved")} active={pathname.startsWith("/mypage/saved")} title={t("saved")}>
           <Heart className="size-[22px] shrink-0" aria-hidden />

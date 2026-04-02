@@ -82,8 +82,8 @@
     "disclaimerShort": "同伴・実務サポートのみ — 医療・法律・緊急対応ではありません。24時間保証なし。"
   },
   "Brand": {
-    "tagline": "今に合う順番—場所の列挙ではありません。",
-    "description": "SafeMateは韓国の「動き方」を順序・タイミング・注意で編集します。必要ならGuardianの判断も重ねます。"
+    "tagline": "順番のある旅—スポットの並びではなくルートです。",
+    "description": "Waylyは韓国旅行をスポット順・移動・時間の文脈で組み立てるAIプランナーです。"
   },
   "GuardianTier": {
     "verified_guardian": "認証済みGuardian",
@@ -2029,7 +2029,7 @@
       "metaTitle": "Safety & etiquette",
       "metaDescription": "Scope and respectful use.",
       "title": "Safety & etiquette",
-      "lead": "SafeMate supports judgment, not emergencies. Use official channels when safety is uncertain.",
+      "lead": "Wayly supports judgment, not emergencies. Use official channels when safety is uncertain.",
       "bullet1": "Routes describe typical conditions—they are not real-time incident data.",
       "bullet2": "Crowd and lighting language is comparative, not a guarantee.",
       "bullet3": "Be explicit about mobility and sensory needs when asking a guardian.",

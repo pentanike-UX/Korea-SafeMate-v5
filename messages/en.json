@@ -82,8 +82,8 @@
     "disclaimerShort": "This service is designed for practical local support and useful information. It does not replace medical, legal, or emergency services, and does not guarantee 24/7 protection."
   },
   "Brand": {
-    "tagline": "Sequences that fit the moment—not another place list.",
-    "description": "SafeMate curates ordered local movement for Korea: timing, mood, cautions, and guardian-backed judgment when you want a second pair of eyes."
+    "tagline": "Trips in order—not another place dump.",
+    "description": "Wayly is an AI travel planner for Korea: ordered routes, road-realistic paths, and timing between stops."
   },
   "GuardianTier": {
     "verified_guardian": "Verified Guardian",
@@ -2029,7 +2029,7 @@
       "metaTitle": "Safety & etiquette",
       "metaDescription": "Scope and respectful use.",
       "title": "Safety & etiquette",
-      "lead": "SafeMate supports judgment, not emergencies. Use official channels when safety is uncertain.",
+      "lead": "Wayly supports judgment, not emergencies. Use official channels when safety is uncertain.",
       "bullet1": "Routes describe typical conditions—they are not real-time incident data.",
       "bullet2": "Crowd and lighting language is comparative, not a guarantee.",
       "bullet3": "Be explicit about mobility and sensory needs when asking a guardian.",

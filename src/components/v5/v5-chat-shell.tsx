@@ -5,7 +5,7 @@ import {
   Plus, MapPin, Clock, CloudSun, Bookmark, BookmarkCheck,
   Send, Utensils, Coffee, Train, Camera, ChevronRight,
   Sparkles, MoreHorizontal, Trash2, PanelLeftClose, PanelLeft,
-  Navigation, Hotel, Menu, X, Map,
+  Navigation, Hotel, Menu, X, Map, Compass,
 } from "lucide-react";
 import { useAuthUser } from "@/hooks/use-auth-user";
 import {
@@ -16,6 +16,7 @@ import {
 } from "@/lib/v5/chat-persistence";
 import { V5PlanMapModal } from "./v5-plan-map-modal";
 import { consumeTravelChatSse } from "@/lib/travel-chat/consume-chat-sse";
+import { BRAND } from "@/lib/constants";
 
 // ─── Domain Types ──────────────────────────────────────────────────────────────
 
@@ -589,10 +590,20 @@ function SidebarContent({
       {/* Top */}
       <div className="flex items-center justify-between px-4 pt-4 pb-3 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-[var(--brand-trust-blue)] to-blue-400 flex items-center justify-center shadow-sm">
-            <MapPin className="w-4 h-4 text-white" />
+          <div
+            className="w-7 h-7 rounded-xl flex items-center justify-center shadow-sm border border-white/[0.08]"
+            style={{ backgroundColor: BRAND.logo.background }}
+          >
+            <Compass
+              className="w-4 h-4 shrink-0"
+              style={{ color: BRAND.logo.electricBlue }}
+              strokeWidth={2.4}
+              aria-hidden
+            />
           </div>
-          <span className="text-[14px] font-bold text-[var(--text-strong)] tracking-tight">SafeMate</span>
+          <span className="text-[14px] font-bold text-[var(--text-strong)] tracking-tight">
+            {BRAND.name}
+          </span>
         </div>
         {onClose && (
           <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)] transition-all">
@@ -1397,7 +1408,7 @@ export function V5ChatShell() {
                 </button>
               )}
               <span className="text-[14px] font-semibold text-[var(--text-strong)] truncate">
-                {hasUserMessage ? activeConv?.title : "여행 동선 AI"}
+                {hasUserMessage ? activeConv?.title : `${BRAND.name} · 여행 동선`}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
