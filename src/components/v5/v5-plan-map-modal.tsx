@@ -5,6 +5,7 @@ import maplibregl from "maplibre-gl";
 import { fetchV5PlanRouteGeometry } from "@/lib/v5/fetch-v5-plan-route.server";
 import type { V5PlanRouteLegSummary } from "@/lib/v5/fetch-v5-plan-route.server";
 import "maplibre-gl/dist/maplibre-gl.css";
+import Image from "next/image";
 import {
   X,
   MapPin,
@@ -22,6 +23,10 @@ import {
   Maximize2,
   Minimize2,
   Map as MapIcon,
+  ExternalLink,
+  Star,
+  ChevronRight,
+  BookOpen,
 } from "lucide-react";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -49,6 +54,15 @@ interface TravelPlan {
   weatherNote?: string;
   totalTime?: string;
   alternativeNote?: string;
+}
+
+/** /api/v5/spot-enrichment 성공 페이로드 (위키백과 요약) */
+interface SpotWikiEnrichment {
+  title: string;
+  displayTitle: string;
+  extract: string;
+  thumbnail: string | null;
+  articleUrl: string;
 }
 
 // ─── Time / duration helpers ─────────────────────────────────────────────────
@@ -116,6 +130,10 @@ function SpotTypeIcon({ type, size = 14 }: { type: SpotType; size?: number }) {
   return <>{icons[type]}</>;
 }
 
+/**
+ * MapLibre가 마커 루트에 `transform`으로 위치를 잡으므로, 스타일은 반드시 **자식**에만 적용합니다.
+ * 루트에 `cssText`/`transform`을 쓰면 핀이 좌상단(0,0)으로 튑니다.
+ */
 function applyPinElement(
   el: HTMLDivElement,
   index: number,
@@ -123,21 +141,23 @@ function applyPinElement(
   selected: boolean,
 ) {
   const color = selected ? "#1c1c1e" : SPOT_COLORS[type].hex;
-  el.style.cssText = `
-    width: 32px; height: 32px;
-    background: ${selected ? "#1c1c1e" : "#fff"};
-    border: 2.5px solid ${color};
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700;
-    color: ${selected ? "#fff" : color};
-    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-    cursor: pointer;
-    pointer-events: auto;
-    user-select: none;
-    transform: scale(1);
-    transform-origin: center center;
-  `;
+  el.style.width = "32px";
+  el.style.height = "32px";
+  el.style.background = selected ? "#1c1c1e" : "#fff";
+  el.style.border = `2.5px solid ${color}`;
+  el.style.borderRadius = "50%";
+  el.style.display = "flex";
+  el.style.alignItems = "center";
+  el.style.justifyContent = "center";
+  el.style.fontSize = "12px";
+  el.style.fontWeight = "700";
+  el.style.color = selected ? "#fff" : color;
+  el.style.boxShadow = "0 2px 8px rgba(0,0,0,0.18)";
+  el.style.cursor = "pointer";
+  el.style.pointerEvents = "auto";
+  el.style.userSelect = "none";
+  el.style.transform = "scale(1)";
+  el.style.transformOrigin = "center center";
   el.textContent = String(index + 1);
   el.onmouseenter = () => {
     el.style.transform = "scale(1.08)";
@@ -266,15 +286,18 @@ function PlanMap({
       spotsWithCoords.forEach((spot, idx) => {
         let entry = markersByIdRef.current.get(spot.id);
         if (!entry) {
-          const el = document.createElement("div");
-          applyPinElement(el, idx, spot.type, spot.id === selectedSpotId);
-          el.addEventListener("mousedown", (e) => e.stopPropagation());
-          el.addEventListener("click", (e) => {
+          const root = document.createElement("div");
+          root.style.pointerEvents = "auto";
+          const pin = document.createElement("div");
+          applyPinElement(pin, idx, spot.type, spot.id === selectedSpotId);
+          root.appendChild(pin);
+          root.addEventListener("mousedown", (e) => e.stopPropagation());
+          root.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
             onMapSelectRef.current(spot.id);
           });
-          const marker = new maplibregl.Marker({ element: el, anchor: "center" })
+          const marker = new maplibregl.Marker({ element: root, anchor: "center" })
             .setLngLat([spot.lng!, spot.lat!])
             .addTo(map);
           entry = { marker, spot, index: idx };
@@ -283,8 +306,9 @@ function PlanMap({
           entry.spot = spot;
           entry.index = idx;
           entry.marker.setLngLat([spot.lng!, spot.lat!]);
-          const el = entry.marker.getElement() as HTMLDivElement;
-          applyPinElement(el, idx, spot.type, spot.id === selectedSpotId);
+          const root = entry.marker.getElement() as HTMLDivElement;
+          const pin = root.firstElementChild as HTMLDivElement | null;
+          if (pin) applyPinElement(pin, idx, spot.type, spot.id === selectedSpotId);
         }
       });
     },
@@ -446,6 +470,11 @@ export function V5PlanMapModal({
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeKind, setRouteKind] = useState<string | null>(null);
 
+  const [detailSpotId, setDetailSpotId] = useState<string | null>(null);
+  const [wikiBySpotId, setWikiBySpotId] = useState<
+    Record<string, SpotWikiEnrichment | "err" | undefined>
+  >({});
+
   const shellRef = useRef<HTMLDivElement>(null);
   const [isFs, setIsFs] = useState(false);
 
@@ -465,6 +494,44 @@ export function V5PlanMapModal({
     () => spotsWithCoords.map((s) => `${s.id}:${s.lat},${s.lng}`).join("|"),
     [spotsWithCoords],
   );
+
+  const spotsWikiFetchKey = useMemo(
+    () => plan.spots.map((s) => `${s.id}:${s.name}`).join("|"),
+    [plan.spots],
+  );
+
+  useEffect(() => {
+    const ac = new AbortController();
+    plan.spots.forEach((spot) => {
+      void (async () => {
+        try {
+          const url = `/api/v5/spot-enrichment?name=${encodeURIComponent(spot.name)}&region=${encodeURIComponent(plan.region)}`;
+          const r = await fetch(url, { signal: ac.signal });
+          const j = (await r.json()) as
+            | ({ ok: true } & SpotWikiEnrichment)
+            | { ok: false; error?: string };
+          if (ac.signal.aborted) return;
+          if (j.ok === true) {
+            setWikiBySpotId((prev) => ({
+              ...prev,
+              [spot.id]: {
+                title: j.title,
+                displayTitle: j.displayTitle,
+                extract: j.extract,
+                thumbnail: j.thumbnail ?? null,
+                articleUrl: j.articleUrl,
+              },
+            }));
+          } else {
+            setWikiBySpotId((prev) => ({ ...prev, [spot.id]: "err" }));
+          }
+        } catch {
+          if (!ac.signal.aborted) setWikiBySpotId((prev) => ({ ...prev, [spot.id]: "err" }));
+        }
+      })();
+    });
+    return () => ac.abort();
+  }, [plan.id, plan.region, spotsWikiFetchKey]);
 
   useEffect(() => {
     setSelectedSpotId((prev) =>
@@ -534,6 +601,8 @@ export function V5PlanMapModal({
   }, [plan.spots, departureTime, routeLegs]);
 
   const selectedSpot = plan.spots.find((s) => s.id === selectedSpotId) ?? null;
+  const detailSpot = detailSpotId ? plan.spots.find((s) => s.id === detailSpotId) ?? null : null;
+  const detailWiki = detailSpotId ? wikiBySpotId[detailSpotId] : undefined;
 
   useEffect(() => {
     const onFs = () => setIsFs(Boolean(document.fullscreenElement));
@@ -544,6 +613,10 @@ export function V5PlanMapModal({
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      if (detailSpotId) {
+        setDetailSpotId(null);
+        return;
+      }
       if (document.fullscreenElement) {
         void document.exitFullscreen();
         return;
@@ -552,7 +625,7 @@ export function V5PlanMapModal({
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
+  }, [onClose, detailSpotId]);
 
   const toggleFullscreen = useCallback(async () => {
     const el = shellRef.current;
@@ -583,8 +656,12 @@ export function V5PlanMapModal({
     >
       <div
         ref={shellRef}
-        className={`relative w-full md:max-w-[860px] md:mx-auto flex flex-col bg-[var(--bg-elevated)] overflow-hidden ${
-          isFs ? "h-screen max-h-none rounded-none" : "h-[92dvh] md:h-[85vh] rounded-t-3xl md:rounded-3xl"
+        className={`relative w-full md:mx-auto flex flex-col bg-[var(--bg-elevated)] overflow-hidden ${
+          isFs
+            ? "h-screen max-h-none rounded-none md:max-w-none"
+            : detailSpotId
+              ? "h-[92dvh] md:h-[85vh] rounded-t-3xl md:rounded-3xl md:max-w-[min(98vw,1180px)]"
+              : "h-[92dvh] md:h-[85vh] rounded-t-3xl md:rounded-3xl md:max-w-[920px]"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -645,7 +722,10 @@ export function V5PlanMapModal({
               plan={plan}
               selectedSpotId={selectedSpotId}
               easeToRevision={easeToRevision}
-              onSpotSelectFromMap={setSelectedSpotId}
+              onSpotSelectFromMap={(id) => {
+                setSelectedSpotId(id);
+                setEaseToRevision((k) => k + 1);
+              }}
               routeCoordinates={routeCoordinates}
               routeLoading={routeLoading}
               routeKind={routeKind}
@@ -685,11 +765,16 @@ export function V5PlanMapModal({
             )}
           </div>
 
-          <div className="md:w-[300px] flex-shrink-0 border-t md:border-t-0 md:border-l border-[var(--border-default)] flex flex-col max-h-[38vh] md:max-h-none overflow-hidden">
+          <div
+            className={`relative flex flex-shrink-0 flex-col border-t border-[var(--border-default)] md:flex-row md:border-t-0 md:border-l max-h-[46vh] md:max-h-none min-h-0 overflow-visible md:overflow-hidden ${
+              detailSpotId ? "md:min-w-0 md:flex-1 md:max-w-none" : "md:w-[min(100%,400px)]"
+            }`}
+          >
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col md:max-w-[400px] md:shrink-0">
             <button
               type="button"
               onClick={() => setListExpanded((v) => !v)}
-              className="flex items-center justify-between px-4 py-3 flex-shrink-0 md:cursor-default"
+              className="flex items-center justify-between px-4 py-3.5 flex-shrink-0 md:cursor-default"
             >
               <span className="text-[12px] font-bold text-[var(--text-muted)] uppercase tracking-widest flex items-center gap-2">
                 <MapIcon className="w-3.5 h-3.5" />
@@ -701,59 +786,95 @@ export function V5PlanMapModal({
             </button>
 
             {listExpanded && (
-              <div className="overflow-y-auto flex-1 px-3 pb-4 space-y-1">
+              <div className="overflow-y-auto flex-1 px-3 pb-4 space-y-2.5">
                 {plan.spots.map((spot, idx) => {
                   const st = spotTimes[idx];
                   const legAfter = routeLegs?.[idx];
+                  const wiki = wikiBySpotId[spot.id];
+                  const thumb =
+                    wiki && wiki !== "err" && wiki.thumbnail ? wiki.thumbnail : null;
                   return (
                     <div key={spot.id}>
-                      <button
-                        type="button"
-                        onClick={() => selectSpotFromList(spot.id)}
-                        className={`w-full text-left flex items-start gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 ${
+                      <div
+                        className={`rounded-2xl border transition-all duration-200 ${
                           selectedSpotId === spot.id
-                            ? "bg-[var(--brand-trust-blue-soft)] border border-[var(--brand-trust-blue)]/20"
-                            : "hover:bg-[var(--bg-surface-subtle)]"
+                            ? "border-[var(--brand-trust-blue)]/35 bg-[var(--brand-trust-blue-soft)] shadow-[0_4px_20px_rgba(47,79,143,0.08)]"
+                            : "border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/50 hover:border-[var(--border-strong)]"
                         }`}
                       >
-                        <div className="flex-shrink-0 mt-0.5">
-                          <div
-                            className={`relative w-8 h-8 rounded-full flex items-center justify-center ${SPOT_COLORS[spot.type].bg} ${SPOT_COLORS[spot.type].text}`}
-                          >
-                            <SpotTypeIcon type={spot.type} size={14} />
-                            <span className="absolute -bottom-0.5 -right-0.5 min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full bg-[var(--text-strong)] text-white text-[9px] font-bold flex items-center justify-center border-2 border-[var(--bg-elevated)] shadow-sm">
+                        <button
+                          type="button"
+                          onClick={() => selectSpotFromList(spot.id)}
+                          className="w-full text-left flex gap-3 p-3 rounded-2xl"
+                        >
+                          <div className="relative h-[5.25rem] w-[5.25rem] shrink-0 overflow-hidden rounded-xl bg-[var(--bg-surface-subtle)] ring-1 ring-[var(--border-default)]/80">
+                            {thumb ? (
+                              <Image
+                                src={thumb}
+                                alt=""
+                                width={168}
+                                height={168}
+                                className="h-full w-full object-cover"
+                                sizes="84px"
+                                unoptimized={thumb.includes("wikimedia")}
+                              />
+                            ) : wiki === undefined ? (
+                              <div className="flex h-full w-full animate-pulse items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+                                <MapPin className="h-6 w-6 text-[var(--text-muted)]/40" />
+                              </div>
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+                                <SpotTypeIcon type={spot.type} size={22} />
+                              </div>
+                            )}
+                            <span className="absolute bottom-1 right-1 flex h-6 min-w-[1.25rem] items-center justify-center rounded-full bg-[var(--text-strong)] px-1 text-[10px] font-bold text-white shadow-md ring-2 ring-white/90">
                               {idx + 1}
                             </span>
                           </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p
-                            className={`text-[13px] font-semibold truncate ${
-                              selectedSpotId === spot.id
-                                ? "text-[var(--brand-trust-blue)]"
-                                : "text-[var(--text-strong)]"
-                            }`}
-                          >
-                            {spot.name}
-                          </p>
-                          {st && (
-                            <p className="text-[10px] font-mono text-[var(--brand-trust-blue)] mt-0.5">
-                              {st.arrive} 도착 → {st.depart} 출발
+                          <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+                            <p
+                              className={`text-[14px] font-bold leading-snug line-clamp-2 ${
+                                selectedSpotId === spot.id
+                                  ? "text-[var(--brand-trust-blue)]"
+                                  : "text-[var(--text-strong)]"
+                              }`}
+                            >
+                              {spot.name}
                             </p>
-                          )}
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <Clock className="w-2.5 h-2.5 text-[var(--text-muted)]" />
-                            <span className="text-[11px] text-[var(--text-muted)]">{spot.duration}</span>
+                            {st && (
+                              <p className="text-[11px] font-mono text-[var(--brand-trust-blue)]">
+                                {st.arrive} 도착 → {st.depart} 출발
+                              </p>
+                            )}
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
+                              <span className="text-[12px] text-[var(--text-muted)]">{spot.duration}</span>
+                            </div>
                           </div>
+                        </button>
+                        <div className="flex items-center justify-end gap-2 border-t border-[var(--border-default)]/60 px-3 py-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDetailSpotId(spot.id);
+                              setSelectedSpotId(spot.id);
+                              setEaseToRevision((k) => k + 1);
+                            }}
+                            className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-semibold text-[var(--brand-trust-blue)] transition-colors hover:bg-[var(--brand-trust-blue-soft)]"
+                          >
+                            자세히 보기
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </button>
                         </div>
-                      </button>
+                      </div>
                       {spot.transitToNext && idx < plan.spots.length - 1 && (
-                        <div className="flex items-start gap-1.5 pl-4 py-1 ml-2 border-l-2 border-[var(--border-strong)]/60">
-                          <Navigation className="w-3 h-3 text-[var(--text-muted)] shrink-0 mt-0.5" />
+                        <div className="flex items-start gap-2 py-2 pl-3 ml-1 border-l-2 border-[var(--border-strong)]/50">
+                          <Navigation className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0 mt-0.5" />
                           <div className="min-w-0">
-                            <p className="text-[11px] text-[var(--text-muted)]">{spot.transitToNext}</p>
+                            <p className="text-[12px] text-[var(--text-muted)] leading-snug">{spot.transitToNext}</p>
                             {legAfter && (
-                              <p className="text-[10px] text-[var(--brand-trust-blue)] font-medium mt-0.5">
+                              <p className="text-[11px] text-[var(--brand-trust-blue)] font-medium mt-1">
                                 경로 예상 {formatLegDuration(legAfter.durationSeconds)}
                                 {legAfter.distanceMeters != null
                                   ? ` · ${(legAfter.distanceMeters / 1000).toFixed(1)}km`
@@ -784,6 +905,126 @@ export function V5PlanMapModal({
                   )}
                 </div>
               </div>
+            )}
+            </div>
+
+            {detailSpotId && detailSpot && (
+              <>
+                <button
+                  type="button"
+                  className="fixed inset-0 z-[55] bg-black/35 backdrop-blur-[1px] md:hidden"
+                  aria-label="상세 닫기"
+                  onClick={() => setDetailSpotId(null)}
+                />
+                <aside
+                  className="fixed inset-y-0 right-0 z-[60] flex w-[min(100%,400px)] flex-col border-l border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[-8px_0_32px_rgba(0,0,0,0.12)] md:static md:z-0 md:flex md:h-full md:min-h-0 md:w-[min(100%,380px)] md:max-w-[380px] md:shrink-0 md:shadow-none"
+                >
+                  <div className="flex items-center justify-between gap-2 border-b border-[var(--border-default)] px-4 py-3">
+                    <p className="min-w-0 text-[13px] font-bold text-[var(--text-strong)] line-clamp-2">
+                      {detailSpot.name}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setDetailSpotId(null)}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)]"
+                      aria-label="닫기"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="min-h-0 flex-1 overflow-y-auto">
+                    <div className="relative aspect-[16/10] w-full bg-[var(--bg-surface-subtle)]">
+                      {detailWiki && detailWiki !== "err" && detailWiki.thumbnail ? (
+                        <Image
+                          src={detailWiki.thumbnail}
+                          alt=""
+                          fill
+                          className="object-cover"
+                          sizes="380px"
+                          unoptimized={detailWiki.thumbnail.includes("wikimedia")}
+                          priority
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+                          <SpotTypeIcon type={detailSpot.type} size={40} />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-4 px-4 py-4">
+                      <div className="flex items-start gap-2 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/60 px-3 py-3">
+                        <Star className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" fill="currentColor" />
+                        <div>
+                          <p className="text-[12px] font-semibold text-[var(--text-strong)]">별점·리뷰</p>
+                          <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-muted)]">
+                            실시간 평점과 방문자 리뷰는 네이버·구글 지도에서 가장 정확해요. 아래에서 바로 열어 보세요.
+                          </p>
+                        </div>
+                      </div>
+
+                      {detailWiki && detailWiki !== "err" ? (
+                        <>
+                          <div>
+                            <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                              <BookOpen className="h-3.5 w-3.5" />
+                              소개 · 위키백과
+                            </div>
+                            <p className="text-[13px] leading-relaxed text-[var(--text-secondary)] whitespace-pre-line">
+                              {detailWiki.extract}
+                            </p>
+                          </div>
+                          <a
+                            href={detailWiki.articleUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--border-default)] py-3 text-[13px] font-semibold text-[var(--brand-trust-blue)] transition-colors hover:bg-[var(--brand-trust-blue-soft)]"
+                          >
+                            위키백과에서 전문 읽기
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </>
+                      ) : detailWiki === "err" ? (
+                        <p className="text-[12px] leading-relaxed text-[var(--text-muted)]">
+                          이 장소에 대한 백과 요약을 불러오지 못했어요. 지도 앱에서 상세 정보를 확인해 보세요.
+                        </p>
+                      ) : (
+                        <p className="text-[12px] text-[var(--text-muted)]">정보를 불러오는 중…</p>
+                      )}
+
+                      {detailSpot.note && (
+                        <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/40 px-3 py-3">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">
+                            플랜 메모
+                          </p>
+                          <p className="text-[12px] leading-relaxed text-[var(--text-secondary)]">{detailSpot.note}</p>
+                        </div>
+                      )}
+
+                      <div className="flex flex-col gap-2 pb-2">
+                        <a
+                          href={`https://map.naver.com/p/search/${encodeURIComponent(detailSpot.name)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-2 rounded-2xl bg-[#03c75a] py-3 text-[13px] font-semibold text-white transition-opacity hover:opacity-95"
+                        >
+                          네이버 지도에서 보기
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${detailSpot.name} ${plan.region}`)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-2 rounded-2xl border-2 border-[var(--border-strong)] py-3 text-[13px] font-semibold text-[var(--text-strong)] transition-colors hover:bg-[var(--bg-surface-subtle)]"
+                        >
+                          구글 지도에서 보기
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </aside>
+              </>
             )}
           </div>
         </div>

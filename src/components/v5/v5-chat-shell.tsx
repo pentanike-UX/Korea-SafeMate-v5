@@ -484,8 +484,12 @@ function MessageBubble({
   return (
     <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"} items-end`}>
       {!isUser && (
-        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[var(--brand-trust-blue)] to-blue-400 flex items-center justify-center flex-shrink-0 mb-0.5 shadow-sm">
-          <Sparkles className="w-3.5 h-3.5 text-white" />
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mb-0.5 shadow-sm ring-1 ring-white/25"
+          style={{ background: "#0891ff" }}
+          aria-hidden
+        >
+          <Sparkles className="w-3.5 h-3.5 text-white drop-shadow-sm" />
         </div>
       )}
       <div className={`max-w-[85%] flex flex-col ${isUser ? "items-end" : "items-start"}`}>
