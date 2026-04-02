@@ -5,7 +5,7 @@ import {
   Plus, MapPin, Clock, CloudSun, Bookmark, BookmarkCheck,
   Send, Utensils, Coffee, Train, Camera, ChevronRight,
   Sparkles, MoreHorizontal, Trash2, PanelLeftClose, PanelLeft,
-  Navigation, Hotel, Menu, X, Map, Compass, Check,
+  Navigation, Hotel, Menu, X, Map, Compass, Check, Plane,
 } from "lucide-react";
 import { useAuthUser } from "@/hooks/use-auth-user";
 import {
@@ -539,19 +539,64 @@ function MessageBubble({
   );
 }
 
+const AWAITING_REPLY_MESSAGES = [
+  "🗺️ 열심히 지도를 펼치고 형광펜으로 동선을 그리는 중...",
+  "🛑 앗, 여긴 너무 막히는데? 더 빠른 지름길로 수정하고 있어요!",
+  "☕ 가이드가 커피 한 모금 마시고 마지막 스퍼트를 올립니다.",
+  "🎉짜잔! 완벽한 동선의 지도가 완성되었습니다!",
+] as const;
+
+/** 질문 전송 후 AI 답변 대기 — 3초마다 문구 페이드 전환 + 회전 비행기 */
 function TypingIndicator() {
+  const [msgIndex, setMsgIndex] = useState(0);
+  const [textVisible, setTextVisible] = useState(true);
+  const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTextVisible(false);
+      if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
+      fadeTimeoutRef.current = setTimeout(() => {
+        setMsgIndex((i) => (i + 1) % AWAITING_REPLY_MESSAGES.length);
+        setTextVisible(true);
+        fadeTimeoutRef.current = null;
+      }, 480);
+    }, 3000);
+    return () => {
+      clearInterval(interval);
+      if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
+    };
+  }, []);
+
   return (
-    <div className="flex gap-3 items-end">
-      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[var(--brand-trust-blue)] to-blue-400 flex items-center justify-center flex-shrink-0 shadow-sm">
-        <Sparkles className="w-3.5 h-3.5 text-white" />
+    <div
+      className="flex gap-3 items-end"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      aria-label="답변 준비 중"
+    >
+      <div
+        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mb-0.5 shadow-sm ring-1 ring-white/25"
+        style={{ background: "#0891ff" }}
+        aria-hidden
+      >
+        <Sparkles className="w-3.5 h-3.5 text-white drop-shadow-sm" />
       </div>
-      <div className="px-4 py-3 rounded-2xl rounded-bl-sm bg-[var(--bg-elevated)] border border-[var(--border-default)]">
-        <div className="flex gap-1.5 items-center h-4">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)] animate-bounce"
-              style={{ animationDelay: `${i * 0.15}s`, animationDuration: "1s" }} />
-          ))}
+      <div className="max-w-[min(100%,26rem)] px-4 py-3.5 rounded-2xl rounded-bl-sm bg-[var(--bg-elevated)] border border-[var(--border-default)] shadow-[0_1px_6px_rgba(20,20,20,0.05)]">
+        <div
+          className="flex justify-center mb-2.5 motion-reduce:animate-none motion-safe:animate-[spin_2.8s_linear_infinite]"
+          aria-hidden
+        >
+          <Plane className="w-7 h-7 text-[var(--brand-trust-blue)] drop-shadow-sm" strokeWidth={2.25} />
         </div>
+        <p
+          className={`text-[13px] leading-relaxed text-[var(--text-secondary)] text-center min-h-[3.5rem] flex items-center justify-center px-0.5 motion-reduce:transition-none motion-safe:transition-opacity motion-safe:duration-500 motion-safe:ease-in-out ${
+            textVisible ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          {AWAITING_REPLY_MESSAGES[msgIndex]}
+        </p>
       </div>
     </div>
   );
