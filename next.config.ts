@@ -17,6 +17,21 @@ const nextConfig: NextConfig = {
         hostname: "upload.wikimedia.org",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "tong.visitkorea.or.kr",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "tong.visitkorea.or.kr",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "cdn.visitkorea.or.kr",
+        pathname: "/**",
+      },
     ],
   },
 };

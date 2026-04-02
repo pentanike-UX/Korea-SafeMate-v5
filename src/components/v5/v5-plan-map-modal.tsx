@@ -6,6 +6,9 @@ import { fetchV5PlanRouteGeometry } from "@/lib/v5/fetch-v5-plan-route.server";
 import type { V5PlanRouteLegSummary } from "@/lib/v5/fetch-v5-plan-route.server";
 import "maplibre-gl/dist/maplibre-gl.css";
 import Image from "next/image";
+import type { SpotTourEnrichment } from "@/lib/tour-api/tour-spot-client";
+import { tourImageUnoptimized, tourSearchQuery } from "@/lib/tour-api/tour-spot-client";
+import { V5TravelAiAnalysisLoadingOverlay } from "./v5-travel-ai-analysis-loading";
 import {
   X,
   MapPin,
@@ -26,6 +29,7 @@ import {
   Star,
   ChevronRight,
   BookOpen,
+  Landmark,
 } from "lucide-react";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -473,6 +477,9 @@ export function V5PlanMapModal({
   const [wikiBySpotId, setWikiBySpotId] = useState<
     Record<string, SpotWikiEnrichment | "err" | undefined>
   >({});
+  const [tourBySpotId, setTourBySpotId] = useState<
+    Record<string, SpotTourEnrichment | "err" | undefined>
+  >({});
 
   const shellRef = useRef<HTMLDivElement>(null);
   const [isFs, setIsFs] = useState(false);
@@ -526,6 +533,50 @@ export function V5PlanMapModal({
           }
         } catch {
           if (!ac.signal.aborted) setWikiBySpotId((prev) => ({ ...prev, [spot.id]: "err" }));
+        }
+      })();
+    });
+    return () => ac.abort();
+  }, [plan.id, plan.region, spotsWikiFetchKey]);
+
+  useEffect(() => {
+    const ac = new AbortController();
+    plan.spots.forEach((spot) => {
+      void (async () => {
+        const q = tourSearchQuery(spot, plan.region);
+        try {
+          const r = await fetch(`/api/tour/spot?q=${encodeURIComponent(q)}`, {
+            signal: ac.signal,
+          });
+          const j = (await r.json()) as
+            | {
+                ok: true;
+                contentId: string;
+                contentTypeId: string;
+                title: string;
+                imageUrl: string | null;
+                displayImageUrl: string;
+                overview: string | null;
+              }
+            | { ok: false };
+          if (ac.signal.aborted) return;
+          if (j.ok === true) {
+            setTourBySpotId((prev) => ({
+              ...prev,
+              [spot.id]: {
+                contentId: j.contentId,
+                contentTypeId: j.contentTypeId,
+                title: j.title,
+                imageUrl: j.imageUrl,
+                displayImageUrl: j.displayImageUrl,
+                overview: j.overview,
+              },
+            }));
+          } else {
+            setTourBySpotId((prev) => ({ ...prev, [spot.id]: "err" }));
+          }
+        } catch {
+          if (!ac.signal.aborted) setTourBySpotId((prev) => ({ ...prev, [spot.id]: "err" }));
         }
       })();
     });
@@ -602,6 +653,7 @@ export function V5PlanMapModal({
   const selectedSpot = plan.spots.find((s) => s.id === selectedSpotId) ?? null;
   const detailSpot = detailSpotId ? plan.spots.find((s) => s.id === detailSpotId) ?? null : null;
   const detailWiki = detailSpotId ? wikiBySpotId[detailSpotId] : undefined;
+  const detailTour = detailSpotId ? tourBySpotId[detailSpotId] : undefined;
 
   useEffect(() => {
     const onFs = () => setIsFs(Boolean(document.fullscreenElement));
@@ -715,7 +767,7 @@ export function V5PlanMapModal({
         </div>
 
         <div className="flex-1 flex flex-col md:flex-row min-h-0">
-          <div className="flex-1 min-h-0 min-w-0 relative min-h-[42dvh] md:min-h-0">
+          <div className="relative flex-1 min-h-0 min-w-0 min-h-[42dvh] md:min-h-0">
             <PlanMap
               key={`${plan.id}-${spotCoordsKey}`}
               plan={plan}
@@ -729,6 +781,12 @@ export function V5PlanMapModal({
               routeLoading={routeLoading}
               routeKind={routeKind}
             />
+            {routeLoading && spotsWithCoords.length >= 2 && (
+              <V5TravelAiAnalysisLoadingOverlay
+                open
+                className="absolute inset-0 z-[18] justify-start overflow-y-auto pt-6 md:pt-10"
+              />
+            )}
             {selectedSpot && (
               <div
                 className="absolute bottom-3 left-3 right-3 md:right-auto md:max-w-[300px] px-4 py-3 rounded-2xl shadow-lg pointer-events-none z-[5]"
@@ -811,8 +869,14 @@ export function V5PlanMapModal({
                   const st = spotTimes[idx];
                   const legAfter = routeLegs?.[idx];
                   const wiki = wikiBySpotId[spot.id];
-                  const thumb =
-                    wiki && wiki !== "err" && wiki.thumbnail ? wiki.thumbnail : null;
+                  const tour = tourBySpotId[spot.id];
+                  const tourImg =
+                    tour && tour !== "err" && tour.imageUrl && tour.imageUrl.length > 0
+                      ? tour.imageUrl
+                      : null;
+                  const wikiThumb = wiki && wiki !== "err" && wiki.thumbnail ? wiki.thumbnail : null;
+                  const thumb = tourImg ?? wikiThumb;
+                  const metaLoading = tour === undefined || wiki === undefined;
                   return (
                     <div key={spot.id}>
                       <div
@@ -836,9 +900,11 @@ export function V5PlanMapModal({
                                 height={168}
                                 className="h-full w-full object-cover"
                                 sizes="84px"
-                                unoptimized={thumb.includes("wikimedia")}
+                                unoptimized={
+                                  thumb.includes("wikimedia") || tourImageUnoptimized(thumb)
+                                }
                               />
-                            ) : wiki === undefined ? (
+                            ) : metaLoading ? (
                               <div className="flex h-full w-full animate-pulse items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
                                 <MapPin className="h-6 w-6 text-[var(--text-muted)]/40" />
                               </div>
@@ -970,21 +1036,41 @@ export function V5PlanMapModal({
                         isFs ? "aspect-[16/9] md:aspect-[21/9] md:max-h-[min(40vh,320px)]" : "aspect-[16/10]"
                       }`}
                     >
-                      {detailWiki && detailWiki !== "err" && detailWiki.thumbnail ? (
-                        <Image
-                          src={detailWiki.thumbnail}
-                          alt=""
-                          fill
-                          className="object-cover"
-                          sizes={isFs ? "(min-width:768px) 55vw, 100vw" : "380px"}
-                          unoptimized={detailWiki.thumbnail.includes("wikimedia")}
-                          priority
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
-                          <SpotTypeIcon type={detailSpot.type} size={40} />
-                        </div>
-                      )}
+                      {(() => {
+                        const tourHero =
+                          detailTour && detailTour !== "err" && detailTour.imageUrl
+                            ? detailTour.imageUrl
+                            : null;
+                        const wikiHero =
+                          detailWiki && detailWiki !== "err" && detailWiki.thumbnail
+                            ? detailWiki.thumbnail
+                            : null;
+                        const fallbackHero =
+                          detailTour && detailTour !== "err"
+                            ? detailTour.displayImageUrl
+                            : null;
+                        const src = tourHero ?? wikiHero ?? fallbackHero;
+                        if (!src) {
+                          return (
+                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+                              <SpotTypeIcon type={detailSpot.type} size={40} />
+                            </div>
+                          );
+                        }
+                        return (
+                          <Image
+                            src={src}
+                            alt=""
+                            fill
+                            className="object-cover"
+                            sizes={isFs ? "(min-width:768px) 55vw, 100vw" : "380px"}
+                            unoptimized={
+                              src.includes("wikimedia") || tourImageUnoptimized(src)
+                            }
+                            priority
+                          />
+                        );
+                      })()}
                     </div>
 
                     <div className={`space-y-4 py-4 ${isFs ? "md:px-8 px-4" : "px-4"}`}>
@@ -998,12 +1084,24 @@ export function V5PlanMapModal({
                         </div>
                       </div>
 
+                      {detailTour && detailTour !== "err" && detailTour.overview ? (
+                        <div>
+                          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                            <Landmark className="h-3.5 w-3.5" />
+                            소개 · 한국관광공사 TourAPI
+                          </div>
+                          <p className="text-[13px] leading-relaxed text-[var(--text-secondary)] whitespace-pre-line">
+                            {detailTour.overview}
+                          </p>
+                        </div>
+                      ) : null}
+
                       {detailWiki && detailWiki !== "err" ? (
                         <>
                           <div>
                             <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
                               <BookOpen className="h-3.5 w-3.5" />
-                              소개 · 위키백과
+                              추가 참고 · 위키백과
                             </div>
                             <p className="text-[13px] leading-relaxed text-[var(--text-secondary)] whitespace-pre-line">
                               {detailWiki.extract}
@@ -1019,13 +1117,39 @@ export function V5PlanMapModal({
                             <ExternalLink className="h-4 w-4" />
                           </a>
                         </>
-                      ) : detailWiki === "err" ? (
-                        <p className="text-[12px] leading-relaxed text-[var(--text-muted)]">
-                          이 장소에 대한 백과 요약을 불러오지 못했어요. 지도 앱에서 상세 정보를 확인해 보세요.
-                        </p>
-                      ) : (
-                        <p className="text-[12px] text-[var(--text-muted)]">정보를 불러오는 중…</p>
-                      )}
+                      ) : null}
+
+                      {(() => {
+                        const tourR = detailTour !== undefined;
+                        const wikiR = detailWiki !== undefined;
+                        const hasTourOv =
+                          Boolean(detailTour && detailTour !== "err" && detailTour.overview);
+                        const hasWikiEx = Boolean(detailWiki && detailWiki !== "err");
+                        const hasAny = hasTourOv || hasWikiEx;
+                        if (!tourR || !wikiR) {
+                          if (!hasAny) {
+                            return (
+                              <p className="text-[12px] text-[var(--text-muted)]">
+                                정보를 불러오는 중…
+                              </p>
+                            );
+                          }
+                          return null;
+                        }
+                        if (hasAny) return null;
+                        if (detailTour === "err" && detailWiki === "err") {
+                          return (
+                            <p className="text-[12px] leading-relaxed text-[var(--text-muted)]">
+                              TourAPI·위키 요약을 불러오지 못했어요. 지도 앱에서 상세 정보를 확인해 보세요.
+                            </p>
+                          );
+                        }
+                        return (
+                          <p className="text-[12px] leading-relaxed text-[var(--text-muted)]">
+                            공식 개요·위키 요약을 찾지 못했어요. 플랜 메모와 지도 링크를 참고해 주세요.
+                          </p>
+                        );
+                      })()}
 
                       {detailSpot.note && (
                         <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/40 px-3 py-3">

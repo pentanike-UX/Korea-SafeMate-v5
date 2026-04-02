@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   Plus, MapPin, Clock, CloudSun, Bookmark, BookmarkCheck,
@@ -19,6 +20,9 @@ import { consumeTravelChatSse } from "@/lib/travel-chat/consume-chat-sse";
 import { BRAND } from "@/lib/constants";
 import { Link } from "@/i18n/navigation";
 import { V5ChatPricingModal, type PricingModalFocus } from "./v5-chat-pricing-modal";
+import { V5TravelAiAnalysisLoadingOverlay } from "./v5-travel-ai-analysis-loading";
+import type { SpotTourEnrichment } from "@/lib/tour-api/tour-spot-client";
+import { tourImageUnoptimized, tourSearchQuery } from "@/lib/tour-api/tour-spot-client";
 
 // ─── Composer: 여행 프롬프트 체크리스트 (실시간 키워드 감지) ───────────────────
 
@@ -294,6 +298,59 @@ function TravelRouteCard({
   plan: TravelPlan; isSaved: boolean;
   onSave: (p: TravelPlan) => void; onViewMap: (p: TravelPlan) => void;
 }) {
+  const [tourBySpotId, setTourBySpotId] = useState<
+    Record<string, SpotTourEnrichment | "err" | undefined>
+  >({});
+
+  const spotsTourFetchKey = useMemo(
+    () => plan.spots.map((s) => `${s.id}:${s.name}`).join("|"),
+    [plan.spots],
+  );
+
+  useEffect(() => {
+    const ac = new AbortController();
+    plan.spots.forEach((spot) => {
+      void (async () => {
+        const q = tourSearchQuery(spot, plan.region);
+        try {
+          const r = await fetch(`/api/tour/spot?q=${encodeURIComponent(q)}`, {
+            signal: ac.signal,
+          });
+          const j = (await r.json()) as
+            | {
+                ok: true;
+                contentId: string;
+                contentTypeId: string;
+                title: string;
+                imageUrl: string | null;
+                displayImageUrl: string;
+                overview: string | null;
+              }
+            | { ok: false };
+          if (ac.signal.aborted) return;
+          if (j.ok === true) {
+            setTourBySpotId((prev) => ({
+              ...prev,
+              [spot.id]: {
+                contentId: j.contentId,
+                contentTypeId: j.contentTypeId,
+                title: j.title,
+                imageUrl: j.imageUrl,
+                displayImageUrl: j.displayImageUrl,
+                overview: j.overview,
+              },
+            }));
+          } else {
+            setTourBySpotId((prev) => ({ ...prev, [spot.id]: "err" }));
+          }
+        } catch {
+          if (!ac.signal.aborted) setTourBySpotId((prev) => ({ ...prev, [spot.id]: "err" }));
+        }
+      })();
+    });
+    return () => ac.abort();
+  }, [plan.id, plan.region, spotsTourFetchKey]);
+
   const hasMapCoords = plan.spots.some(
     (s) =>
       s.lat != null &&
@@ -321,12 +378,37 @@ function TravelRouteCard({
         <p className="text-[13px] text-[var(--text-secondary)] mt-2 leading-relaxed">{plan.summary}</p>
       </div>
       <div className="px-4 py-3">
-        {plan.spots.map((spot, idx) => (
+        {plan.spots.map((spot, idx) => {
+          const tour = tourBySpotId[spot.id];
+          const tourImg =
+            tour && tour !== "err" && tour.imageUrl && tour.imageUrl.length > 0
+              ? tour.imageUrl
+              : null;
+          const tourLoading = tour === undefined;
+          return (
           <div key={spot.id}>
             <div className="flex items-start gap-3 py-2">
-              <div className="relative flex-shrink-0">
-                <SpotIcon type={spot.type} />
-                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[var(--text-strong)] text-white text-[9px] font-bold flex items-center justify-center leading-none">
+              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-[var(--bg-surface-subtle)] ring-1 ring-black/[0.06] dark:ring-white/[0.08]">
+                {tourImg ? (
+                  <Image
+                    src={tourImg}
+                    alt=""
+                    width={48}
+                    height={48}
+                    className="h-full w-full object-cover"
+                    sizes="48px"
+                    unoptimized={tourImageUnoptimized(tourImg)}
+                  />
+                ) : tourLoading ? (
+                  <div className="flex h-full w-full animate-pulse items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+                    <MapPin className="h-4 w-4 text-[var(--text-muted)]/35" />
+                  </div>
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <SpotIcon type={spot.type} />
+                  </div>
+                )}
+                <span className="absolute -top-1 -right-1 flex h-3.5 min-w-[0.875rem] items-center justify-center rounded-full bg-[var(--text-strong)] px-0.5 text-[9px] font-bold leading-none text-white shadow-sm">
                   {idx + 1}
                 </span>
               </div>
@@ -339,6 +421,16 @@ function TravelRouteCard({
                   </div>
                 </div>
                 {spot.note && <p className="text-[12px] text-[var(--text-secondary)] mt-0.5 leading-relaxed">{spot.note}</p>}
+                {tour && tour !== "err" && tour.overview ? (
+                  <div className="mt-1.5 rounded-lg border border-[var(--border-default)]/70 bg-[var(--bg-surface-subtle)]/50 px-2.5 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                      소개 · 한국관광공사
+                    </p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-secondary)] line-clamp-4 whitespace-pre-line">
+                      {tour.overview}
+                    </p>
+                  </div>
+                ) : null}
               </div>
             </div>
             {spot.transitToNext && idx < plan.spots.length - 1 && (
@@ -349,7 +441,8 @@ function TravelRouteCard({
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
       <div className="px-4 pb-3 space-y-2">
         {plan.weatherNote && (
@@ -585,72 +678,6 @@ function MessageBubble({
         <span className="text-[10px] text-[var(--text-muted)] mt-1 px-1">
           {message.timestamp.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
         </span>
-      </div>
-    </div>
-  );
-}
-
-const AWAITING_REPLY_MESSAGES = [
-  "🗺️ 열심히 지도를 펼치고 형광펜으로 동선을 그리는 중...",
-  "🛑 앗, 여긴 너무 막히는데? 더 빠른 지름길로 수정하고 있어요!",
-  "☕ 가이드가 커피 한 모금 마시고 마지막 스퍼트를 올립니다.",
-] as const;
-
-/** 질문 전송 후 AI 답변 대기 — 3초마다 문구 페이드 전환 + 회전 나침반 */
-function TypingIndicator() {
-  const [msgIndex, setMsgIndex] = useState(0);
-  const [textVisible, setTextVisible] = useState(true);
-  const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTextVisible(false);
-      if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
-      fadeTimeoutRef.current = setTimeout(() => {
-        setMsgIndex((i) => (i + 1) % AWAITING_REPLY_MESSAGES.length);
-        setTextVisible(true);
-        fadeTimeoutRef.current = null;
-      }, 480);
-    }, 3000);
-    return () => {
-      clearInterval(interval);
-      if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
-    };
-  }, []);
-
-  return (
-    <div
-      className="flex gap-3 items-end"
-      role="status"
-      aria-live="polite"
-      aria-busy="true"
-      aria-label="답변 준비 중"
-    >
-      <div
-        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mb-0.5 shadow-sm ring-1 ring-white/25"
-        style={{ background: "#0891ff" }}
-        aria-hidden
-      >
-        <Sparkles className="w-3.5 h-3.5 text-white drop-shadow-sm" />
-      </div>
-      <div className="max-w-[min(100%,26rem)] px-4 pt-7 pb-3.5 rounded-2xl rounded-bl-sm bg-[var(--bg-elevated)] border border-[var(--border-default)] shadow-[0_1px_6px_rgba(20,20,20,0.05)]">
-        <div
-          className="flex justify-center mb-[3px] motion-reduce:animate-none motion-safe:animate-[spin_2.8s_linear_infinite]"
-          aria-hidden
-        >
-          <Compass
-            className="w-7 h-7 drop-shadow-sm"
-            strokeWidth={2.25}
-            style={{ color: "#0891ff" }}
-          />
-        </div>
-        <p
-          className={`text-[13px] leading-relaxed text-[var(--text-secondary)] text-center min-h-[3.5rem] flex items-center justify-center px-0.5 motion-reduce:transition-none motion-safe:transition-opacity motion-safe:duration-500 motion-safe:ease-in-out ${
-            textVisible ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          {AWAITING_REPLY_MESSAGES[msgIndex]}
-        </p>
       </div>
     </div>
   );
@@ -976,6 +1003,18 @@ export function V5ChatShell() {
 
   const activeConv = conversations.find((c) => c.id === activeConvId) ?? null;
 
+  const streamWaitingForFirstToken = useMemo(() => {
+    const msgs = activeConv?.messages;
+    if (!msgs?.length) return false;
+    const last = msgs[msgs.length - 1];
+    if (!last || last.role !== "assistant" || !last.isStreaming) return false;
+    return !String(last.content ?? "").trim();
+  }, [activeConv?.messages]);
+
+  const showTravelAnalysisLoading = Boolean(
+    isTyping || routeGeneratingMessageId || streamWaitingForFirstToken,
+  );
+
   useEffect(() => {
     if (!chatHeaderMenuOpen) return;
     const onDown = (e: MouseEvent) => {
@@ -1120,7 +1159,7 @@ export function V5ChatShell() {
   // ── Auto-scroll ───────────────────────────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeConv?.messages, isTyping, routeGeneratingMessageId]);
+  }, [activeConv?.messages, isTyping, routeGeneratingMessageId, showTravelAnalysisLoading]);
 
   // ── Textarea auto-resize ──────────────────────────────────────────────────
   useEffect(() => {
@@ -1730,44 +1769,51 @@ export function V5ChatShell() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto pt-1 md:pt-2">
-            {/* 메시지 로드 중 (대화 전환 후 DB 로드 전) */}
-            {activeConv && !activeConv.messagesLoaded && userId ? (
-              <div className="flex-1 flex items-center justify-center py-20">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-6 h-6 rounded-full border-2 border-[var(--border-strong)] border-t-[var(--brand-trust-blue)] animate-spin" />
-                  <span className="text-[12px] text-[var(--text-muted)]">메시지 불러오는 중…</span>
-                </div>
-              </div>
-            ) : !hasUserMessage ? (
-              <EmptyState
-                onApplyPrompt={(text) => {
-                  setInputValue(text);
-                  queueMicrotask(() => {
-                    textareaRef.current?.focus();
-                    textareaRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-                  });
-                }}
-                onOpenPricing={() => openPricing("overview")}
+          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden pt-1 md:pt-2">
+            {showTravelAnalysisLoading && (
+              <V5TravelAiAnalysisLoadingOverlay
+                open
+                className="absolute inset-0 z-40 justify-start overflow-y-auto pt-[min(10vh,4rem)]"
               />
-            ) : (
-              <div className="max-w-[720px] mx-auto px-4 md:px-5 py-7 md:py-8 space-y-5">
-                {messages.map((msg) => (
-                  <MessageBubble
-                    key={msg.id}
-                    message={msg}
-                    savedPlanIds={savedPlanIds}
-                    onSavePlan={handleSavePlan}
-                    onViewMap={setMapModalPlan}
-                    onRemovePreferenceChip={handleRemovePreferenceChip}
-                    onConfirmRoute={handleConfirmRoute}
-                    routeGeneratingMessageId={routeGeneratingMessageId}
-                  />
-                ))}
-                {isTyping && <TypingIndicator />}
-                <div ref={messagesEndRef} />
-              </div>
             )}
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {/* 메시지 로드 중 (대화 전환 후 DB 로드 전) */}
+              {activeConv && !activeConv.messagesLoaded && userId ? (
+                <div className="flex flex-1 flex-col items-center justify-center py-20">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--border-strong)] border-t-[var(--brand-trust-blue)]" />
+                    <span className="text-[12px] text-[var(--text-muted)]">메시지 불러오는 중…</span>
+                  </div>
+                </div>
+              ) : !hasUserMessage ? (
+                <EmptyState
+                  onApplyPrompt={(text) => {
+                    setInputValue(text);
+                    queueMicrotask(() => {
+                      textareaRef.current?.focus();
+                      textareaRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                    });
+                  }}
+                  onOpenPricing={() => openPricing("overview")}
+                />
+              ) : (
+                <div className="mx-auto max-w-[720px] space-y-5 px-4 py-7 md:px-5 md:py-8">
+                  {messages.map((msg) => (
+                    <MessageBubble
+                      key={msg.id}
+                      message={msg}
+                      savedPlanIds={savedPlanIds}
+                      onSavePlan={handleSavePlan}
+                      onViewMap={setMapModalPlan}
+                      onRemovePreferenceChip={handleRemovePreferenceChip}
+                      onConfirmRoute={handleConfirmRoute}
+                      routeGeneratingMessageId={routeGeneratingMessageId}
+                    />
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Input Bar */}
