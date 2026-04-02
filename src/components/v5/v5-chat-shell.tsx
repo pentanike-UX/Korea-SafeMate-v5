@@ -6,7 +6,7 @@ import {
   Plus, MapPin, Clock, CloudSun, Bookmark, BookmarkCheck,
   Send, Utensils, Coffee, Train, Camera, ChevronRight,
   Sparkles, MoreHorizontal, Trash2, PanelLeftClose, PanelLeft,
-  Navigation, Hotel, Menu, X, Map, Compass, Check,
+  Navigation, Hotel, Menu, X, Map, Compass, Check, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { useAuthUser } from "@/hooks/use-auth-user";
 import {
@@ -53,6 +53,9 @@ const TRAVEL_PROMPT_CHECKLIST: { key: TravelPromptCheckKey; label: string; hint:
 ];
 
 const DEPARTURE_CHIP_ID = "trip_departure_origin";
+
+/** 이전 키(`wayly-v5-composer-mode`)는 무시 — 한 번 더 하이브리드 기본(간편 선택)이 보이도록 */
+const V5_COMPOSER_MODE_STORAGE_KEY = "wayly-v5-composer-mode-v3";
 
 function evaluateTravelPromptChecklist(text: string): Record<TravelPromptCheckKey, boolean> {
   const s = text;
@@ -1022,10 +1025,13 @@ function WaylyMark({
 function EmptyState({
   onApplyPrompt,
   onOpenPricing,
+  onScrollToComposer,
 }: {
   /** 입력창에 문장을 넣고 포커스 — 괄호 부분만 고친 뒤 전송 */
   onApplyPrompt: (text: string) => void;
   onOpenPricing: () => void;
+  /** 화면 하단 하이브리드 칩 영역으로 스크롤 */
+  onScrollToComposer: () => void;
 }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 pb-28 md:pb-32 select-none overflow-y-auto">
@@ -1037,11 +1043,21 @@ function EmptyState({
       <h1 className="text-[22px] font-bold text-[var(--text-strong)] text-center mb-2 tracking-tight">
         어디로 여행을 떠나시나요?
       </h1>
-      <p className="text-[14px] text-[var(--text-secondary)] text-center max-w-md leading-relaxed mb-6">
-        먼저 <strong className="font-semibold text-[var(--text-strong)]">왕복</strong>인지{" "}
-        <strong className="font-semibold text-[var(--text-strong)]">현지만</strong>인지 고른 뒤, 입력창에 채워진 문장에서{" "}
-        <strong className="font-semibold text-[var(--text-strong)]">괄호 안</strong>만 바꿔내면 돼요. 인원·출발지·교통이
-        자연스럽게 들어갑니다.
+      <p className="text-[14px] text-[var(--text-secondary)] text-center max-w-md leading-relaxed mb-3">
+        <strong className="font-semibold text-[var(--text-strong)]">아래 8가지 칩</strong>(지역·출발·도착·일정·인원·교통·분위기·음식)으로
+        탭만 해서 조합할 수 있어요. 키보드는 &quot;직접 입력&quot;으로 켤 때만 쓰면 됩니다.
+      </p>
+      <button
+        type="button"
+        onClick={onScrollToComposer}
+        className="mb-6 text-[13px] font-semibold text-[var(--brand-trust-blue)] underline-offset-4 hover:underline touch-manipulation"
+      >
+        여행 조건 칩 영역으로 이동 ↓
+      </button>
+      <p className="text-[13px] text-[var(--text-muted)] text-center max-w-md leading-relaxed mb-6">
+        긴 문장이 편하면 <strong className="text-[var(--text-strong)]">자유 입력</strong>(데스크톱) 또는{" "}
+        <strong className="text-[var(--text-strong)]">키보드로 직접 입력</strong>(모바일)을 켠 뒤, 예시 문장의{" "}
+        <strong className="text-[var(--text-strong)]">괄호 안</strong>만 고쳐내도 됩니다.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg mb-6">
@@ -1055,14 +1071,14 @@ function EmptyState({
             <span className="block text-[15px] font-semibold text-[var(--text-strong)] tracking-tight">{opt.title}</span>
             <span className="block text-[12px] text-[var(--text-muted)] mt-1 leading-snug">{opt.subtitle}</span>
             <span className="block text-[11px] font-medium text-[var(--brand-trust-blue)] mt-2.5">
-              탭하면 아래 입력창에 문장이 들어가요
+              탭하면 자유 입력란에 문장이 들어가요 (직접 입력 모드로 전환)
             </span>
           </button>
         ))}
       </div>
 
       <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2 w-full max-w-lg">
-        한 줄 예시 (탭해서 수정 후 전송)
+        한 줄 예시 (자유 입력에서 탭 → 수정 후 전송)
       </p>
       <div className="flex flex-col gap-2 w-full max-w-lg mb-8">
         {RICH_START_EXAMPLES.map((line) => (
@@ -1277,6 +1293,8 @@ export function V5ChatShell() {
   const isLg = useLgUp();
   const [hybridDraft, setHybridDraft] = useState(HYBRID_TRIP_EMPTY);
   const [mobileFreeInput, setMobileFreeInput] = useState(false);
+  /** 모바일·태블릿(1024px 미만): 입력 독(하이브리드·자유입력) 접기/펼치기 */
+  const [mobileDockExpanded, setMobileDockExpanded] = useState(true);
   const [composerDesktopMode, setComposerDesktopMode] = useState<"picker" | "free">("picker");
 
   const promptChecklist = useMemo(() => evaluateTravelPromptChecklist(inputValue), [inputValue]);
@@ -1502,7 +1520,7 @@ export function V5ChatShell() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      const v = localStorage.getItem("wayly-v5-composer-mode");
+      const v = localStorage.getItem(V5_COMPOSER_MODE_STORAGE_KEY);
       if (v === "picker" || v === "free") setComposerDesktopMode(v);
     } catch {
       /* ignore */
@@ -1512,7 +1530,7 @@ export function V5ChatShell() {
   const setDesktopComposerMode = useCallback((mode: "picker" | "free") => {
     setComposerDesktopMode(mode);
     try {
-      localStorage.setItem("wayly-v5-composer-mode", mode);
+      localStorage.setItem(V5_COMPOSER_MODE_STORAGE_KEY, mode);
     } catch {
       /* ignore */
     }
@@ -2035,6 +2053,8 @@ export function V5ChatShell() {
   const showFreeComposer =
     (isLg && composerDesktopMode === "free") || (!isLg && mobileFreeInput);
   const composerBusy = isTyping || Boolean(routeGeneratingMessageId);
+  const mobileDockCompact = !isLg && !mobileDockExpanded;
+  const showComposerMain = isLg || mobileDockExpanded;
 
   const sidebarProps = {
     conversations, savedPlans, activeConvId,
@@ -2186,6 +2206,13 @@ export function V5ChatShell() {
                     });
                   }}
                   onOpenPricing={() => openPricing("overview")}
+                  onScrollToComposer={() => {
+                    setMobileDockExpanded(true);
+                    composerShellRef.current?.scrollIntoView({
+                      block: "end",
+                      behavior: "smooth",
+                    });
+                  }}
                 />
               ) : (
                 <div className="mx-auto max-w-[720px] space-y-5 px-4 py-7 md:px-5 md:py-8">
@@ -2218,14 +2245,45 @@ export function V5ChatShell() {
 
           {/* Input Bar */}
           <div
+            id="wayly-trip-composer"
             ref={composerShellRef}
-            className={`v5-composer-dock flex-shrink-0 bg-[var(--bg-page)] border-t border-[var(--border-default)]/40 transition-[padding] duration-150 ease-out ${
+            className={`wayly-trip-composer-anchor v5-composer-dock flex-shrink-0 scroll-mt-4 bg-[var(--bg-page)] border-t border-[var(--border-default)]/40 transition-[padding] duration-150 ease-out ${
               composerKeyboardTight
                 ? "v5-composer-keyboard-tight"
-                : "px-5 pb-6 md:pb-8 pt-5 md:pt-7"
+                : mobileDockCompact
+                  ? "px-4 pt-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+                  : "px-5 pb-6 md:pb-8 pt-5 md:pt-7"
             }`}
           >
             <div className="max-w-[720px] mx-auto space-y-3">
+              {mobileDockCompact && (
+                <button
+                  type="button"
+                  onClick={() => setMobileDockExpanded(true)}
+                  className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3.5 py-2.5 text-left shadow-[0_2px_12px_rgba(20,20,20,0.04)] touch-manipulation active:scale-[0.99] transition-transform"
+                  aria-expanded={false}
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)]">
+                      <ChevronUp className="h-5 w-5" aria-hidden />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-[13px] font-semibold text-[var(--text-strong)] leading-tight">
+                        여행 조건 입력
+                      </span>
+                      <span className="block text-[11px] text-[var(--text-muted)] mt-0.5">
+                        탭하면 칩·키보드 입력을 펼칩니다
+                      </span>
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-[11px] font-semibold text-[var(--brand-trust-blue)]">
+                    펼치기
+                  </span>
+                </button>
+              )}
+
+              {showComposerMain && (
+                <>
               <div className="hidden lg:flex items-center justify-between gap-3 px-0.5">
                 <span className="text-[11px] font-medium text-[var(--text-muted)] tracking-tight">
                   입력 방식
@@ -2265,15 +2323,25 @@ export function V5ChatShell() {
               </div>
 
               <div className="flex lg:hidden items-center justify-between gap-2 px-0.5">
-                <span className="text-[11px] font-medium text-[var(--text-muted)]">
-                  선택 입력을 기본으로 씁니다
+                <button
+                  type="button"
+                  onClick={() => setMobileDockExpanded(false)}
+                  className="flex shrink-0 items-center gap-1 rounded-xl border border-transparent px-2 py-1.5 text-[11px] font-semibold text-[var(--text-muted)] hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--text-strong)] touch-manipulation"
+                  aria-expanded={mobileDockExpanded}
+                  title="입력 영역 접기"
+                >
+                  <ChevronDown className="h-4 w-4 opacity-80" aria-hidden />
+                  접기
+                </button>
+                <span className="min-w-0 flex-1 text-center text-[11px] font-medium text-[var(--text-muted)] truncate">
+                  선택 입력 기본
                 </span>
                 <button
                   type="button"
                   onClick={() => setMobileFreeInput((v) => !v)}
-                  className="shrink-0 text-[12px] font-semibold text-[var(--brand-trust-blue)] touch-manipulation"
+                  className="shrink-0 max-w-[48%] text-right text-[12px] font-semibold text-[var(--brand-trust-blue)] touch-manipulation"
                 >
-                  {mobileFreeInput ? "선택 모드로" : "키보드로 직접 입력"}
+                  {mobileFreeInput ? "선택 모드" : "키보드 입력"}
                 </button>
               </div>
 
@@ -2403,6 +2471,8 @@ export function V5ChatShell() {
                       요금 안내
                     </button>
                   </p>
+                </>
+              )}
                 </>
               )}
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import {
   MapPin,
   Navigation,
@@ -160,9 +160,10 @@ export function hybridHasMinimumForSend(d: Record<HybridTripKey, string>): boole
   return Boolean(d.region.trim() && d.schedule.trim());
 }
 
+/** Tailwind `lg`와 동일 1024px — useEffect보다 빨리 맞춰 깜빡임·모드 오판을 줄임 */
 export function useLgUp(): boolean {
   const [lg, setLg] = useState(false);
-  useEffect(() => {
+  useLayoutEffect(() => {
     const mq = window.matchMedia("(min-width: 1024px)");
     const sync = () => setLg(mq.matches);
     sync();
@@ -218,9 +219,12 @@ export function HybridTripComposer({
   const canSend = hybridHasMinimumForSend(draft) && !disabled;
 
   return (
-    <div className="space-y-3">
-      <p className="text-[11px] font-medium text-[var(--text-muted)] tracking-tight px-0.5">
-        탭해서 고르기 · 키보드 없이 조건을 모아요
+    <div className="space-y-3 rounded-2xl border border-[var(--border-default)]/80 bg-[var(--bg-elevated)]/40 px-3 py-3 md:px-4 md:py-4">
+      <p className="text-[12px] font-semibold text-[var(--text-strong)] tracking-tight px-0.5">
+        하이브리드 입력 · 8가지 칩으로 조합
+      </p>
+      <p className="text-[11px] font-medium text-[var(--text-muted)] tracking-tight px-0.5 -mt-1">
+        탭하면 시트에서 고르거나 짧게 직접 입력 · 지역·일정 필수 후 보내기
       </p>
       <div className="v5-hybrid-chip-strip flex flex-wrap gap-2">
         {SLOT_META.map(({ key, label, short, icon: Icon }) => {
