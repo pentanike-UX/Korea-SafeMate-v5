@@ -1,6 +1,11 @@
 import type { Content } from "@google/genai";
-import { getGeminiClient, shouldFallbackFromGeminiToGroq } from "@/lib/gemini";
+import {
+  getGeminiClient,
+  isChatProviderAbortError,
+  shouldFallbackFromGeminiToGroq,
+} from "@/lib/gemini";
 import { getGroqClient, streamGroqTravelPlanner } from "@/lib/groq-travel-chat.server";
+import { streamOpenAiTravelPlanner } from "@/lib/openai-travel-chat.server";
 import {
   GEMINI_CHAT_HISTORY_LIMIT,
   insertChatMessage,
@@ -291,16 +296,46 @@ export async function POST(req: Request) {
           return;
         }
 
-        const runGroqFallbackStream = () =>
-          streamGroqTravelPlanner({
-            systemInstruction: TRAVEL_PLANNER_SYSTEM_INSTRUCTION,
-            history,
-            userMessage: message,
-            abortSignal,
-            onDelta: (t) => sendSse({ type: "delta", text: t }),
-          });
+        const streamFallbackOpts = {
+          systemInstruction: TRAVEL_PLANNER_SYSTEM_INSTRUCTION,
+          history,
+          userMessage: message,
+          abortSignal,
+          onDelta: (t: string) => sendSse({ type: "delta", text: t }),
+        };
 
-        const persistAssistantAndDone = async (trimmed: string, opts?: { groqFallback?: boolean }) => {
+        /** Gemini 실패 시 Groq → OpenAI 순 (`/api/v5/chat`와 동일) */
+        const tryFallbackProviders = async (
+          err: unknown,
+          errorLabel: string,
+        ): Promise<{ text: string; source: "groq" | "openai" } | null> => {
+          if (abortSignal.aborted || isChatProviderAbortError(err)) return null;
+
+          if (shouldFallbackFromGeminiToGroq(err, abortSignal) && getGroqClient()) {
+            try {
+              const groqText = (await streamGroqTravelPlanner(streamFallbackOpts)).trim();
+              if (groqText) return { text: groqText, source: "groq" };
+            } catch (ge) {
+              console.error(`[api/chat] Groq fallback ${errorLabel}`, ge);
+            }
+          }
+
+          if (process.env.OPENAI_API_KEY?.trim()) {
+            try {
+              const openaiText = (await streamOpenAiTravelPlanner(streamFallbackOpts)).trim();
+              if (openaiText) return { text: openaiText, source: "openai" };
+            } catch (oe) {
+              console.error(`[api/chat] OpenAI fallback ${errorLabel}`, oe);
+            }
+          }
+
+          return null;
+        };
+
+        const persistAssistantAndDone = async (
+          trimmed: string,
+          opts?: { fallbackSource?: "groq" | "openai" },
+        ) => {
           const savedAi = await insertChatMessage(sb, userId, trimmed, "assistant");
           recordWaylyUsageFireAndForget(sb, {
             geminiGenerations: 1,
@@ -308,8 +343,10 @@ export async function POST(req: Request) {
             geminiEstOutputTokens: Math.ceil(trimmed.length / 4),
           });
           const parts: string[] = [];
-          if (opts?.groqFallback) {
+          if (opts?.fallbackSource === "groq") {
             parts.push("Gemini API 한도·오류로 Groq 백업 모델이 응답했습니다.");
+          } else if (opts?.fallbackSource === "openai") {
+            parts.push("Gemini·Groq를 쓰지 못해 OpenAI 백업 모델이 응답했습니다.");
           }
           if (!savedAi.ok) {
             parts.push(`AI 답변은 전송했으나 저장에 실패했습니다: ${savedAi.message}`);
@@ -333,18 +370,9 @@ export async function POST(req: Request) {
           });
         } catch (e) {
           console.error("[api/chat] chats.create", e);
-          if (shouldFallbackFromGeminiToGroq(e, abortSignal) && getGroqClient()) {
-            try {
-              const groqText = (await runGroqFallbackStream()).trim();
-              if (groqText) {
-                await persistAssistantAndDone(groqText, { groqFallback: true });
-              } else {
-                await fallbackDummy();
-              }
-            } catch (ge) {
-              console.error("[api/chat] Groq fallback after chats.create", ge);
-              await fallbackDummy();
-            }
+          const fb = await tryFallbackProviders(e, "after chats.create");
+          if (fb) {
+            await persistAssistantAndDone(fb.text, { fallbackSource: fb.source });
           } else {
             await fallbackDummy();
           }
@@ -359,18 +387,9 @@ export async function POST(req: Request) {
           });
         } catch (e) {
           console.error("[api/chat] sendMessageStream", e);
-          if (shouldFallbackFromGeminiToGroq(e, abortSignal) && getGroqClient()) {
-            try {
-              const groqText = (await runGroqFallbackStream()).trim();
-              if (groqText) {
-                await persistAssistantAndDone(groqText, { groqFallback: true });
-              } else {
-                await fallbackDummy();
-              }
-            } catch (ge) {
-              console.error("[api/chat] Groq fallback after sendMessageStream", ge);
-              await fallbackDummy();
-            }
+          const fb = await tryFallbackProviders(e, "after sendMessageStream");
+          if (fb) {
+            await persistAssistantAndDone(fb.text, { fallbackSource: fb.source });
           } else {
             await fallbackDummy();
           }
@@ -417,18 +436,9 @@ export async function POST(req: Request) {
             });
             return;
           }
-          if (shouldFallbackFromGeminiToGroq(e, abortSignal) && getGroqClient()) {
-            try {
-              const groqText = (await runGroqFallbackStream()).trim();
-              if (groqText) {
-                await persistAssistantAndDone(groqText, { groqFallback: true });
-              } else {
-                await fallbackDummy();
-              }
-            } catch (ge) {
-              console.error("[api/chat] Groq fallback after stream error", ge);
-              await fallbackDummy();
-            }
+          const fb = await tryFallbackProviders(e, "after stream error");
+          if (fb) {
+            await persistAssistantAndDone(fb.text, { fallbackSource: fb.source });
           } else {
             await fallbackDummy();
           }
@@ -441,18 +451,12 @@ export async function POST(req: Request) {
 
         const trimmed = accumulated.trim();
         if (!trimmed) {
-          if (getGroqClient()) {
-            try {
-              const groqText = (await runGroqFallbackStream()).trim();
-              if (groqText) {
-                await persistAssistantAndDone(groqText, { groqFallback: true });
-              } else {
-                await fallbackDummy("모델이 빈 응답을 돌려줘서 샘플 동선으로 대체했어요.");
-              }
-            } catch (ge) {
-              console.error("[api/chat] Groq fallback after empty Gemini", ge);
-              await fallbackDummy("모델이 빈 응답을 돌려줘서 샘플 동선으로 대체했어요.");
-            }
+          const fb = await tryFallbackProviders(
+            new Error("empty gemini response"),
+            "after empty Gemini",
+          );
+          if (fb) {
+            await persistAssistantAndDone(fb.text, { fallbackSource: fb.source });
           } else {
             await fallbackDummy("모델이 빈 응답을 돌려줘서 샘플 동선으로 대체했어요.");
           }

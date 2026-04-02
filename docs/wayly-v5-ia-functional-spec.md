@@ -114,9 +114,12 @@ Gemini generateObject → planResponseSchema
 동선 카드 렌더링 → "저장" / "지도 보기" 버튼 노출
 ```
 
-### AI 모델 우선순위
-1. **Gemini** (`gemini-2.5-flash-preview`) — 기본
-2. **Groq** (`llama-3.3-70b-versatile`) — Gemini 실패 시 자동 폴백 (`GROQ_API_KEY` 필요)
+### AI 모델 우선순위 (`POST /api/v5/chat` · 스트리밍 `POST /api/chat` 공통)
+1. **Gemini** — `GEMINI_MODEL` → `GEMINI_CHAT_MODEL` → 코드 기본 모델 순
+2. **Groq** — `GROQ_API_KEY`가 있고 Gemini 오류가 폴백 대상이면 (`GROQ_CHAT_MODEL`, 기본 `llama-3.3-70b-versatile`)
+3. **OpenAI** — `OPENAI_API_KEY`가 있으면 Groq까지 실패했거나 Groq 미설정인 경우 (`OPENAI_CHAT_MODEL`, 기본 `gpt-4o-mini`)
+
+`/api/chat`은 SSE 스트리밍이며, 폴백 시에도 동일 순서로 델타를 전송합니다 (`streamGroqTravelPlanner` → `streamOpenAiTravelPlanner`).
 
 ---
 
@@ -307,7 +310,11 @@ saved_at              TIMESTAMPTZ
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 공개 키 |
 | `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini API |
-| `GROQ_API_KEY` | Groq 폴백 AI (선택) |
+| `GEMINI_MODEL` / `GEMINI_CHAT_MODEL` | Gemini 모델 ID (선택) |
+| `GROQ_API_KEY` | Groq 폴백 (선택) |
+| `GROQ_CHAT_MODEL` | Groq 모델 ID (선택) |
+| `OPENAI_API_KEY` | OpenAI 폴백 (선택) |
+| `OPENAI_CHAT_MODEL` | OpenAI 모델 ID (선택, 기본 `gpt-4o-mini`) |
 | `STRIPE_SECRET_KEY` | Stripe 결제 |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe 클라이언트 |
 
@@ -320,7 +327,7 @@ saved_at              TIMESTAMPTZ
 | 프레임워크 | Next.js 16 (App Router) |
 | UI 라이브러리 | React 19, Tailwind CSS v4 |
 | i18n | next-intl (ko/en) |
-| AI SDK | Vercel AI SDK + @ai-sdk/google, @ai-sdk/groq |
+| AI SDK | Vercel AI SDK + @ai-sdk/google, @ai-sdk/groq, @ai-sdk/openai |
 | DB/Auth | Supabase (@supabase/ssr) |
 | 지도 | MapLibre GL + OpenFreeMap |
 | 결제 | Stripe |

@@ -20,7 +20,7 @@ function readApiKey(): string | undefined {
  * - **서버 전용**: `server-only`로 클라이언트 번들 포함을 막습니다.
  * - **Node 전용 엔트리**: `@google/genai/node`로 fs·Vertex 등 Node 런타임 구현을 사용합니다.
  * - 환경 변수 `GOOGLE_GENERATIVE_AI_API_KEY`가 없으면 `null`을 반환합니다.
- * - 백업 LLM: `GROQ_API_KEY` + 선택 `GROQ_CHAT_MODEL`(기본 `llama-3.3-70b-versatile`) — 라우트에서 Gemini 실패 시 사용.
+ * - 백업 LLM: `GROQ_API_KEY` / `OPENAI_API_KEY` — 라우트에서 Gemini 실패 시 순차 폴백.
  *
  * Route Handler / Server Action / 서버 컴포넌트에서만 import 하세요.
  */
@@ -51,6 +51,18 @@ export function resetGeminiClientForTests(): void {
   singleton = null;
 }
 
+/** Groq/OpenAI 폴백을 시도하면 안 되는 요청 취소 계열 오류 */
+export function isChatProviderAbortError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error);
+  const lower = msg.toLowerCase();
+  return (
+    lower.includes("aborted") ||
+    lower.includes("abort") ||
+    lower.includes("the user aborted") ||
+    lower.includes("request was aborted")
+  );
+}
+
 /**
  * Gemini Developer API 호출이 실패했을 때 Groq 백업 호출을 시도할지 판별합니다.
  *
@@ -68,16 +80,10 @@ export function shouldFallbackFromGeminiToGroq(
   const key = process.env.GROQ_API_KEY?.trim();
   if (!key) return false;
 
+  if (isChatProviderAbortError(error)) return false;
+
   const msg = error instanceof Error ? error.message : String(error);
   const lower = msg.toLowerCase();
-  if (
-    lower.includes("aborted") ||
-    lower.includes("abort") ||
-    lower.includes("the user aborted") ||
-    lower.includes("request was aborted")
-  ) {
-    return false;
-  }
 
   const status = (error as { status?: number })?.status;
   if (typeof status === "number") {

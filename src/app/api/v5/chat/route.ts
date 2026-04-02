@@ -1,8 +1,12 @@
 import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
 import { groq } from "@ai-sdk/groq";
+import { openai } from "@ai-sdk/openai";
 import type { z } from "zod";
-import { shouldFallbackFromGeminiToGroq } from "@/lib/gemini";
+import {
+  isChatProviderAbortError,
+  shouldFallbackFromGeminiToGroq,
+} from "@/lib/gemini";
 import {
   gatherResponseSchema,
   planResponseSchema,
@@ -59,7 +63,13 @@ function groqChatModel() {
   return groq(id);
 }
 
-async function generateObjectGeminiOrGroq<S extends z.ZodType>(args: {
+/** OpenAI 백업 — `OPENAI_CHAT_MODEL`로 재정의 (기본 gpt-4o-mini, structured 출력에 적합) */
+function openaiChatModel() {
+  const id = process.env.OPENAI_CHAT_MODEL?.trim() || "gpt-4o-mini";
+  return openai(id);
+}
+
+async function generateObjectGeminiGroqOrOpenai<S extends z.ZodType>(args: {
   schema: S;
   system: string;
   prompt: string;
@@ -73,18 +83,40 @@ async function generateObjectGeminiOrGroq<S extends z.ZodType>(args: {
       prompt: args.prompt,
       temperature: args.temperature,
     });
-  } catch (e) {
-    if (!shouldFallbackFromGeminiToGroq(e) || !process.env.GROQ_API_KEY?.trim()) {
-      throw e;
+  } catch (geminiErr) {
+    if (isChatProviderAbortError(geminiErr)) throw geminiErr;
+
+    let lastErr: unknown = geminiErr;
+
+    if (shouldFallbackFromGeminiToGroq(geminiErr)) {
+      try {
+        console.warn("[v5/chat] Gemini generateObject failed, falling back to Groq:", geminiErr);
+        return await generateObject({
+          model: groqChatModel(),
+          schema: args.schema,
+          system: args.system,
+          prompt: args.prompt,
+          temperature: args.temperature,
+        });
+      } catch (groqErr) {
+        if (isChatProviderAbortError(groqErr)) throw groqErr;
+        lastErr = groqErr;
+        console.warn("[v5/chat] Groq generateObject failed:", groqErr);
+      }
     }
-    console.warn("[v5/chat] Gemini generateObject failed, falling back to Groq:", e);
-    return generateObject({
-      model: groqChatModel(),
-      schema: args.schema,
-      system: args.system,
-      prompt: args.prompt,
-      temperature: args.temperature,
-    });
+
+    if (process.env.OPENAI_API_KEY?.trim()) {
+      console.warn("[v5/chat] Falling back to OpenAI:", lastErr);
+      return await generateObject({
+        model: openaiChatModel(),
+        schema: args.schema,
+        system: args.system,
+        prompt: args.prompt,
+        temperature: args.temperature,
+      });
+    }
+
+    throw lastErr;
   }
 }
 
@@ -108,7 +140,7 @@ export async function POST(req: Request) {
 
       const history = formatHistory(messages.slice(-24));
 
-      const { object } = await generateObjectGeminiOrGroq({
+      const { object } = await generateObjectGeminiGroqOrOpenai({
         schema: planResponseSchema,
         system: PLAN_SYSTEM,
         prompt: `아래는 지금까지의 대화 맥락입니다.\n\n${history || "(이전 맥락 없음)"}\n\n---\n사용자가 다음 여행 조건을 확정했습니다. **같은 도시·권역 안에서만** 스팟을 이은 로컬 동선을 plan으로 구조화하세요. 다른 도시로 이동하거나 집·역으로 복귀하는 구간은 넣지 마세요.\n\n${slotText}`,
@@ -139,7 +171,7 @@ export async function POST(req: Request) {
     const history = formatHistory(messages.slice(-24));
     const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
 
-    const { object } = await generateObjectGeminiOrGroq({
+    const { object } = await generateObjectGeminiGroqOrOpenai({
       schema: gatherResponseSchema,
       system: GATHER_SYSTEM,
       prompt: `대화 맥락:\n\n${history || "(첫 메시지)"}\n\n---\n마지막 사용자 발화:\n${lastUser}\n\n위를 반영해 assistantMessage, chips, readyToGenerateRoute를 생성하세요.`,
@@ -169,7 +201,7 @@ export async function POST(req: Request) {
     console.error("[v5/chat]", e);
     return jsonResponse({
       content:
-        "일시적으로 응답을 만들지 못했어요. 잠시 후 다시 시도해 주세요. (Gemini·Groq API 키와 모델 설정을 확인해 주세요.)",
+        "일시적으로 응답을 만들지 못했어요. 잠시 후 다시 시도해 주세요. (Gemini·Groq·OpenAI API 키와 모델 설정을 확인해 주세요.)",
       preferenceChips: [],
       readyToGenerateRoute: false,
       travelPlan: null,
