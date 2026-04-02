@@ -1293,8 +1293,8 @@ export function V5ChatShell() {
   const isLg = useLgUp();
   const [hybridDraft, setHybridDraft] = useState(HYBRID_TRIP_EMPTY);
   const [mobileFreeInput, setMobileFreeInput] = useState(false);
-  /** 모바일·태블릿(1024px 미만): 입력 독(하이브리드·자유입력) 접기/펼치기 */
-  const [mobileDockExpanded, setMobileDockExpanded] = useState(true);
+  /** 입력 독(하이브리드·자유입력) 접기/펼치기 — 모바일·태블릿·데스크톱 공통 */
+  const [composerDockExpanded, setComposerDockExpanded] = useState(true);
   const [composerDesktopMode, setComposerDesktopMode] = useState<"picker" | "free">("picker");
 
   const promptChecklist = useMemo(() => evaluateTravelPromptChecklist(inputValue), [inputValue]);
@@ -2053,8 +2053,7 @@ export function V5ChatShell() {
   const showFreeComposer =
     (isLg && composerDesktopMode === "free") || (!isLg && mobileFreeInput);
   const composerBusy = isTyping || Boolean(routeGeneratingMessageId);
-  const mobileDockCompact = !isLg && !mobileDockExpanded;
-  const showComposerMain = isLg || mobileDockExpanded;
+  const composerDockCompact = !composerDockExpanded;
 
   const sidebarProps = {
     conversations, savedPlans, activeConvId,
@@ -2207,7 +2206,7 @@ export function V5ChatShell() {
                   }}
                   onOpenPricing={() => openPricing("overview")}
                   onScrollToComposer={() => {
-                    setMobileDockExpanded(true);
+                    setComposerDockExpanded(true);
                     composerShellRef.current?.scrollIntoView({
                       block: "end",
                       behavior: "smooth",
@@ -2250,16 +2249,16 @@ export function V5ChatShell() {
             className={`wayly-trip-composer-anchor v5-composer-dock flex-shrink-0 scroll-mt-4 bg-[var(--bg-page)] border-t border-[var(--border-default)]/40 transition-[padding] duration-150 ease-out ${
               composerKeyboardTight
                 ? "v5-composer-keyboard-tight"
-                : mobileDockCompact
-                  ? "px-4 pt-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+                : composerDockCompact
+                  ? "px-4 pt-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:px-5 lg:pt-3 lg:pb-3"
                   : "px-5 pb-6 md:pb-8 pt-5 md:pt-7"
             }`}
           >
             <div className="max-w-[720px] mx-auto space-y-3">
-              {mobileDockCompact && (
+              {composerDockCompact && (
                 <button
                   type="button"
-                  onClick={() => setMobileDockExpanded(true)}
+                  onClick={() => setComposerDockExpanded(true)}
                   className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3.5 py-2.5 text-left shadow-[0_2px_12px_rgba(20,20,20,0.04)] touch-manipulation active:scale-[0.99] transition-transform"
                   aria-expanded={false}
                 >
@@ -2282,42 +2281,54 @@ export function V5ChatShell() {
                 </button>
               )}
 
-              {showComposerMain && (
+              {composerDockExpanded && (
                 <>
               <div className="hidden lg:flex items-center justify-between gap-3 px-0.5">
-                <span className="text-[11px] font-medium text-[var(--text-muted)] tracking-tight">
+                <span className="text-[11px] font-medium text-[var(--text-muted)] tracking-tight shrink-0">
                   입력 방식
                 </span>
-                <div
-                  className="inline-flex rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)] p-1"
-                  role="tablist"
-                  aria-label="입력 방식 전환"
-                >
+                <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+                  <div
+                    className="inline-flex shrink-0 rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)] p-1"
+                    role="tablist"
+                    aria-label="입력 방식 전환"
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={composerDesktopMode === "picker"}
+                      onClick={() => setDesktopComposerMode("picker")}
+                      className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                        composerDesktopMode === "picker"
+                          ? "bg-[var(--bg-elevated)] text-[var(--text-strong)] shadow-sm"
+                          : "text-[var(--text-muted)] hover:text-[var(--text-strong)]"
+                      }`}
+                    >
+                      간편 선택
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={composerDesktopMode === "free"}
+                      onClick={() => setDesktopComposerMode("free")}
+                      className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                        composerDesktopMode === "free"
+                          ? "bg-[var(--bg-elevated)] text-[var(--text-strong)] shadow-sm"
+                          : "text-[var(--text-muted)] hover:text-[var(--text-strong)]"
+                      }`}
+                    >
+                      자유 입력
+                    </button>
+                  </div>
                   <button
                     type="button"
-                    role="tab"
-                    aria-selected={composerDesktopMode === "picker"}
-                    onClick={() => setDesktopComposerMode("picker")}
-                    className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${
-                      composerDesktopMode === "picker"
-                        ? "bg-[var(--bg-elevated)] text-[var(--text-strong)] shadow-sm"
-                        : "text-[var(--text-muted)] hover:text-[var(--text-strong)]"
-                    }`}
+                    onClick={() => setComposerDockExpanded(false)}
+                    className="flex shrink-0 items-center gap-1 rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-strong)] transition-colors"
+                    aria-expanded={composerDockExpanded}
+                    title="입력 영역 접기"
                   >
-                    간편 선택
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={composerDesktopMode === "free"}
-                    onClick={() => setDesktopComposerMode("free")}
-                    className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${
-                      composerDesktopMode === "free"
-                        ? "bg-[var(--bg-elevated)] text-[var(--text-strong)] shadow-sm"
-                        : "text-[var(--text-muted)] hover:text-[var(--text-strong)]"
-                    }`}
-                  >
-                    자유 입력
+                    <ChevronDown className="h-4 w-4 opacity-80" aria-hidden />
+                    접기
                   </button>
                 </div>
               </div>
@@ -2325,9 +2336,9 @@ export function V5ChatShell() {
               <div className="flex lg:hidden items-center justify-between gap-2 px-0.5">
                 <button
                   type="button"
-                  onClick={() => setMobileDockExpanded(false)}
+                  onClick={() => setComposerDockExpanded(false)}
                   className="flex shrink-0 items-center gap-1 rounded-xl border border-transparent px-2 py-1.5 text-[11px] font-semibold text-[var(--text-muted)] hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--text-strong)] touch-manipulation"
-                  aria-expanded={mobileDockExpanded}
+                  aria-expanded={composerDockExpanded}
                   title="입력 영역 접기"
                 >
                   <ChevronDown className="h-4 w-4 opacity-80" aria-hidden />
