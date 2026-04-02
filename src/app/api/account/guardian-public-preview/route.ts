@@ -1,22 +1,16 @@
 import { NextResponse } from "next/server";
 import { mockContentPosts } from "@/data/mock";
-import { getMockGuardianIdFromCookies } from "@/lib/dev/mock-guardian-cookies.server";
 import { getPublicGuardianByIdMerged } from "@/lib/guardian-public-merged.server";
 import { publicGuardianToSheetPreview, type GuardianProfileSheetPreview } from "@/lib/guardian-profile-sheet-preview";
 import { getServerSupabaseForUser } from "@/lib/supabase/server-user";
 
 export async function GET() {
-  const mockId = await getMockGuardianIdFromCookies();
-  let userId: string | null = mockId;
-
-  if (!userId) {
-    const sb = await getServerSupabaseForUser();
-    if (!sb) return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
-    const {
-      data: { user },
-    } = await sb.auth.getUser();
-    userId = user?.id ?? null;
-  }
+  const sb = await getServerSupabaseForUser();
+  if (!sb) return NextResponse.json({ error: "Auth not configured" }, { status: 503 });
+  const {
+    data: { user },
+  } = await sb.auth.getUser();
+  const userId = user?.id ?? null;
 
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

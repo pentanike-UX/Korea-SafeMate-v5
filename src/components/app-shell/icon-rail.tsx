@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { BRAND } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { CircleHelp, CircleUser, Compass, Heart, Home, Info, MapPinned, UserRound } from "lucide-react";
+import { CircleHelp, CircleUser, Compass, Home, Info } from "lucide-react";
 import { RailItem } from "@/components/app-shell/rail-item";
 
 const RAIL_W = "w-[72px]";
@@ -24,10 +24,7 @@ export function IconRail({
 }) {
   const t = useTranslations("V4.workspace.rail");
 
-  const active = (p: string) => {
-    if (p === "/chat") return pathname === "/chat" || pathname.endsWith("/chat");
-    return pathname === p || pathname.startsWith(`${p}/`);
-  };
+  const chatActive = pathname === "/chat" || pathname.endsWith("/chat");
 
   return (
     <aside
@@ -55,22 +52,8 @@ export function IconRail({
       </div>
 
       <nav className="flex flex-1 flex-col items-center gap-1.5 px-2" aria-label={t("mainNavAria")}>
-        <RailItem href="/chat" label={t("home")} active={active("/chat")} title={t("home")}>
+        <RailItem href="/chat" label={t("home")} active={chatActive} title={t("home")}>
           <Home className="size-[22px] shrink-0" aria-hidden />
-        </RailItem>
-        <RailItem href="/explore" label={t("explore")} active={active("/explore")} title={t("explore")}>
-          <MapPinned className="size-[22px] shrink-0" aria-hidden />
-        </RailItem>
-        <RailItem href="/mypage/saved" label={t("saved")} active={pathname.startsWith("/mypage/saved")} title={t("saved")}>
-          <Heart className="size-[22px] shrink-0" aria-hidden />
-        </RailItem>
-        <RailItem
-          href="/mypage"
-          label={t("my")}
-          active={pathname.startsWith("/mypage") && !pathname.startsWith("/mypage/saved")}
-          title={t("my")}
-        >
-          <UserRound className="size-[22px] shrink-0" aria-hidden />
         </RailItem>
       </nav>
 

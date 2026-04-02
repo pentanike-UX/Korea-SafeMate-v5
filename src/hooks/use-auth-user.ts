@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { subscribeClientAuthContextChanged } from "@/lib/auth/client-auth-tab-sync";
-import { buildMockSupabaseUser, readMockGuardianIdFromDocumentCookie } from "@/lib/dev/mock-guardian-auth";
 import { invalidateClientPointsCache } from "@/lib/points/client-points-fetch-cache";
 import { emitMypageAttentionUpdated } from "@/lib/mypage-attention-events";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
@@ -14,7 +13,6 @@ export function useAuthUser(): User | null | undefined {
 
   useEffect(() => {
     const prevUserIdRef = { current: undefined as string | null | undefined };
-    const lastMockCookieRef = { current: null as string | null };
 
     const applySessionUser = (next: User | null) => {
       const nextId = next?.id ?? null;
@@ -31,17 +29,7 @@ export function useAuthUser(): User | null | undefined {
       setUser(next);
     };
 
-    const resyncFromBrowserAuth = (opts?: { force?: boolean }) => {
-      const mid = readMockGuardianIdFromDocumentCookie()?.trim() || null;
-      if (mid) {
-        if (!opts?.force && mid === lastMockCookieRef.current) {
-          return;
-        }
-        lastMockCookieRef.current = mid;
-        applySessionUser(buildMockSupabaseUser(mid));
-        return;
-      }
-      lastMockCookieRef.current = null;
+    const resyncFromBrowserAuth = () => {
       const sb = createSupabaseBrowserClient();
       if (!sb) {
         applySessionUser(null);
@@ -53,7 +41,7 @@ export function useAuthUser(): User | null | undefined {
     const onOtherTabAuthChange = () => {
       invalidateClientPointsCache();
       emitMypageAttentionUpdated();
-      resyncFromBrowserAuth({ force: true });
+      resyncFromBrowserAuth();
     };
 
     resyncFromBrowserAuth();
@@ -77,13 +65,6 @@ export function useAuthUser(): User | null | undefined {
       const {
         data: { subscription: sub },
       } = sb.auth.onAuthStateChange((_event, session) => {
-        const mid = readMockGuardianIdFromDocumentCookie()?.trim() || null;
-        if (mid) {
-          lastMockCookieRef.current = mid;
-          applySessionUser(buildMockSupabaseUser(mid));
-          return;
-        }
-        lastMockCookieRef.current = null;
         applySessionUser(session?.user ?? null);
       });
       subscription = sub;

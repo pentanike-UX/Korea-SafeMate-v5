@@ -407,13 +407,14 @@
   "Login": {
     "metaTitle": "ログイン",
     "title": "ログイン",
-    "description": "Googleでログインすると、保存・マッチング・マイページが使えます。Guardianとしての手続きはログイン後のマイページから始められます。",
+    "description": "Googleでログインすると、チャット履歴と保存した旅程を端末間で同期できます。",
     "continueGoogle": "Googleで続ける",
     "googleSigningIn": "Googleへ移動中…",
     "googleConfigMissing": "環境変数 NEXT_PUBLIC_SUPABASE_URL と NEXT_PUBLIC_SUPABASE_ANON_KEY を設定してください。",
     "googleSignInFailed": "Googleログインを開始できませんでした。しばらくしてからお試しください。",
     "oauthFailed": "ログインに失敗しました。もう一度お試しください。",
-    "browseWithoutLogin": "ログインせずに見る",
+    "browseWithoutLogin": "ログインせずチャットへ",
+    "backToChat": "チャットへ",
     "browsePostsWithoutLogin": "投稿だけ見る",
     "legalAbout": "サービス紹介",
     "legalTermsSoon": "利用規約・プライバシーは近日公開予定です。",
@@ -1637,6 +1638,7 @@
     },
     "bottomNav": {
       "aria": "Primary",
+      "chatOnly": "チャット",
       "home": "Home",
       "explore": "Explore",
       "ai": "AI",
@@ -1668,7 +1670,8 @@
       },
       "accountDrawer": {
         "title": "アカウント",
-        "navAria": "アカウントメニュー"
+        "navAria": "アカウントメニュー",
+        "backToChat": "チャットへ"
       },
       "infoDrawer": {
         "title": "情報",

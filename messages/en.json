@@ -407,13 +407,14 @@
   "Login": {
     "metaTitle": "Log in",
     "title": "Log in",
-    "description": "Sign in with Google to save favorites, request matches, and use My page. Guardian onboarding starts from My page after you sign in.",
+    "description": "Sign in with Google to sync chat history and saved trip plans across devices.",
     "continueGoogle": "Continue with Google",
     "googleSigningIn": "Redirecting to Google…",
     "googleConfigMissing": "Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your environment.",
     "googleSignInFailed": "Could not start Google sign-in. Please try again.",
     "oauthFailed": "Sign-in failed. Please try again.",
-    "browseWithoutLogin": "Browse without signing in",
+    "browseWithoutLogin": "Continue to chat without signing in",
+    "backToChat": "Chat home",
     "browsePostsWithoutLogin": "View posts only",
     "legalAbout": "About",
     "legalTermsSoon": "Terms & privacy policy coming soon.",
@@ -1637,6 +1638,7 @@
     },
     "bottomNav": {
       "aria": "Primary",
+      "chatOnly": "Chat",
       "home": "Home",
       "explore": "Explore",
       "ai": "AI",
@@ -1668,7 +1670,8 @@
       },
       "accountDrawer": {
         "title": "Account",
-        "navAria": "Account navigation"
+        "navAria": "Account navigation",
+        "backToChat": "Back to chat"
       },
       "infoDrawer": {
         "title": "Information",

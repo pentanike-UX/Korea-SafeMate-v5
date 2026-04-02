@@ -24,7 +24,7 @@ export function AccountDrawer({ open, onOpenChange }: { open: boolean; onOpenCha
     const supabase = createSupabaseBrowserClient();
     if (supabase) await supabase.auth.signOut();
     onOpenChange(false);
-    window.location.assign("/");
+    window.location.assign("/chat");
   };
 
   return (
@@ -36,17 +36,8 @@ export function AccountDrawer({ open, onOpenChange }: { open: boolean; onOpenCha
         <nav className="flex flex-col gap-1 px-3 py-4" aria-label={t("navAria")}>
           {user ? (
             <>
-              <Link href="/mypage" className={rowClass()} onClick={() => onOpenChange(false)}>
-                {tHeader("accountMypage")}
-              </Link>
-              <Link href="/mypage/profile" className={rowClass(true)} onClick={() => onOpenChange(false)}>
-                {tHeader("accountProfile")}
-              </Link>
-              <Link href="/traveler" className={rowClass(true)} onClick={() => onOpenChange(false)}>
-                {tHeader("myJourney")}
-              </Link>
-              <Link href="/guardian" className={rowClass(true)} onClick={() => onOpenChange(false)}>
-                {tHeader("accountGuardianHub")}
+              <Link href="/chat" className={rowClass()} onClick={() => onOpenChange(false)}>
+                {t("backToChat")}
               </Link>
               <Button variant="outline" className="mt-4 h-11 w-full rounded-[14px]" onClick={() => void signOut()}>
                 {tHeader("logOut")}
@@ -54,14 +45,11 @@ export function AccountDrawer({ open, onOpenChange }: { open: boolean; onOpenCha
             </>
           ) : (
             <>
-              <Link href="/login" className={rowClass()} onClick={() => onOpenChange(false)}>
+              <Link href="/login?next=/chat" className={rowClass()} onClick={() => onOpenChange(false)}>
                 {tHeader("logIn")}
               </Link>
-              <Link href="/login?next=/mypage" className={rowClass(true)} onClick={() => onOpenChange(false)}>
+              <Link href="/login?next=/chat" className={rowClass(true)} onClick={() => onOpenChange(false)}>
                 {tHeader("signUp")}
-              </Link>
-              <Link href="/login/guardian" className={rowClass(true)} onClick={() => onOpenChange(false)}>
-                {tHeader("guardianLoginShort")}
               </Link>
             </>
           )}

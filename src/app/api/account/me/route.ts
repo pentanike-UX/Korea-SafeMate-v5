@@ -1,37 +1,12 @@
 import { NextResponse } from "next/server";
 import type { AppAccountRole } from "@/lib/auth/app-role";
 import { guardianStatusFromRow, type GuardianProfileStatus } from "@/lib/auth/guardian-profile-status";
-import { buildMockAccountMePayload } from "@/lib/dev/mock-guardian-auth";
-import { getMockGuardianIdFromCookies } from "@/lib/dev/mock-guardian-cookies.server";
 import { computeMypageAttentionViewFromSnapshot } from "@/lib/mypage-attention-unread";
 import { getBlockSeenMapForUser, getSeenMapForUser } from "@/lib/mypage-attention-seen.server";
 import { getMypageHubSnapshot } from "@/lib/mypage-hub-snapshot.server";
 import { getServerSupabaseForUser } from "@/lib/supabase/server-user";
 
 export async function GET() {
-  const mockId = await getMockGuardianIdFromCookies();
-  if (mockId) {
-    const mock = buildMockAccountMePayload(mockId);
-    if (mock) {
-      const snapshot = await getMypageHubSnapshot(mock.auth.id, "guardian", mock.guardian_status);
-      const [seen, blockSeen] = await Promise.all([
-        getSeenMapForUser(mock.auth.id),
-        getBlockSeenMapForUser(mock.auth.id),
-      ]);
-      const attentionView = computeMypageAttentionViewFromSnapshot(snapshot, seen, blockSeen);
-      return NextResponse.json({
-        ...mock,
-        attention: {
-          globalAttentionDot: attentionView.unreadGlobalAttentionDot,
-          travelerNavBadges: snapshot.travelerNavBadges,
-          travelerNavSignatures: snapshot.travelerNavSignatures,
-          guardianWorkspaceNavBadges: snapshot.guardianWorkspaceNavBadges,
-          guardianWorkspaceNavSignatures: snapshot.guardianWorkspaceNavSignatures,
-        },
-      });
-    }
-  }
-
   const sb = await getServerSupabaseForUser();
   if (!sb) {
     return NextResponse.json({ error: "Auth not configured" }, { status: 503 });

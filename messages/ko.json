@@ -407,13 +407,14 @@
   "Login": {
     "metaTitle": "로그인",
     "title": "로그인",
-    "description": "Google 계정으로 로그인하면 저장·매칭·마이페이지를 이용할 수 있어요. 가디언 활동은 로그인 후 마이페이지에서 시작할 수 있습니다.",
+    "description": "Google 계정으로 로그인하면 대화 기록과 저장한 동선 플랜을 기기 간에 이어서 쓸 수 있어요.",
     "continueGoogle": "Google로 계속하기",
     "googleSigningIn": "Google로 이동 중…",
     "googleConfigMissing": "Supabase 환경 변수(NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY)를 설정해 주세요.",
     "googleSignInFailed": "Google 로그인을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     "oauthFailed": "로그인에 실패했습니다. 다시 시도해 주세요.",
-    "browseWithoutLogin": "로그인 없이 둘러보기",
+    "browseWithoutLogin": "로그인 없이 채팅으로",
+    "backToChat": "채팅 홈",
     "browsePostsWithoutLogin": "포스트만 보기",
     "legalAbout": "서비스 소개",
     "legalTermsSoon": "약관·개인정보 처리방침은 곧 안내 예정입니다.",
@@ -1637,6 +1638,7 @@
     },
     "bottomNav": {
       "aria": "주요 메뉴",
+      "chatOnly": "채팅",
       "home": "홈",
       "explore": "탐색",
       "ai": "AI",
@@ -1668,7 +1670,8 @@
       },
       "accountDrawer": {
         "title": "계정",
-        "navAria": "계정 메뉴"
+        "navAria": "계정 메뉴",
+        "backToChat": "채팅으로"
       },
       "infoDrawer": {
         "title": "정보",

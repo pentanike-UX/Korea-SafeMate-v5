@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getMockGuardianIdFromCookies } from "@/lib/dev/mock-guardian-cookies.server";
 import {
   parseMatchRequests,
   serializeMatchRequests,
@@ -11,8 +10,6 @@ import { cookieOpts } from "@/lib/traveler-match-requests.server";
 import { getServerSupabaseForUser } from "@/lib/supabase/server-user";
 
 async function resolveActorId(): Promise<string | null> {
-  const mock = await getMockGuardianIdFromCookies();
-  if (mock) return mock;
   const sb = await getServerSupabaseForUser();
   if (!sb) return null;
   const {

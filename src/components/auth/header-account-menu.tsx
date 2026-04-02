@@ -1,20 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { useLocale, useTranslations } from "next-intl";
-import { usePathname, useRouter as useI18nRouter } from "@/i18n/navigation";
-import { useRouter as useNextRouter } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import type { AppAccountRole } from "@/lib/auth/app-role";
-import { isPrivilegedAppRole } from "@/lib/auth/app-role";
 import { sameOriginApiUrl } from "@/lib/api-origin";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -25,7 +21,7 @@ import { MYPAGE_ATTENTION_UPDATED_EVENT } from "@/lib/mypage-attention-events";
 import { broadcastClientAuthContextChanged } from "@/lib/auth/client-auth-tab-sync";
 import { invalidateClientPointsCache } from "@/lib/points/client-points-fetch-cache";
 import type { GuardianWorkspaceNavBadgeKey, TravelerNavBadgeKey } from "@/types/mypage-hub";
-import { ChevronDown, Coins, FileText, Heart, LayoutDashboard, Plane, Shield, UserRound, Users } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 type MeResponse = {
   auth: { id: string; email: string | undefined; sessionAvatar: string | null; sessionName: string };
@@ -151,9 +147,6 @@ export function HeaderAccountMenu({
 }) {
   const t = useTranslations("Header");
   const locale = useLocale();
-  const pathname = usePathname();
-  const i18nRouter = useI18nRouter();
-  const nextRouter = useNextRouter();
   const [me, setMe] = useState<MeResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [desktopOpen, setDesktopOpen] = useState(false);
@@ -181,44 +174,22 @@ export function HeaderAccountMenu({
     return () => window.removeEventListener(MYPAGE_ATTENTION_UPDATED_EVENT, onAttention);
   }, [load]);
 
-  const publicHomeHref = locale === routing.defaultLocale ? "/" : `/${locale}`;
-
-  const isProtectedPath = (p: string) =>
-    p === "/mypage" ||
-    p.startsWith("/mypage/") ||
-    p === "/guardian" ||
-    p.startsWith("/guardian/") ||
-    p.startsWith("/admin");
+  const publicChatHref = locale === routing.defaultLocale ? "/chat" : `/${locale}/chat`;
 
   const handleSignOut = async (close: () => void) => {
     close();
     invalidateClientPointsCache();
-    await fetch("/api/dev/mock-guardian-logout", { method: "POST", credentials: "include" });
     const sb = createSupabaseBrowserClient();
     await sb?.auth.signOut();
     broadcastClientAuthContextChanged();
     setDesktopOpen(false);
     setMobileOpen(false);
-    if (isProtectedPath(pathname)) {
-      window.location.href = publicHomeHref;
-      return;
-    }
-    nextRouter.refresh();
-  };
-
-  const go = (path: string, close: () => void) => {
-    close();
-    if (path.startsWith("/admin")) {
-      nextRouter.push(path);
-      return;
-    }
-    i18nRouter.push(path);
+    window.location.href = publicChatHref;
   };
 
   const email = me?.auth.email ?? authUser.email ?? "";
   const display = me?.profile?.display_name?.trim() || me?.auth.sessionName || me?.user?.legal_name || email.split("@")[0] || "User";
   const avatarSrc = me?.profile?.profile_image_url || me?.user?.avatar_url || me?.auth.sessionAvatar || null;
-  const role = me?.user?.app_role ?? "traveler";
 
   const triggerClassBase =
     "inline-flex h-9 min-h-9 min-w-0 items-center gap-1.5 rounded-[var(--radius-md)] border text-left text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50";
@@ -287,240 +258,33 @@ export function HeaderAccountMenu({
     </>
   );
 
-  const menuItemsDesktop = (close: () => void) => {
-    const itemClick = (path: string) => (e: MouseEvent) => {
-      e.preventDefault();
-      go(path, close);
-    };
-
-    if (isPrivilegedAppRole(role)) {
-      return (
-        <>
-          <DropdownMenuItem className="min-h-11" onClick={itemClick("/admin/dashboard")}>
-            <Shield className="size-4 opacity-80" aria-hidden />
-            {t("accountAdminConsole")}
-          </DropdownMenuItem>
-          {role === "super_admin" ? (
-            <DropdownMenuItem className="min-h-11" onClick={itemClick("/admin/managers/invite")}>
-              <Shield className="size-4 opacity-80" aria-hidden />
-              {t("accountSuperInvites")}
-            </DropdownMenuItem>
-          ) : null}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            variant="destructive"
-            className="min-h-11"
-            onClick={(e) => {
-              e.preventDefault();
-              void handleSignOut(close);
-            }}
-          >
-            {t("logOut")}
-          </DropdownMenuItem>
-        </>
-      );
-    }
-    if (role === "guardian") {
-      return (
-        <>
-          <DropdownMenuItem className="min-h-11" onClick={itemClick("/mypage")}>
-            <LayoutDashboard className="size-4 opacity-80" aria-hidden />
-            {t("accountMypage")}
-          </DropdownMenuItem>
-          <DropdownMenuItem className="min-h-11" onClick={itemClick("/mypage/journeys")}>
-            <Plane className="size-4 opacity-80" aria-hidden />
-            {t("accountMyJourney")}
-          </DropdownMenuItem>
-          <DropdownMenuItem className="min-h-11" onClick={itemClick("/mypage/profile")}>
-            <UserRound className="size-4 opacity-80" aria-hidden />
-            {t("accountProfile")}
-          </DropdownMenuItem>
-          <DropdownMenuItem className="min-h-11" onClick={itemClick("/mypage/points")}>
-            <Coins className="size-4 opacity-80" aria-hidden />
-            {t("accountPoints")}
-          </DropdownMenuItem>
-          <DropdownMenuItem className="min-h-11" onClick={itemClick("/mypage/matches")}>
-            <Users className="size-4 opacity-80" aria-hidden />
-            {t("accountMatches")}
-          </DropdownMenuItem>
-          <DropdownMenuItem className="min-h-11" onClick={itemClick("/guardian/profile")}>
-            <Users className="size-4 opacity-80" aria-hidden />
-            {t("accountGuardianProfile")}
-          </DropdownMenuItem>
-          <DropdownMenuItem className="min-h-11" onClick={itemClick("/mypage/guardian/posts")}>
-            <FileText className="size-4 opacity-80" aria-hidden />
-            {t("accountGuardianPosts")}
-          </DropdownMenuItem>
-          <DropdownMenuItem className="min-h-11" onClick={itemClick("/mypage/guardian/matches")}>
-            <Heart className="size-4 opacity-80" aria-hidden />
-            {t("accountGuardianMatches")}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            variant="destructive"
-            className="min-h-11"
-            onClick={(e) => {
-              e.preventDefault();
-              void handleSignOut(close);
-            }}
-          >
-            {t("logOut")}
-          </DropdownMenuItem>
-        </>
-      );
-    }
-    return (
-      <>
-        <DropdownMenuItem className="min-h-11" onClick={itemClick("/mypage")}>
-          <LayoutDashboard className="size-4 opacity-80" aria-hidden />
-          {t("accountMypage")}
-        </DropdownMenuItem>
-        <DropdownMenuItem className="min-h-11" onClick={itemClick("/mypage/journeys")}>
-          <Plane className="size-4 opacity-80" aria-hidden />
-          {t("accountMyJourney")}
-        </DropdownMenuItem>
-        <DropdownMenuItem className="min-h-11" onClick={itemClick("/mypage/profile")}>
-          <UserRound className="size-4 opacity-80" aria-hidden />
-          {t("accountProfile")}
-        </DropdownMenuItem>
-        <DropdownMenuItem className="min-h-11" onClick={itemClick("/mypage/points")}>
-          <Coins className="size-4 opacity-80" aria-hidden />
-          {t("accountPoints")}
-        </DropdownMenuItem>
-        <DropdownMenuItem className="min-h-11" onClick={itemClick("/mypage/matches")}>
-          <Users className="size-4 opacity-80" aria-hidden />
-          {t("accountMatches")}
-        </DropdownMenuItem>
-        <DropdownMenuItem className="min-h-11" onClick={itemClick("/guardians/apply")}>
-          <Shield className="size-4 opacity-80" aria-hidden />
-          {t("accountGuardianApply")}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant="destructive"
-          className="min-h-11"
-          onClick={(e) => {
-            e.preventDefault();
-            void handleSignOut(close);
-          }}
-        >
-          {t("logOut")}
-        </DropdownMenuItem>
-      </>
-    );
-  };
+  const menuItemsDesktop = (close: () => void) => (
+    <DropdownMenuItem
+      variant="destructive"
+      className="min-h-11"
+      onClick={(e) => {
+        e.preventDefault();
+        void handleSignOut(close);
+      }}
+    >
+      {t("logOut")}
+    </DropdownMenuItem>
+  );
 
   const row =
     "hover:bg-accent focus-visible:bg-accent flex min-h-12 w-full items-center gap-3 rounded-[var(--radius-md)] px-4 py-3 text-left text-base font-medium text-foreground outline-none transition-colors";
 
-  const menuItemsMobile = (close: () => void) => {
-    if (isPrivilegedAppRole(role)) {
-      return (
-        <nav className="flex flex-col gap-1 px-2" aria-label={t("accountMenuTitle")}>
-          <button type="button" className={row} onClick={() => go("/admin/dashboard", close)}>
-            <Shield className="size-5 shrink-0 opacity-80" aria-hidden />
-            {t("accountAdminConsole")}
-          </button>
-          {role === "super_admin" ? (
-            <button type="button" className={row} onClick={() => go("/admin/managers/invite", close)}>
-              <Shield className="size-5 shrink-0 opacity-80" aria-hidden />
-              {t("accountSuperInvites")}
-            </button>
-          ) : null}
-          <div className="border-border/60 my-2 border-t" />
-          <button
-            type="button"
-            className={cn(row, "text-destructive hover:bg-destructive/10")}
-            onClick={() => void handleSignOut(close)}
-          >
-            {t("logOut")}
-          </button>
-        </nav>
-      );
-    }
-    if (role === "guardian") {
-      return (
-        <nav className="flex flex-col gap-1 px-2" aria-label={t("accountMenuTitle")}>
-          <button type="button" className={row} onClick={() => go("/mypage", close)}>
-            <LayoutDashboard className="size-5 shrink-0 opacity-80" aria-hidden />
-            {t("accountMypage")}
-          </button>
-          <button type="button" className={row} onClick={() => go("/mypage/journeys", close)}>
-            <Plane className="size-5 shrink-0 opacity-80" aria-hidden />
-            {t("accountMyJourney")}
-          </button>
-          <button type="button" className={row} onClick={() => go("/mypage/profile", close)}>
-            <UserRound className="size-5 shrink-0 opacity-80" aria-hidden />
-            {t("accountProfile")}
-          </button>
-          <button type="button" className={row} onClick={() => go("/mypage/points", close)}>
-            <Coins className="size-5 shrink-0 opacity-80" aria-hidden />
-            {t("accountPoints")}
-          </button>
-          <button type="button" className={row} onClick={() => go("/mypage/matches", close)}>
-            <Users className="size-5 shrink-0 opacity-80" aria-hidden />
-            {t("accountMatches")}
-          </button>
-          <button type="button" className={row} onClick={() => go("/guardian/profile", close)}>
-            <Users className="size-5 shrink-0 opacity-80" aria-hidden />
-            {t("accountGuardianProfile")}
-          </button>
-          <button type="button" className={row} onClick={() => go("/mypage/guardian/posts", close)}>
-            <FileText className="size-5 shrink-0 opacity-80" aria-hidden />
-            {t("accountGuardianPosts")}
-          </button>
-          <button type="button" className={row} onClick={() => go("/mypage/guardian/matches", close)}>
-            <Heart className="size-5 shrink-0 opacity-80" aria-hidden />
-            {t("accountGuardianMatches")}
-          </button>
-          <div className="border-border/60 my-2 border-t" />
-          <button
-            type="button"
-            className={cn(row, "text-destructive hover:bg-destructive/10")}
-            onClick={() => void handleSignOut(close)}
-          >
-            {t("logOut")}
-          </button>
-        </nav>
-      );
-    }
-    return (
-      <nav className="flex flex-col gap-1 px-2" aria-label={t("accountMenuTitle")}>
-        <button type="button" className={row} onClick={() => go("/mypage", close)}>
-          <LayoutDashboard className="size-5 shrink-0 opacity-80" aria-hidden />
-          {t("accountMypage")}
-        </button>
-        <button type="button" className={row} onClick={() => go("/mypage/journeys", close)}>
-          <Plane className="size-5 shrink-0 opacity-80" aria-hidden />
-          {t("accountMyJourney")}
-        </button>
-        <button type="button" className={row} onClick={() => go("/mypage/profile", close)}>
-          <UserRound className="size-5 shrink-0 opacity-80" aria-hidden />
-          {t("accountProfile")}
-        </button>
-        <button type="button" className={row} onClick={() => go("/mypage/points", close)}>
-          <Coins className="size-5 shrink-0 opacity-80" aria-hidden />
-          {t("accountPoints")}
-        </button>
-        <button type="button" className={row} onClick={() => go("/mypage/matches", close)}>
-          <Users className="size-5 shrink-0 opacity-80" aria-hidden />
-          {t("accountMatches")}
-        </button>
-        <button type="button" className={row} onClick={() => go("/guardians/apply", close)}>
-          <Shield className="size-5 shrink-0 opacity-80" aria-hidden />
-          {t("accountGuardianApply")}
-        </button>
-        <div className="border-border/60 my-2 border-t" />
-        <button
-          type="button"
-          className={cn(row, "text-destructive hover:bg-destructive/10")}
-          onClick={() => void handleSignOut(close)}
-        >
-          {t("logOut")}
-        </button>
-      </nav>
-    );
-  };
+  const menuItemsMobile = (close: () => void) => (
+    <nav className="flex flex-col gap-1 px-2" aria-label={t("accountMenuTitle")}>
+      <button
+        type="button"
+        className={cn(row, "text-destructive hover:bg-destructive/10")}
+        onClick={() => void handleSignOut(close)}
+      >
+        {t("logOut")}
+      </button>
+    </nav>
+  );
 
   return (
     <>
