@@ -382,4 +382,29 @@
     animation: guardian-review-target-pulse 1.35s ease-out 1;
     border-radius: 0.75rem;
   }
+
+  /* 채팅/지도 AI 로딩: 원형 스트로크 0→100%→0 무한 (circumference 2π·15) */
+  @keyframes v5-compass-stroke-fill {
+    0%,
+    100% {
+      stroke-dashoffset: 94.24778;
+    }
+    50% {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  .v5-compass-stroke-ring {
+    stroke-dasharray: 94.24778;
+    stroke-dashoffset: 94.24778;
+    animation: v5-compass-stroke-fill 2.2s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .v5-compass-stroke-ring {
+      animation: none;
+      stroke-dashoffset: 47.12;
+      opacity: 0.92;
+    }
+  }
 }

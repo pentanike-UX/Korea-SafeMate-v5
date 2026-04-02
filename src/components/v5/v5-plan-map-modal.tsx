@@ -784,6 +784,7 @@ export function V5PlanMapModal({
             {routeLoading && spotsWithCoords.length >= 2 && (
               <V5TravelAiAnalysisLoadingOverlay
                 open
+                variant="panel"
                 className="absolute inset-0 z-[18] justify-start overflow-y-auto pt-6 md:pt-10"
               />
             )}

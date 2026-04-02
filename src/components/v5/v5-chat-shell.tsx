@@ -526,14 +526,22 @@ function PreferenceChipsCard({
     [chips],
   );
 
+  /** 입력창 또는 대화에서 이미 확정된 출발·귀경지 칩 */
+  const depEffective = useMemo(
+    () => departure.trim() || depFromChip.trim(),
+    [departure, depFromChip],
+  );
+
   const mergedSlots = useMemo((): PreferenceChip[] => {
     const base = displayChips;
-    const d = departure.trim();
-    if (!d) return base;
-    return [...base, { id: DEPARTURE_CHIP_ID, label: "출발·귀경지", value: d }];
-  }, [displayChips, departure]);
+    if (!depEffective) return base;
+    return [
+      ...base,
+      { id: DEPARTURE_CHIP_ID, label: "출발·귀경지", value: depEffective },
+    ];
+  }, [displayChips, depEffective]);
 
-  const canSubmit = displayChips.length > 0 && departure.trim().length > 0 && !isGenerating;
+  const canSubmit = displayChips.length > 0 && depEffective.length > 0 && !isGenerating;
 
   return (
     <div className="mt-3 w-full max-w-[480px] rounded-[20px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-4 shadow-[0_4px_24px_rgba(20,20,20,0.06)]">
@@ -597,7 +605,7 @@ function PreferenceChipsCard({
       >
         {isGenerating ? "동선 짜는 중…" : "이 정보로 동선 짜기"}
       </button>
-      {!departure.trim() && displayChips.length > 0 && (
+      {!depEffective && displayChips.length > 0 && (
         <p className="mt-2 text-center text-[11px] text-[var(--text-muted)]">출발·귀경지를 입력해야 해요.</p>
       )}
     </div>
@@ -1770,12 +1778,6 @@ export function V5ChatShell() {
 
           {/* Messages */}
           <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden pt-1 md:pt-2">
-            {showTravelAnalysisLoading && (
-              <V5TravelAiAnalysisLoadingOverlay
-                open
-                className="absolute inset-0 z-40 justify-start overflow-y-auto pt-[min(10vh,4rem)]"
-              />
-            )}
             <div className="min-h-0 flex-1 overflow-y-auto">
               {/* 메시지 로드 중 (대화 전환 후 DB 로드 전) */}
               {activeConv && !activeConv.messagesLoaded && userId ? (
@@ -1810,6 +1812,15 @@ export function V5ChatShell() {
                       routeGeneratingMessageId={routeGeneratingMessageId}
                     />
                   ))}
+                  {showTravelAnalysisLoading && (
+                    <div className="flex w-full justify-start">
+                      <V5TravelAiAnalysisLoadingOverlay
+                        open
+                        variant="chat-row"
+                        className="max-w-[min(100%,85%)]"
+                      />
+                    </div>
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
               )}
