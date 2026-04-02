@@ -20,7 +20,8 @@ export const travelPlanSchema = z.object({
   region: z.string(),
   days: z.number(),
   summary: z.string(),
-  spots: z.array(travelSpotSchema).min(3).max(8),
+  /** 왕복 시 출발·복귀 지점 + 관광 스팟으로 12개까지 가능 */
+  spots: z.array(travelSpotSchema).min(3).max(12),
   weatherNote: z.string().optional(),
   totalTime: z.string().optional(),
   alternativeNote: z.string().optional(),

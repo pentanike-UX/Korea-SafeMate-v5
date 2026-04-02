@@ -19,7 +19,6 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
-  Navigation,
   Maximize2,
   Minimize2,
   Map as MapIcon,
@@ -716,7 +715,7 @@ export function V5PlanMapModal({
         </div>
 
         <div className="flex-1 flex flex-col md:flex-row min-h-0">
-          <div className="flex-1 min-h-0 relative min-h-[42dvh] md:min-h-0">
+          <div className="flex-1 min-h-0 min-w-0 relative min-h-[42dvh] md:min-h-0">
             <PlanMap
               key={`${plan.id}-${spotCoordsKey}`}
               plan={plan}
@@ -766,27 +765,48 @@ export function V5PlanMapModal({
           </div>
 
           <div
-            className={`relative flex flex-shrink-0 flex-col border-t border-[var(--border-default)] md:flex-row md:border-t-0 md:border-l max-h-[46vh] md:max-h-none min-h-0 overflow-visible md:overflow-hidden ${
-              detailSpotId ? "md:min-w-0 md:flex-1 md:max-w-none" : "md:w-[min(100%,400px)]"
+            className={`relative flex flex-shrink-0 flex-col border-t border-[var(--border-default)] md:flex-row md:border-t-0 md:border-l max-h-[48vh] md:max-h-none md:min-h-0 min-h-0 overflow-visible md:overflow-hidden ${
+              isFs && detailSpotId
+                ? "md:flex-1 md:min-w-0 md:max-w-none"
+                : detailSpotId
+                  ? "md:w-auto md:max-w-[min(100%,820px)] md:shrink-0"
+                  : "md:w-[min(100%,392px)] md:shrink-0"
             }`}
           >
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col md:max-w-[400px] md:shrink-0">
+            <div
+              className={`flex min-h-0 min-w-0 flex-col border-[var(--border-default)]/0 md:border-r md:border-[var(--border-default)]/60 ${
+                isFs && detailSpotId
+                  ? "md:w-[min(100%,380px)] md:max-w-[380px] md:shrink-0"
+                  : "md:w-[min(100%,392px)] md:max-w-[392px] md:shrink-0"
+              }`}
+            >
             <button
               type="button"
               onClick={() => setListExpanded((v) => !v)}
-              className="flex items-center justify-between px-4 py-3.5 flex-shrink-0 md:cursor-default"
+              className="flex flex-col items-stretch gap-0.5 px-4 pt-4 pb-2 text-left md:px-5 md:pt-5 md:pb-3 flex-shrink-0 md:cursor-default"
             >
-              <span className="text-[12px] font-bold text-[var(--text-muted)] uppercase tracking-widest flex items-center gap-2">
-                <MapIcon className="w-3.5 h-3.5" />
-                스팟 목록 ({plan.spots.length})
-              </span>
-              <span className="md:hidden text-[var(--text-muted)]">
-                {listExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+              <span className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2 min-w-0">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--bg-surface-subtle)] text-[var(--brand-trust-blue)]">
+                    <MapIcon className="w-4 h-4" strokeWidth={2.25} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[15px] font-semibold text-[var(--text-strong)] tracking-tight">
+                      일정 스팟
+                    </span>
+                    <span className="block text-[12px] text-[var(--text-muted)] font-normal mt-0.5">
+                      {plan.spots.length}곳 · 탭하면 지도로 이동
+                    </span>
+                  </span>
+                </span>
+                <span className="md:hidden text-[var(--text-muted)] shrink-0">
+                  {listExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
+                </span>
               </span>
             </button>
 
             {listExpanded && (
-              <div className="overflow-y-auto flex-1 px-3 pb-4 space-y-2.5">
+              <div className="overflow-y-auto flex-1 px-3 pb-5 md:px-4 space-y-3 md:space-y-3.5 scroll-smooth">
                 {plan.spots.map((spot, idx) => {
                   const st = spotTimes[idx];
                   const legAfter = routeLegs?.[idx];
@@ -796,18 +816,18 @@ export function V5PlanMapModal({
                   return (
                     <div key={spot.id}>
                       <div
-                        className={`rounded-2xl border transition-all duration-200 ${
+                        className={`rounded-[22px] transition-all duration-300 ease-out ${
                           selectedSpotId === spot.id
-                            ? "border-[var(--brand-trust-blue)]/35 bg-[var(--brand-trust-blue-soft)] shadow-[0_4px_20px_rgba(47,79,143,0.08)]"
-                            : "border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/50 hover:border-[var(--border-strong)]"
+                            ? "border border-[var(--brand-trust-blue)]/20 bg-[var(--brand-trust-blue-soft)]/75 shadow-[0_10px_36px_rgba(47,79,143,0.11)] ring-1 ring-[var(--brand-trust-blue)]/12"
+                            : "border border-transparent bg-[var(--bg-elevated)] shadow-[0_2px_14px_rgba(0,0,0,0.04)] hover:border-[var(--border-default)] hover:shadow-[0_8px_28px_rgba(0,0,0,0.07)]"
                         }`}
                       >
                         <button
                           type="button"
                           onClick={() => selectSpotFromList(spot.id)}
-                          className="w-full text-left flex gap-3 p-3 rounded-2xl"
+                          className="w-full text-left flex gap-3.5 p-3.5 rounded-[22px] active:scale-[0.99] transition-transform duration-150"
                         >
-                          <div className="relative h-[5.25rem] w-[5.25rem] shrink-0 overflow-hidden rounded-xl bg-[var(--bg-surface-subtle)] ring-1 ring-[var(--border-default)]/80">
+                          <div className="relative h-[5.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-2xl bg-[var(--bg-surface-subtle)] ring-1 ring-black/[0.06] dark:ring-white/[0.08]">
                             {thumb ? (
                               <Image
                                 src={thumb}
@@ -827,13 +847,13 @@ export function V5PlanMapModal({
                                 <SpotTypeIcon type={spot.type} size={22} />
                               </div>
                             )}
-                            <span className="absolute bottom-1 right-1 flex h-6 min-w-[1.25rem] items-center justify-center rounded-full bg-[var(--text-strong)] px-1 text-[10px] font-bold text-white shadow-md ring-2 ring-white/90">
+                            <span className="absolute bottom-1.5 right-1.5 flex h-6 min-w-[1.35rem] items-center justify-center rounded-full bg-[var(--text-strong)]/90 px-1.5 text-[10px] font-bold text-white shadow-sm backdrop-blur-[2px]">
                               {idx + 1}
                             </span>
                           </div>
-                          <div className="flex min-w-0 flex-1 flex-col justify-center gap-1">
+                          <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
                             <p
-                              className={`text-[14px] font-bold leading-snug line-clamp-2 ${
+                              className={`text-[15px] font-semibold leading-snug tracking-tight line-clamp-2 ${
                                 selectedSpotId === spot.id
                                   ? "text-[var(--brand-trust-blue)]"
                                   : "text-[var(--text-strong)]"
@@ -842,17 +862,17 @@ export function V5PlanMapModal({
                               {spot.name}
                             </p>
                             {st && (
-                              <p className="text-[11px] font-mono text-[var(--brand-trust-blue)]">
-                                {st.arrive} 도착 → {st.depart} 출발
+                              <p className="text-[11px] font-medium tabular-nums tracking-wide text-[var(--brand-trust-blue)]">
+                                {st.arrive} – {st.depart}
                               </p>
                             )}
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
-                              <span className="text-[12px] text-[var(--text-muted)]">{spot.duration}</span>
+                            <div className="flex items-center gap-1.5 text-[12px] text-[var(--text-muted)]">
+                              <Clock className="w-3.5 h-3.5 opacity-70 shrink-0" strokeWidth={2} />
+                              <span className="leading-snug">{spot.duration}</span>
                             </div>
                           </div>
                         </button>
-                        <div className="flex items-center justify-end gap-2 border-t border-[var(--border-default)]/60 px-3 py-2">
+                        <div className="flex items-center justify-end gap-2 border-t border-[var(--border-default)]/50 px-3.5 py-2.5">
                           <button
                             type="button"
                             onClick={(e) => {
@@ -861,21 +881,24 @@ export function V5PlanMapModal({
                               setSelectedSpotId(spot.id);
                               setEaseToRevision((k) => k + 1);
                             }}
-                            className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[12px] font-semibold text-[var(--brand-trust-blue)] transition-colors hover:bg-[var(--brand-trust-blue-soft)]"
+                            className="inline-flex items-center gap-1 rounded-full px-3.5 py-2 text-[12px] font-semibold text-[var(--brand-trust-blue)] transition-colors hover:bg-[var(--brand-trust-blue-soft)] active:opacity-90"
                           >
                             자세히 보기
-                            <ChevronRight className="h-3.5 w-3.5" />
+                            <ChevronRight className="h-3.5 w-3.5 opacity-80" />
                           </button>
                         </div>
                       </div>
                       {spot.transitToNext && idx < plan.spots.length - 1 && (
-                        <div className="flex items-start gap-2 py-2 pl-3 ml-1 border-l-2 border-[var(--border-strong)]/50">
-                          <Navigation className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0 mt-0.5" />
-                          <div className="min-w-0">
-                            <p className="text-[12px] text-[var(--text-muted)] leading-snug">{spot.transitToNext}</p>
+                        <div className="flex items-start gap-2.5 py-2.5 pl-4 ml-2">
+                          <div className="flex flex-col items-center pt-1">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--border-strong)]" />
+                            <span className="w-px flex-1 min-h-[1.25rem] bg-gradient-to-b from-[var(--border-default)] to-transparent" />
+                          </div>
+                          <div className="min-w-0 pt-0.5">
+                            <p className="text-[12px] text-[var(--text-secondary)] leading-snug">{spot.transitToNext}</p>
                             {legAfter && (
-                              <p className="text-[11px] text-[var(--brand-trust-blue)] font-medium mt-1">
-                                경로 예상 {formatLegDuration(legAfter.durationSeconds)}
+                              <p className="text-[11px] text-[var(--brand-trust-blue)] font-medium mt-1 tabular-nums">
+                                약 {formatLegDuration(legAfter.durationSeconds)}
                                 {legAfter.distanceMeters != null
                                   ? ` · ${(legAfter.distanceMeters / 1000).toFixed(1)}km`
                                   : ""}
@@ -917,10 +940,18 @@ export function V5PlanMapModal({
                   onClick={() => setDetailSpotId(null)}
                 />
                 <aside
-                  className="fixed inset-y-0 right-0 z-[60] flex w-[min(100%,400px)] flex-col border-l border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[-8px_0_32px_rgba(0,0,0,0.12)] md:static md:z-0 md:flex md:h-full md:min-h-0 md:w-[min(100%,380px)] md:max-w-[380px] md:shrink-0 md:shadow-none"
+                  className={`fixed inset-y-0 right-0 z-[60] flex w-[min(100%,420px)] flex-col border-l border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[-12px_0_40px_rgba(0,0,0,0.14)] md:static md:z-0 md:flex md:h-full md:min-h-0 md:shadow-none ${
+                    isFs && detailSpotId
+                      ? "md:flex-1 md:min-w-0 md:max-w-none md:w-auto"
+                      : "md:w-[min(100%,380px)] md:max-w-[380px] md:shrink-0"
+                  }`}
                 >
-                  <div className="flex items-center justify-between gap-2 border-b border-[var(--border-default)] px-4 py-3">
-                    <p className="min-w-0 text-[13px] font-bold text-[var(--text-strong)] line-clamp-2">
+                  <div className="flex items-center justify-between gap-2 border-b border-[var(--border-default)]/80 px-4 py-3.5 md:px-5 bg-[var(--bg-elevated)]">
+                    <p
+                      className={`min-w-0 font-semibold text-[var(--text-strong)] line-clamp-2 tracking-tight ${
+                        isFs ? "text-[15px] md:text-[16px]" : "text-[13px]"
+                      }`}
+                    >
                       {detailSpot.name}
                     </p>
                     <button
@@ -934,14 +965,18 @@ export function V5PlanMapModal({
                   </div>
 
                   <div className="min-h-0 flex-1 overflow-y-auto">
-                    <div className="relative aspect-[16/10] w-full bg-[var(--bg-surface-subtle)]">
+                    <div
+                      className={`relative w-full bg-[var(--bg-surface-subtle)] ${
+                        isFs ? "aspect-[16/9] md:aspect-[21/9] md:max-h-[min(40vh,320px)]" : "aspect-[16/10]"
+                      }`}
+                    >
                       {detailWiki && detailWiki !== "err" && detailWiki.thumbnail ? (
                         <Image
                           src={detailWiki.thumbnail}
                           alt=""
                           fill
                           className="object-cover"
-                          sizes="380px"
+                          sizes={isFs ? "(min-width:768px) 55vw, 100vw" : "380px"}
                           unoptimized={detailWiki.thumbnail.includes("wikimedia")}
                           priority
                         />
@@ -952,8 +987,8 @@ export function V5PlanMapModal({
                       )}
                     </div>
 
-                    <div className="space-y-4 px-4 py-4">
-                      <div className="flex items-start gap-2 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/60 px-3 py-3">
+                    <div className={`space-y-4 py-4 ${isFs ? "md:px-8 px-4" : "px-4"}`}>
+                      <div className="flex items-start gap-2 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/60 px-3 py-3 md:px-4 md:py-3.5">
                         <Star className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" fill="currentColor" />
                         <div>
                           <p className="text-[12px] font-semibold text-[var(--text-strong)]">별점·리뷰</p>

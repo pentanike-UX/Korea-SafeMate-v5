@@ -5,7 +5,7 @@ import {
   Plus, MapPin, Clock, CloudSun, Bookmark, BookmarkCheck,
   Send, Utensils, Coffee, Train, Camera, ChevronRight,
   Sparkles, MoreHorizontal, Trash2, PanelLeftClose, PanelLeft,
-  Navigation, Hotel, Menu, X, Map, Compass, Check, Plane,
+  Navigation, Hotel, Menu, X, Map, Compass, Check,
 } from "lucide-react";
 import { useAuthUser } from "@/hooks/use-auth-user";
 import {
@@ -22,10 +22,18 @@ import { V5ChatPricingModal, type PricingModalFocus } from "./v5-chat-pricing-mo
 
 // ─── Composer: 여행 프롬프트 체크리스트 (실시간 키워드 감지) ───────────────────
 
-type TravelPromptCheckKey = "region" | "schedule" | "people" | "transport" | "atmosphere" | "food";
+type TravelPromptCheckKey =
+  | "region"
+  | "departure"
+  | "schedule"
+  | "people"
+  | "transport"
+  | "atmosphere"
+  | "food";
 
 const TRAVEL_PROMPT_CHECKLIST: { key: TravelPromptCheckKey; label: string; hint: string }[] = [
   { key: "region", label: "지역", hint: "도시·지역명" },
+  { key: "departure", label: "출발지", hint: "집·역·구간" },
   { key: "schedule", label: "일정", hint: "박·일·기간" },
   { key: "people", label: "인원", hint: "명수·동행" },
   { key: "transport", label: "교통", hint: "이동 수단" },
@@ -41,6 +49,8 @@ function evaluateTravelPromptChecklist(text: string): Record<TravelPromptCheckKe
       /서울|부산|대구|인천|광주|대전|울산|세종|제주|경주|전주|여수|속초|평창|안동|통영|해운대|명동|홍대|강남|강릉|춘천|양양|안양|수원|용인|고양|파주|화성|김해|창원|진주|목포|순천|원주|충주|청주|포항|군산|남해|거제|하동|보성|광양|제주도|전라|경상|충청|강원|경기|전북|전남|경북|경남|충북|충남|내륙|동해|서해|한국|국내/i.test(
         s,
       ) || /[가-힣]{2,8}(시|도|군)(으로|에서|\s|,|\.|$)/.test(c) || /[가-힣]{2,6}(으로|에서)(여행|간|갈|놀러)/.test(c),
+    departure:
+      /출발|출발지|집에서|우리집|퇴근|거주|근무지|회사|역에서|공항에서|터미널|출발은|나가는\s*곳|귀가|돌아올|복귀/i.test(s),
     schedule:
       /\d+\s*박|\d+\s*일|\d+박\s*\d+일|일정|며칠|주말|평일|당일|하루|이틀|사흘|일주|연휴|방학|휴가|2박|3박|1박/i.test(s),
     people:
@@ -396,6 +406,8 @@ function TravelRouteCard({
   );
 }
 
+const DEPARTURE_CHIP_ID = "trip_departure_origin";
+
 function PreferenceChipsCard({
   chips,
   readyToGenerateRoute,
@@ -406,11 +418,32 @@ function PreferenceChipsCard({
   chips: PreferenceChip[];
   readyToGenerateRoute: boolean;
   onRemoveChip: (chipId: string) => void;
-  onConfirm: () => void;
+  onConfirm: (slots: PreferenceChip[]) => void;
   isGenerating: boolean;
 }) {
+  const depFromChip = chips.find((c) => c.id === DEPARTURE_CHIP_ID)?.value ?? "";
+  const [departure, setDeparture] = useState(depFromChip);
+
+  useEffect(() => {
+    if (depFromChip) setDeparture(depFromChip);
+  }, [depFromChip]);
+
+  const displayChips = useMemo(
+    () => chips.filter((c) => c.id !== DEPARTURE_CHIP_ID),
+    [chips],
+  );
+
+  const mergedSlots = useMemo((): PreferenceChip[] => {
+    const base = displayChips;
+    const d = departure.trim();
+    if (!d) return base;
+    return [...base, { id: DEPARTURE_CHIP_ID, label: "출발·귀경지", value: d }];
+  }, [displayChips, departure]);
+
+  const canSubmit = displayChips.length > 0 && departure.trim().length > 0 && !isGenerating;
+
   return (
-    <div className="mt-3 w-full max-w-[480px] rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-3 shadow-[0_2px_12px_rgba(20,20,20,0.06)]">
+    <div className="mt-3 w-full max-w-[480px] rounded-[20px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-4 shadow-[0_4px_24px_rgba(20,20,20,0.06)]">
       <div className="flex items-center gap-2 mb-2">
         <Sparkles className="w-3.5 h-3.5 text-[var(--brand-trust-blue)]" />
         <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">정리한 여행 조건</span>
@@ -419,13 +452,28 @@ function PreferenceChipsCard({
         )}
       </div>
       <p className="text-[12px] text-[var(--text-secondary)] mb-3 leading-relaxed">
-        내용을 확인하고 필요 없는 칩은 뺀 뒤, 동선을 만들어 달라고 눌러 주세요.
+        출발지를 입력하면 <strong className="font-semibold text-[var(--text-strong)]">출발 → 여행지 동선 → 같은 곳으로 복귀</strong>하는 일정으로 짜 드려요. 칩을 정리한 뒤 동선 만들기를 눌러 주세요.
       </p>
-      <div className="flex flex-wrap gap-2 mb-3">
-        {chips.length === 0 ? (
+
+      <label className="block mb-3">
+        <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          출발·귀경지 <span className="text-[var(--error)]">*</span>
+        </span>
+        <input
+          type="text"
+          value={departure}
+          onChange={(e) => setDeparture(e.target.value)}
+          placeholder="예: 서울역, 강남구 논현동 집, 대전역"
+          className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-page)] px-3.5 py-2.5 text-[14px] text-[var(--text-strong)] placeholder:text-[var(--text-muted)] outline-none transition-shadow focus:border-[var(--brand-trust-blue)] focus:ring-2 focus:ring-[var(--brand-trust-blue)]/20"
+          autoComplete="street-address"
+        />
+      </label>
+
+      <div className="flex flex-wrap gap-2 mb-4">
+        {displayChips.length === 0 ? (
           <span className="text-[12px] text-[var(--text-muted)]">남은 칩이 없어요. 다시 대화로 알려 주세요.</span>
         ) : (
-          chips.map((c) => (
+          displayChips.map((c) => (
             <span
               key={c.id}
               className="inline-flex items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full text-[12px] font-medium bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] border border-blue-100"
@@ -446,16 +494,19 @@ function PreferenceChipsCard({
       </div>
       <button
         type="button"
-        onClick={onConfirm}
-        disabled={chips.length === 0 || isGenerating}
-        className={`w-full py-3 rounded-2xl text-[13px] font-semibold transition-all duration-200 ${
-          chips.length > 0 && !isGenerating
-            ? "bg-[var(--brand-primary)] text-[var(--text-on-brand)] hover:bg-[var(--brand-primary-hover)] active:scale-[0.98]"
+        onClick={() => onConfirm(mergedSlots)}
+        disabled={!canSubmit}
+        className={`w-full py-3.5 rounded-2xl text-[14px] font-semibold transition-all duration-200 ${
+          canSubmit
+            ? "bg-[var(--brand-primary)] text-[var(--text-on-brand)] hover:bg-[var(--brand-primary-hover)] active:scale-[0.99]"
             : "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] cursor-not-allowed"
         }`}
       >
         {isGenerating ? "동선 짜는 중…" : "이 정보로 동선 짜기"}
       </button>
+      {!departure.trim() && displayChips.length > 0 && (
+        <p className="mt-2 text-center text-[11px] text-[var(--text-muted)]">출발·귀경지를 입력해야 해요.</p>
+      )}
     </div>
   );
 }
@@ -517,7 +568,7 @@ function MessageBubble({
             chips={chips}
             readyToGenerateRoute={Boolean(message.canGenerateRoute)}
             onRemoveChip={(chipId) => onRemovePreferenceChip(message.id, chipId)}
-            onConfirm={() => onConfirmRoute(message.id, chips)}
+            onConfirm={(slots) => onConfirmRoute(message.id, slots)}
             isGenerating={routeGeneratingMessageId === message.id}
           />
         )}
@@ -543,10 +594,9 @@ const AWAITING_REPLY_MESSAGES = [
   "🗺️ 열심히 지도를 펼치고 형광펜으로 동선을 그리는 중...",
   "🛑 앗, 여긴 너무 막히는데? 더 빠른 지름길로 수정하고 있어요!",
   "☕ 가이드가 커피 한 모금 마시고 마지막 스퍼트를 올립니다.",
-  "🎉짜잔! 완벽한 동선의 지도가 완성되었습니다!",
 ] as const;
 
-/** 질문 전송 후 AI 답변 대기 — 3초마다 문구 페이드 전환 + 회전 비행기 */
+/** 질문 전송 후 AI 답변 대기 — 3초마다 문구 페이드 전환 + 회전 나침반 */
 function TypingIndicator() {
   const [msgIndex, setMsgIndex] = useState(0);
   const [textVisible, setTextVisible] = useState(true);
@@ -588,7 +638,7 @@ function TypingIndicator() {
           className="flex justify-center mb-2.5 motion-reduce:animate-none motion-safe:animate-[spin_2.8s_linear_infinite]"
           aria-hidden
         >
-          <Plane className="w-7 h-7 text-[var(--brand-trust-blue)] drop-shadow-sm" strokeWidth={2.25} />
+          <Compass className="w-7 h-7 text-[var(--brand-trust-blue)] drop-shadow-sm" strokeWidth={2.25} />
         </div>
         <p
           className={`text-[13px] leading-relaxed text-[var(--text-secondary)] text-center min-h-[3.5rem] flex items-center justify-center px-0.5 motion-reduce:transition-none motion-safe:transition-opacity motion-safe:duration-500 motion-safe:ease-in-out ${
@@ -602,11 +652,32 @@ function TypingIndicator() {
   );
 }
 
-const SUGGESTION_CHIPS = [
-  "경주 2박 3일 혼자 여행", "부산 당일치기 맛집 중심",
-  "제주 4박 5일 렌터카 여행", "서울 K-콘텐츠 스팟 투어",
-  "전주 한옥마을 1박 2일", "강릉 바다 드라이브 코스",
-];
+/** 빈 화면 — 왕복 / 현지만 템플릿(괄호만 고치면 됨) */
+const TRIP_START_TEMPLATES = [
+  {
+    key: "roundtrip",
+    title: "왕복 동선",
+    subtitle: "출발지 → 여행 → 같은 곳으로 복귀까지",
+    prompt:
+      "왕복 동선으로 짜 줘. 출발지(집·역·주차장 등): (여기 입력) / 여행 지역: (예: 경주) / 일정: (예: 2박 3일) / 인원: (예: 2명·가족) / 이동 수단: (예: KTX·렌터카·대중교통). 같은 출발지로 돌아오는 일정까지 포함해 줘.",
+  },
+  {
+    key: "local_only",
+    title: "현지 동선만",
+    subtitle: "도착한 도시·지역 안에서만 코스",
+    prompt:
+      "여행 지역 안에서만 동선 짜 줘(집에서 오는 길·귀가 편은 빼고). 지역: (예: 강릉 시내·제주 서귀포) / 일정: (예: 당일 또는 1박 2일) / 인원: ( ) / 이동: (예: 도보·버스·택시) / 취향: (예: 카페·바다·맛집).",
+  },
+] as const;
+
+const RICH_START_EXAMPLES = [
+  "서울역 출발, 부산 2박 3일, 2명, KTX·지하철 위주, 맛집·해변, 왕복 동선으로.",
+  "인천공항 출발 제주 4박 5일, 가족 4명, 렌터카, 왕복 포함해서 짜 줘.",
+  "대전역에서 출발해 당일 부산(해운대·광안리), 친구 3명, SRT·지하철, 저녁에 대전으로 복귀.",
+  "경주 2박 3일, 혼자, KTX, 불국사·첨성대·황리단길 위주, 울산에서 출발했다가 울산으로 돌아오는 일정.",
+  "서울 종로·익선동 안에서만 하루 동선(외부 출발·귀경 없이), 도보·한옥·카페 위주.",
+  "강릉 1박 2일, 커플, 서울 청량리역 출발 ITX, 렌트, 카페·바다, 왕복.",
+] as const;
 
 function WaylyMark({
   boxClass,
@@ -633,35 +704,67 @@ function WaylyMark({
 }
 
 function EmptyState({
-  onSuggestion,
+  onApplyPrompt,
   onOpenPricing,
 }: {
-  onSuggestion: (t: string) => void;
+  /** 입력창에 문장을 넣고 포커스 — 괄호 부분만 고친 뒤 전송 */
+  onApplyPrompt: (text: string) => void;
   onOpenPricing: () => void;
 }) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-6 pb-32 select-none">
+    <div className="flex-1 flex flex-col items-center justify-center px-5 pb-28 md:pb-32 select-none overflow-y-auto">
       <WaylyMark
         boxClass="w-16 h-16 rounded-[18px] mb-5"
         iconClass="w-9 h-9"
         strokeWidth={2.4}
       />
-      <h1 className="text-[22px] font-bold text-[var(--text-strong)] text-center mb-2">어디로 여행을 떠나시나요?</h1>
-      <p className="text-[14px] text-[var(--text-secondary)] text-center max-w-xs leading-relaxed mb-8">
-        지역, 기간, 여행 스타일을 알려주시면<br />최적의 동선과 스팟을 제안해 드려요.
+      <h1 className="text-[22px] font-bold text-[var(--text-strong)] text-center mb-2 tracking-tight">
+        어디로 여행을 떠나시나요?
+      </h1>
+      <p className="text-[14px] text-[var(--text-secondary)] text-center max-w-md leading-relaxed mb-6">
+        먼저 <strong className="font-semibold text-[var(--text-strong)]">왕복</strong>인지{" "}
+        <strong className="font-semibold text-[var(--text-strong)]">현지만</strong>인지 고른 뒤, 입력창에 채워진 문장에서{" "}
+        <strong className="font-semibold text-[var(--text-strong)]">괄호 안</strong>만 바꿔내면 돼요. 인원·출발지·교통이
+        자연스럽게 들어갑니다.
       </p>
-      <div className="flex flex-wrap gap-2 justify-center max-w-sm">
-        {SUGGESTION_CHIPS.map((chip) => (
-          <button key={chip} type="button" onClick={() => onSuggestion(chip)}
-            className="px-3.5 py-2 rounded-full text-[13px] font-medium bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--brand-trust-blue)] hover:text-[var(--brand-trust-blue)] hover:bg-[var(--brand-trust-blue-soft)] transition-all duration-150 active:scale-95">
-            {chip}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg mb-6">
+        {TRIP_START_TEMPLATES.map((opt) => (
+          <button
+            key={opt.key}
+            type="button"
+            onClick={() => onApplyPrompt(opt.prompt)}
+            className="text-left rounded-[20px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-4 shadow-[0_2px_16px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-[var(--brand-trust-blue)]/35 hover:shadow-[0_8px_28px_rgba(47,79,143,0.08)] active:scale-[0.99]"
+          >
+            <span className="block text-[15px] font-semibold text-[var(--text-strong)] tracking-tight">{opt.title}</span>
+            <span className="block text-[12px] text-[var(--text-muted)] mt-1 leading-snug">{opt.subtitle}</span>
+            <span className="block text-[11px] font-medium text-[var(--brand-trust-blue)] mt-2.5">
+              탭하면 아래 입력창에 문장이 들어가요
+            </span>
           </button>
         ))}
       </div>
+
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2 w-full max-w-lg">
+        한 줄 예시 (탭해서 수정 후 전송)
+      </p>
+      <div className="flex flex-col gap-2 w-full max-w-lg mb-8">
+        {RICH_START_EXAMPLES.map((line) => (
+          <button
+            key={line}
+            type="button"
+            onClick={() => onApplyPrompt(line)}
+            className="text-left rounded-2xl border border-[var(--border-default)]/80 bg-[var(--bg-surface-subtle)]/60 px-3.5 py-3 text-[13px] leading-snug text-[var(--text-secondary)] transition-all duration-150 hover:bg-[var(--brand-trust-blue-soft)] hover:border-[var(--brand-trust-blue)]/25 hover:text-[var(--text-strong)] active:scale-[0.99]"
+          >
+            {line}
+          </button>
+        ))}
+      </div>
+
       <button
         type="button"
         onClick={onOpenPricing}
-        className="mt-8 text-[12px] font-medium text-[var(--brand-trust-blue)] underline-offset-4 hover:underline"
+        className="text-[12px] font-medium text-[var(--brand-trust-blue)] underline-offset-4 hover:underline"
       >
         요금제·이용 한도·API 안내 보기
       </button>
@@ -1634,7 +1737,13 @@ export function V5ChatShell() {
               </div>
             ) : !hasUserMessage ? (
               <EmptyState
-                onSuggestion={(t) => void handleSend(t)}
+                onApplyPrompt={(text) => {
+                  setInputValue(text);
+                  queueMicrotask(() => {
+                    textareaRef.current?.focus();
+                    textareaRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                  });
+                }}
                 onOpenPricing={() => openPricing("overview")}
               />
             ) : (
@@ -1670,7 +1779,7 @@ export function V5ChatShell() {
                   <p className="text-[11px] md:text-[12px] font-medium text-[var(--text-muted)] tracking-tight mb-2.5">
                     알려주시면 동선 짜기가 수월해요
                   </p>
-                  <ul className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-2">
+                  <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-2">
                     {TRAVEL_PROMPT_CHECKLIST.map(({ key, label, hint }) => {
                       const done = promptChecklist[key];
                       return (
@@ -1706,7 +1815,7 @@ export function V5ChatShell() {
                   onKeyDown={handleKeyDown}
                   onFocus={() => setComposerFocused(true)}
                   onBlur={() => setComposerFocused(false)}
-                  placeholder="지역·일정·인원·교통·분위기·음식 취향을 알려주세요 (예: 경주 2박 3일 맛집·도보 위주)"
+                  placeholder="출발지·지역·일정·인원·교통 등을 알려주세요 (예: 서울역 출발 경주 2박 3일 맛집·도보)"
                   rows={1}
                   className="flex-1 bg-transparent resize-none outline-none text-[14px] md:text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] leading-relaxed py-1 min-h-[22px]" />
                 <button type="button"
