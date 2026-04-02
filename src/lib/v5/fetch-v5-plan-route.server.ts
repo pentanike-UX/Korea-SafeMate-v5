@@ -10,12 +10,20 @@ import type { DirectionsProfile } from "@/lib/routing/directions-types";
 
 const MAX_COORDS = 25;
 
+/** 스팟 i → i+1 구간 (도로 기준, OSRM/네이버·캐시) */
+export type V5PlanRouteLegSummary = {
+  durationSeconds: number | null;
+  distanceMeters: number | null;
+};
+
 export type V5PlanRouteSuccess = {
   ok: true;
   /** GeoJSON LineString coordinates: [lng, lat][] */
   coordinates: [number, number][];
   /** UI/디버그용 */
   kind: "full-foot" | "full-driving" | "chained-foot" | "chained-driving" | "chained-mixed";
+  /** 스팟 순서대로 n-1개 구간의 이동 시간·거리 */
+  legs: V5PlanRouteLegSummary[];
 };
 
 export type V5PlanRouteFailure = {
@@ -83,6 +91,28 @@ async function tryFullRoute(
   return data.path.map((p) => [p.lng, p.lat] as [number, number]);
 }
 
+async function collectLegSummaries(
+  coords: { lat: number; lng: number }[],
+  primary: DirectionsProfile,
+): Promise<V5PlanRouteLegSummary[]> {
+  const out: V5PlanRouteLegSummary[] = [];
+  for (let i = 0; i < coords.length - 1; i++) {
+    const a = coords[i]!;
+    const b = coords[i + 1]!;
+    let data = await resolveDirections([a, b], primary);
+    if (!data?.durationSeconds) {
+      const alt: DirectionsProfile = primary === "foot" ? "driving" : "foot";
+      const data2 = await resolveDirections([a, b], alt);
+      if (data2) data = data2;
+    }
+    out.push({
+      durationSeconds: data?.durationSeconds ?? null,
+      distanceMeters: data?.distanceMeters ?? null,
+    });
+  }
+  return out;
+}
+
 async function tryLeg(
   a: { lat: number; lng: number },
   b: { lat: number; lng: number },
@@ -129,19 +159,23 @@ export async function fetchV5PlanRouteGeometry(
 
   const fullPrimary = await tryFullRoute(coordinates, primary);
   if (fullPrimary) {
+    const legs = await collectLegSummaries(coordinates, primary);
     return {
       ok: true,
       coordinates: fullPrimary,
       kind: primary === "foot" ? "full-foot" : "full-driving",
+      legs,
     };
   }
 
   const fullSecondary = await tryFullRoute(coordinates, secondary);
   if (fullSecondary) {
+    const legs = await collectLegSummaries(coordinates, secondary);
     return {
       ok: true,
       coordinates: fullSecondary,
       kind: secondary === "foot" ? "full-foot" : "full-driving",
+      legs,
     };
   }
 
@@ -166,5 +200,7 @@ export async function fetchV5PlanRouteGeometry(
     kind = primary === "foot" ? "chained-foot" : "chained-driving";
   }
 
-  return { ok: true, coordinates: merged, kind };
+  const legs = await collectLegSummaries(coordinates, primary);
+
+  return { ok: true, coordinates: merged, kind, legs };
 }

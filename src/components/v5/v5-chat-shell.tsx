@@ -247,6 +247,14 @@ function TravelRouteCard({
   plan: TravelPlan; isSaved: boolean;
   onSave: (p: TravelPlan) => void; onViewMap: (p: TravelPlan) => void;
 }) {
+  const hasMapCoords = plan.spots.some(
+    (s) =>
+      s.lat != null &&
+      s.lng != null &&
+      Number.isFinite(s.lat) &&
+      Number.isFinite(s.lng),
+  );
+
   return (
     <div className="mt-3 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] overflow-hidden shadow-[0_2px_12px_rgba(20,20,20,0.06)]">
       <div className="px-4 pt-4 pb-3 border-b border-[var(--border-default)]">
@@ -316,8 +324,27 @@ function TravelRouteCard({
           </div>
         )}
       </div>
-      <div className="px-4 pb-4 flex gap-2">
+      <div className="px-4 pb-4 flex flex-col sm:flex-row gap-2">
         <button
+          type="button"
+          disabled={!hasMapCoords}
+          title={
+            hasMapCoords
+              ? "실제 도로를 따라 동선을 지도에서 봅니다."
+              : "스팟에 좌표가 있어야 지도를 열 수 있어요."
+          }
+          onClick={() => hasMapCoords && onViewMap(plan)}
+          className={`flex items-center justify-center gap-2 py-3 px-4 rounded-2xl text-[13px] font-semibold transition-all duration-200 border ${
+            hasMapCoords
+              ? "border-[var(--brand-trust-blue)]/35 bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] hover:bg-blue-100 active:scale-[0.98]"
+              : "border-[var(--border-default)] bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] cursor-not-allowed"
+          }`}
+        >
+          <Map className="w-4 h-4" />
+          지도 보기
+        </button>
+        <button
+          type="button"
           onClick={() => !isSaved && onSave(plan)}
           className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-[13px] font-semibold transition-all duration-200 ${
             isSaved
@@ -327,14 +354,6 @@ function TravelRouteCard({
         >
           {isSaved ? <><BookmarkCheck className="w-4 h-4" />저장됨</> : <><Bookmark className="w-4 h-4" />추천한 동선 저장</>}
         </button>
-        {isSaved && (
-          <button
-            onClick={() => onViewMap(plan)}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-[13px] font-semibold bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] hover:bg-blue-100 active:scale-[0.98] transition-all duration-200"
-          >
-            <Map className="w-4 h-4" />지도
-          </button>
-        )}
       </div>
     </div>
   );
