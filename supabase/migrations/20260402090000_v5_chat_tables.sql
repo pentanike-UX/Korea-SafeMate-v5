@@ -55,10 +55,12 @@ ALTER TABLE public.v5_messages      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.v5_saved_plans   ENABLE ROW LEVEL SECURITY;
 
 -- Conversations: 본인 것만 CRUD
+DROP POLICY IF EXISTS "v5_conv_owner" ON public.v5_conversations;
 CREATE POLICY "v5_conv_owner" ON public.v5_conversations
   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 -- Messages: 본인 대화 내 메시지만
+DROP POLICY IF EXISTS "v5_msg_owner" ON public.v5_messages;
 CREATE POLICY "v5_msg_owner" ON public.v5_messages
   FOR ALL USING (
     EXISTS (
@@ -68,6 +70,7 @@ CREATE POLICY "v5_msg_owner" ON public.v5_messages
   );
 
 -- Saved plans: 본인 것만
+DROP POLICY IF EXISTS "v5_plan_owner" ON public.v5_saved_plans;
 CREATE POLICY "v5_plan_owner" ON public.v5_saved_plans
   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
@@ -80,6 +83,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE TRIGGER v5_conversations_updated_at
+DROP TRIGGER IF EXISTS v5_conversations_updated_at ON public.v5_conversations;
+CREATE TRIGGER v5_conversations_updated_at
   BEFORE UPDATE ON public.v5_conversations
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();

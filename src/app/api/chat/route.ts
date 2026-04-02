@@ -6,6 +6,7 @@ import {
   loadRecentChatHistoryForGemini,
 } from "@/lib/travel-chat/gemini-chat-db";
 import { getServerSupabaseForUser, getSessionUserId } from "@/lib/supabase/server-user";
+import { recordWaylyUsageFireAndForget } from "@/lib/wayly/record-usage.server";
 
 export const maxDuration = 60;
 
@@ -364,6 +365,11 @@ export async function POST(req: Request) {
         }
 
         const savedAi = await insertChatMessage(sb, userId, trimmed, "assistant");
+        recordWaylyUsageFireAndForget(sb, {
+          geminiGenerations: 1,
+          geminiEstInputTokens: Math.ceil(message.length / 4) + 1500,
+          geminiEstOutputTokens: Math.ceil(trimmed.length / 4),
+        });
         if (!savedAi.ok) {
           sendSse({
             type: "done",

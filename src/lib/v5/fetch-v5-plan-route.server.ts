@@ -5,8 +5,13 @@ import {
   consumeDirectionsRateLimit,
   getClientIpFromHeaders,
 } from "@/lib/routing/directions-api-guard.server";
-import { resolveDirections } from "@/lib/routing/resolve-directions.server";
+import {
+  resolveDirections,
+  type ResolveDirectionsHooks,
+} from "@/lib/routing/resolve-directions.server";
 import type { DirectionsProfile } from "@/lib/routing/directions-types";
+import { getServerSupabaseForUser } from "@/lib/supabase/server-user";
+import { recordWaylyUsageFireAndForget } from "@/lib/wayly/record-usage.server";
 
 const MAX_COORDS = 25;
 
@@ -85,8 +90,9 @@ function validateCoords(coordinates: { lat: number; lng: number }[]): V5PlanRout
 async function tryFullRoute(
   coords: { lat: number; lng: number }[],
   profile: DirectionsProfile,
+  hooks?: ResolveDirectionsHooks,
 ): Promise<[number, number][] | null> {
-  const data = await resolveDirections(coords, profile);
+  const data = await resolveDirections(coords, profile, hooks);
   if (!data?.path?.length || data.path.length < 2) return null;
   return data.path.map((p) => [p.lng, p.lat] as [number, number]);
 }
@@ -94,15 +100,16 @@ async function tryFullRoute(
 async function collectLegSummaries(
   coords: { lat: number; lng: number }[],
   primary: DirectionsProfile,
+  hooks?: ResolveDirectionsHooks,
 ): Promise<V5PlanRouteLegSummary[]> {
   const out: V5PlanRouteLegSummary[] = [];
   for (let i = 0; i < coords.length - 1; i++) {
     const a = coords[i]!;
     const b = coords[i + 1]!;
-    let data = await resolveDirections([a, b], primary);
+    let data = await resolveDirections([a, b], primary, hooks);
     if (!data?.durationSeconds) {
       const alt: DirectionsProfile = primary === "foot" ? "driving" : "foot";
-      const data2 = await resolveDirections([a, b], alt);
+      const data2 = await resolveDirections([a, b], alt, hooks);
       if (data2) data = data2;
     }
     out.push({
@@ -117,12 +124,13 @@ async function tryLeg(
   a: { lat: number; lng: number },
   b: { lat: number; lng: number },
   primary: DirectionsProfile,
+  hooks?: ResolveDirectionsHooks,
 ): Promise<{ path: [number, number][]; straight: boolean }> {
   const pair = [a, b];
-  let data = await resolveDirections(pair, primary);
+  let data = await resolveDirections(pair, primary, hooks);
   if (!data?.path?.length || data.path.length < 2) {
     const alt: DirectionsProfile = primary === "foot" ? "driving" : "foot";
-    data = await resolveDirections(pair, alt);
+    data = await resolveDirections(pair, alt, hooks);
   }
   if (data?.path?.length && data.path.length >= 2) {
     return { path: data.path.map((p) => [p.lng, p.lat] as [number, number]), straight: false };
@@ -153,13 +161,31 @@ export async function fetchV5PlanRouteGeometry(
     return { ok: false, code: "RATE_LIMIT" };
   }
 
+  const usage = { routing: 0, naver: 0 };
+  const routeHooks: ResolveDirectionsHooks = {
+    onLiveResolution: (r) => {
+      usage.routing += 1;
+      if (r.provider === "naver") usage.naver += 1;
+    },
+  };
+
   const maxLeg = maxLegMeters(coordinates);
   const primary: DirectionsProfile = maxLeg > 12_000 ? "driving" : "foot";
   const secondary: DirectionsProfile = primary === "foot" ? "driving" : "foot";
 
-  const fullPrimary = await tryFullRoute(coordinates, primary);
+  const flushRoutingUsage = async () => {
+    if (usage.routing < 1) return;
+    const sb = await getServerSupabaseForUser();
+    recordWaylyUsageFireAndForget(sb, {
+      routingLive: usage.routing,
+      naverLive: usage.naver,
+    });
+  };
+
+  const fullPrimary = await tryFullRoute(coordinates, primary, routeHooks);
   if (fullPrimary) {
-    const legs = await collectLegSummaries(coordinates, primary);
+    const legs = await collectLegSummaries(coordinates, primary, routeHooks);
+    await flushRoutingUsage();
     return {
       ok: true,
       coordinates: fullPrimary,
@@ -168,9 +194,10 @@ export async function fetchV5PlanRouteGeometry(
     };
   }
 
-  const fullSecondary = await tryFullRoute(coordinates, secondary);
+  const fullSecondary = await tryFullRoute(coordinates, secondary, routeHooks);
   if (fullSecondary) {
-    const legs = await collectLegSummaries(coordinates, secondary);
+    const legs = await collectLegSummaries(coordinates, secondary, routeHooks);
+    await flushRoutingUsage();
     return {
       ok: true,
       coordinates: fullSecondary,
@@ -185,13 +212,14 @@ export async function fetchV5PlanRouteGeometry(
   for (let i = 0; i < coordinates.length - 1; i++) {
     const a = coordinates[i]!;
     const b = coordinates[i + 1]!;
-    const leg = await tryLeg(a, b, primary);
+    const leg = await tryLeg(a, b, primary, routeHooks);
     pieces.push(leg.path);
     if (leg.straight) anyStraight = true;
   }
 
   const merged = mergeLngLatPaths(pieces);
   if (merged.length < 2) {
+    await flushRoutingUsage();
     return { ok: false, code: "EMPTY" };
   }
 
@@ -200,7 +228,8 @@ export async function fetchV5PlanRouteGeometry(
     kind = primary === "foot" ? "chained-foot" : "chained-driving";
   }
 
-  const legs = await collectLegSummaries(coordinates, primary);
+  const legs = await collectLegSummaries(coordinates, primary, routeHooks);
 
+  await flushRoutingUsage();
   return { ok: true, coordinates: merged, kind, legs };
 }

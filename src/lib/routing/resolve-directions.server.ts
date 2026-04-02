@@ -114,9 +114,15 @@ async function fetchOsrm(
   };
 }
 
+export type ResolveDirectionsHooks = {
+  /** 캐시 미스 후 실제 네트워크 호출로 얻은 결과일 때만 호출 */
+  onLiveResolution?: (result: NormalizedDirections) => void;
+};
+
 export async function resolveDirections(
   coordinates: { lat: number; lng: number }[],
   profile: DirectionsProfile = "foot",
+  hooks?: ResolveDirectionsHooks,
 ): Promise<NormalizedDirections | null> {
   if (coordinates.length < 2) return null;
 
@@ -143,6 +149,7 @@ export async function resolveDirections(
   if (result) {
     directionsCacheSet(ckey, result);
     logDirections("resolved", { profile: result.profile, provider: result.provider, points: result.path.length });
+    hooks?.onLiveResolution?.(result);
   } else {
     logDirections("failed", { profile });
   }

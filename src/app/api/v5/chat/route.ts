@@ -4,6 +4,8 @@ import {
   gatherResponseSchema,
   planResponseSchema,
 } from "@/lib/v5/travel-chat-schema.server";
+import { getServerSupabaseForUser, getSessionUserId } from "@/lib/supabase/server-user";
+import { recordWaylyUsageFireAndForget } from "@/lib/wayly/record-usage.server";
 
 export const maxDuration = 60;
 
@@ -74,6 +76,18 @@ export async function POST(req: Request) {
         temperature: 0.6,
       });
 
+      const sbPlan = await getServerSupabaseForUser();
+      const uidPlan = await getSessionUserId();
+      if (uidPlan && sbPlan) {
+        const promptLen =
+          (history?.length ?? 0) + slotText.length + PLAN_SYSTEM.length + 400;
+        recordWaylyUsageFireAndForget(sbPlan, {
+          geminiGenerations: 1,
+          geminiEstInputTokens: Math.ceil(promptLen / 4),
+          geminiEstOutputTokens: Math.ceil(JSON.stringify(object).length / 4),
+        });
+      }
+
       return jsonResponse({
         content: object.assistantMessage,
         preferenceChips: null,
@@ -93,6 +107,18 @@ export async function POST(req: Request) {
       prompt: `대화 맥락:\n\n${history || "(첫 메시지)"}\n\n---\n마지막 사용자 발화:\n${lastUser}\n\n위를 반영해 assistantMessage, chips, readyToGenerateRoute를 생성하세요.`,
       temperature: 0.5,
     });
+
+    const sbGather = await getServerSupabaseForUser();
+    const uidGather = await getSessionUserId();
+    if (uidGather && sbGather) {
+      const promptLen =
+        (history?.length ?? 0) + lastUser.length + GATHER_SYSTEM.length + 400;
+      recordWaylyUsageFireAndForget(sbGather, {
+        geminiGenerations: 1,
+        geminiEstInputTokens: Math.ceil(promptLen / 4),
+        geminiEstOutputTokens: Math.ceil(JSON.stringify(object).length / 4),
+      });
+    }
 
     return jsonResponse({
       content: object.assistantMessage,
