@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { BRAND } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { CircleHelp, CircleUser, Compass, Heart, Home, Info, Sparkles, UserRound } from "lucide-react";
+import { CircleHelp, CircleUser, Compass, Heart, Home, Info, UserRound } from "lucide-react";
 import { RailItem } from "@/components/app-shell/rail-item";
 
 const RAIL_W = "w-[72px]";
@@ -25,7 +25,7 @@ export function IconRail({
   const t = useTranslations("V4.workspace.rail");
 
   const active = (p: string) => {
-    if (p === "/") return pathname === "/";
+    if (p === "/chat") return pathname === "/chat" || pathname.endsWith("/chat");
     return pathname === p || pathname.startsWith(`${p}/`);
   };
 
@@ -39,7 +39,7 @@ export function IconRail({
     >
       <div className="flex flex-col items-center px-2">
         <Link
-          href="/"
+          href="/chat"
           className="mb-5 flex size-11 items-center justify-center rounded-[14px] bg-[var(--brand-primary)] text-xs font-semibold tracking-tight text-[var(--text-on-brand)] shadow-[var(--shadow-sm)]"
           title={BRAND.name}
         >
@@ -48,14 +48,11 @@ export function IconRail({
       </div>
 
       <nav className="flex flex-1 flex-col items-center gap-1.5 px-2" aria-label={t("mainNavAria")}>
-        <RailItem href="/" label={t("home")} active={active("/")} title={t("home")}>
+        <RailItem href="/chat" label={t("home")} active={active("/chat")} title={t("home")}>
           <Home className="size-[22px] shrink-0" aria-hidden />
         </RailItem>
         <RailItem href="/explore" label={t("explore")} active={active("/explore")} title={t("explore")}>
           <Compass className="size-[22px] shrink-0" aria-hidden />
-        </RailItem>
-        <RailItem href="/planner" label={t("planner")} active={active("/planner")} title={t("planner")}>
-          <Sparkles className="size-[22px] shrink-0" aria-hidden />
         </RailItem>
         <RailItem href="/mypage/saved" label={t("saved")} active={pathname.startsWith("/mypage/saved")} title={t("saved")}>
           <Heart className="size-[22px] shrink-0" aria-hidden />

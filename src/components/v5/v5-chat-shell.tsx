@@ -31,9 +31,19 @@ interface TravelPlan {
   alternativeNote?: string;
 }
 
+interface PreferenceChip {
+  id: string;
+  label: string;
+  value: string;
+  category?: string;
+}
+
 interface Message {
   id: string; role: "user" | "assistant"; content: string;
   timestamp: Date; travelPlan?: TravelPlan;
+  /** AI가 추출·정리한 여행 조건 칩 (컨펌 전) */
+  preferenceChips?: PreferenceChip[];
+  canGenerateRoute?: boolean;
   /** DB에 저장된 경우 row ID */
   dbId?: string;
 }
@@ -66,16 +76,47 @@ function dbConvToConv(db: DBConversation): Conversation {
 }
 
 function dbMsgToMessage(db: DBMessage): Message {
+  let travelPlan: TravelPlan | undefined;
+  let preferenceChips: PreferenceChip[] | undefined;
+  let canGenerateRoute: boolean | undefined;
+  const raw = db.travel_plan;
+  if (raw && typeof raw === "object") {
+    const o = raw as Record<string, unknown>;
+    if (o._v5Kind === "preferences" && Array.isArray(o.chips)) {
+      preferenceChips = o.chips as PreferenceChip[];
+      canGenerateRoute = Boolean(o.readyToGenerateRoute);
+    } else if (Array.isArray(o.spots)) {
+      travelPlan = raw as unknown as TravelPlan;
+    }
+  }
   return {
     id: db.id,
     dbId: db.id,
     role: db.role,
     content: db.content,
     timestamp: new Date(db.created_at),
-    travelPlan: db.travel_plan
-      ? (db.travel_plan as unknown as TravelPlan)
-      : undefined,
+    travelPlan,
+    preferenceChips,
+    canGenerateRoute,
   };
+}
+
+function assistantTravelPlanForDb(m: Pick<Message, "travelPlan" | "preferenceChips" | "canGenerateRoute">): Record<string, unknown> | null {
+  if (m.travelPlan) return m.travelPlan as unknown as Record<string, unknown>;
+  if (m.preferenceChips && m.preferenceChips.length > 0) {
+    return {
+      _v5Kind: "preferences",
+      chips: m.preferenceChips,
+      readyToGenerateRoute: Boolean(m.canGenerateRoute),
+    };
+  }
+  return null;
+}
+
+function messagesToApiPayload(messages: Message[]): { role: "user" | "assistant"; content: string }[] {
+  return messages
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .map((m) => ({ role: m.role, content: m.content }));
 }
 
 function dbPlanToSaved(db: DBSavedPlan): SavedPlan {
@@ -95,7 +136,8 @@ function dbPlanToSaved(db: DBSavedPlan): SavedPlan {
 const makeWelcomeMsg = (): Message => ({
   id: `welcome-${Date.now()}`,
   role: "assistant",
-  content: "안녕하세요! 저는 한국 여행 동선 AI예요. 어느 지역으로, 얼마나 여행하실 계획인지 알려주시면 — 날씨, 이동 시간, 스팟 특성을 종합해 최적의 동선을 제안해 드려요. 아래 예시를 눌러 시작해 보세요.",
+  content:
+    "안녕하세요! 한국 여행 동선을 함께 짤게요. 지역·일정·인원·교통·분위기·음식 취향 등을 말씀해 주시면 칩으로 정리해 드리고, 확인하신 뒤 「이 정보로 동선 짜기」를 누르면 스팟 순서·이동·소요 시간·대안까지 담은 코스를 만들어요. 아래 예시를 눌러 시작해 보세요.",
   timestamp: new Date(),
 });
 
@@ -295,11 +337,91 @@ function TravelRouteCard({
   );
 }
 
-function MessageBubble({ message, savedPlanIds, onSavePlan, onViewMap }: {
-  message: Message; savedPlanIds: Set<string>;
-  onSavePlan: (p: TravelPlan) => void; onViewMap: (p: TravelPlan) => void;
+function PreferenceChipsCard({
+  chips,
+  readyToGenerateRoute,
+  onRemoveChip,
+  onConfirm,
+  isGenerating,
+}: {
+  chips: PreferenceChip[];
+  readyToGenerateRoute: boolean;
+  onRemoveChip: (chipId: string) => void;
+  onConfirm: () => void;
+  isGenerating: boolean;
+}) {
+  return (
+    <div className="mt-3 w-full max-w-[480px] rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-3 shadow-[0_2px_12px_rgba(20,20,20,0.06)]">
+      <div className="flex items-center gap-2 mb-2">
+        <Sparkles className="w-3.5 h-3.5 text-[var(--brand-trust-blue)]" />
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">정리한 여행 조건</span>
+        {readyToGenerateRoute && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">동선 생성 가능</span>
+        )}
+      </div>
+      <p className="text-[12px] text-[var(--text-secondary)] mb-3 leading-relaxed">
+        내용을 확인하고 필요 없는 칩은 뺀 뒤, 동선을 만들어 달라고 눌러 주세요.
+      </p>
+      <div className="flex flex-wrap gap-2 mb-3">
+        {chips.length === 0 ? (
+          <span className="text-[12px] text-[var(--text-muted)]">남은 칩이 없어요. 다시 대화로 알려 주세요.</span>
+        ) : (
+          chips.map((c) => (
+            <span
+              key={c.id}
+              className="inline-flex items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full text-[12px] font-medium bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] border border-blue-100"
+            >
+              <span className="text-[10px] opacity-80">{c.label}</span>
+              <span className="text-[var(--text-strong)]">{c.value}</span>
+              <button
+                type="button"
+                onClick={() => onRemoveChip(c.id)}
+                className="ml-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:bg-white/80 hover:text-[var(--error)] transition-colors"
+                aria-label={`${c.label} 칩 제거`}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={onConfirm}
+        disabled={chips.length === 0 || isGenerating}
+        className={`w-full py-3 rounded-2xl text-[13px] font-semibold transition-all duration-200 ${
+          chips.length > 0 && !isGenerating
+            ? "bg-[var(--brand-primary)] text-[var(--text-on-brand)] hover:bg-[var(--brand-primary-hover)] active:scale-[0.98]"
+            : "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] cursor-not-allowed"
+        }`}
+      >
+        {isGenerating ? "동선 짜는 중…" : "이 정보로 동선 짜기"}
+      </button>
+    </div>
+  );
+}
+
+function MessageBubble({
+  message,
+  savedPlanIds,
+  onSavePlan,
+  onViewMap,
+  onRemovePreferenceChip,
+  onConfirmRoute,
+  routeGeneratingMessageId,
+}: {
+  message: Message;
+  savedPlanIds: Set<string>;
+  onSavePlan: (p: TravelPlan) => void;
+  onViewMap: (p: TravelPlan) => void;
+  onRemovePreferenceChip?: (messageId: string, chipId: string) => void;
+  onConfirmRoute?: (messageId: string, slots: PreferenceChip[]) => void;
+  routeGeneratingMessageId: string | null;
 }) {
   const isUser = message.role === "user";
+  const chips = message.preferenceChips ?? [];
+  const showChips = !isUser && chips.length > 0 && onRemovePreferenceChip && onConfirmRoute;
+
   return (
     <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"} items-end`}>
       {!isUser && (
@@ -315,6 +437,15 @@ function MessageBubble({ message, savedPlanIds, onSavePlan, onViewMap }: {
         }`}>
           {message.content}
         </div>
+        {showChips && (
+          <PreferenceChipsCard
+            chips={chips}
+            readyToGenerateRoute={Boolean(message.canGenerateRoute)}
+            onRemoveChip={(chipId) => onRemovePreferenceChip(message.id, chipId)}
+            onConfirm={() => onConfirmRoute(message.id, chips)}
+            isGenerating={routeGeneratingMessageId === message.id}
+          />
+        )}
         {!isUser && message.travelPlan && (
           <div className="w-full max-w-[480px]">
             <TravelRouteCard
@@ -544,6 +675,7 @@ export function V5ChatShell() {
   const [savedPlanIds, setSavedPlanIds] = useState<Set<string>>(new Set());
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [routeGeneratingMessageId, setRouteGeneratingMessageId] = useState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -638,7 +770,7 @@ export function V5ChatShell() {
   // ── Auto-scroll ───────────────────────────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeConv?.messages, isTyping]);
+  }, [activeConv?.messages, isTyping, routeGeneratingMessageId]);
 
   // ── Textarea auto-resize ──────────────────────────────────────────────────
   useEffect(() => {
@@ -654,89 +786,38 @@ export function V5ChatShell() {
     return () => { document.body.style.overflow = ""; };
   }, [mobileSidebarOpen]);
 
-  // ── handleSend ────────────────────────────────────────────────────────────
-  const handleSend = useCallback(async (text?: string) => {
-    const content = (text ?? inputValue).trim();
-    if (!content || isTyping || !activeConvId) return;
-    setInputValue("");
+  const handleRemovePreferenceChip = useCallback(
+    (messageId: string, chipId: string) => {
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.id !== activeConvId) return c;
+          return {
+            ...c,
+            messages: c.messages.map((m) => {
+              if (m.id !== messageId || !m.preferenceChips?.length) return m;
+              const preferenceChips = m.preferenceChips.filter((ch) => ch.id !== chipId);
+              return {
+                ...m,
+                preferenceChips: preferenceChips.length ? preferenceChips : undefined,
+                canGenerateRoute: preferenceChips.length ? m.canGenerateRoute : false,
+              };
+            }),
+          };
+        })
+      );
+    },
+    [activeConvId]
+  );
 
-    const isFirstUserMsg = (conversations.find((c) => c.id === activeConvId)?.messages ?? [])
-      .filter((m) => m.role === "user").length === 0;
-    const newTitle = isFirstUserMsg
-      ? content.slice(0, 28) + (content.length > 28 ? "…" : "")
-      : null;
-
-    // 1. UI 즉시 반영 (optimistic)
-    const userMsg: Message = {
-      id: `tmp-${Date.now()}`,
-      role: "user",
-      content,
-      timestamp: new Date(),
-    };
-    setConversations((prev) =>
-      prev.map((c) => {
-        if (c.id !== activeConvId) return c;
-        return {
-          ...c,
-          title: newTitle ?? c.title,
-          messages: [...c.messages, userMsg],
-        };
-      })
-    );
-
-    // 2. DB 저장 (fire-and-forget, 로그인 시만)
-    if (userId) {
-      void saveMessage(activeConvId, "user", content).then((saved) => {
-        if (!saved) return;
-        // temp ID → DB ID 교체
-        setConversations((prev) =>
-          prev.map((c) => {
-            if (c.id !== activeConvId) return c;
-            return {
-              ...c,
-              messages: c.messages.map((m) =>
-                m.id === userMsg.id ? { ...m, id: saved.id, dbId: saved.id } : m
-              ),
-            };
-          })
-        );
-      });
-      if (newTitle) void updateConversationTitle(activeConvId, newTitle);
-    }
-
-    // 3. AI 응답 대기
-    setIsTyping(true);
-    await new Promise((r) => setTimeout(r, 1200 + Math.random() * 800));
-
-    const { content: aiContent, plan } = getMockResponse(content);
-    const aiMsg: Message = {
-      id: `tmp-ai-${Date.now()}`,
-      role: "assistant",
-      content: aiContent,
-      timestamp: new Date(),
-      travelPlan: plan,
-    };
-
-    // 4. AI 응답 UI 반영
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id !== activeConvId ? c : { ...c, messages: [...c.messages, aiMsg] }
-      )
-    );
-    setIsTyping(false);
-
-    // 5. AI 응답 DB 저장 (fire-and-forget)
-    if (userId) {
-      void saveMessage(
-        activeConvId,
-        "assistant",
-        aiContent,
-        plan ? (plan as unknown as Record<string, unknown>) : null
-      ).then((saved) => {
+  const persistAssistantMessage = useCallback(
+    (aiMsg: Message, activeId: string) => {
+      if (!userId) return;
+      const payload = assistantTravelPlanForDb(aiMsg);
+      void saveMessage(activeId, "assistant", aiMsg.content, payload).then((saved) => {
         if (!saved) return;
         setConversations((prev) =>
           prev.map((c) => {
-            if (c.id !== activeConvId) return c;
+            if (c.id !== activeId) return c;
             return {
               ...c,
               messages: c.messages.map((m) =>
@@ -746,8 +827,212 @@ export function V5ChatShell() {
           })
         );
       });
-    }
-  }, [inputValue, isTyping, activeConvId, userId, conversations]);
+    },
+    [userId]
+  );
+
+  // ── handleSend ────────────────────────────────────────────────────────────
+  const handleSend = useCallback(
+    async (text?: string) => {
+      const content = (text ?? inputValue).trim();
+      if (!content || isTyping || routeGeneratingMessageId || !activeConvId) return;
+      setInputValue("");
+
+      const priorMsgs = conversations.find((c) => c.id === activeConvId)?.messages ?? [];
+      const isFirstUserMsg = priorMsgs.filter((m) => m.role === "user").length === 0;
+      const newTitle = isFirstUserMsg
+        ? content.slice(0, 28) + (content.length > 28 ? "…" : "")
+        : null;
+
+      const userMsg: Message = {
+        id: `tmp-${Date.now()}`,
+        role: "user",
+        content,
+        timestamp: new Date(),
+      };
+
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.id !== activeConvId) return c;
+          return {
+            ...c,
+            title: newTitle ?? c.title,
+            messages: [...c.messages, userMsg],
+          };
+        })
+      );
+
+      if (userId) {
+        void saveMessage(activeConvId, "user", content).then((saved) => {
+          if (!saved) return;
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== activeConvId) return c;
+              return {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === userMsg.id ? { ...m, id: saved.id, dbId: saved.id } : m
+                ),
+              };
+            })
+          );
+        });
+        if (newTitle) void updateConversationTitle(activeConvId, newTitle);
+      }
+
+      setIsTyping(true);
+
+      const apiMessages = messagesToApiPayload([...priorMsgs, userMsg]);
+
+      type ApiV5 = {
+        content?: string;
+        preferenceChips?: PreferenceChip[] | null;
+        readyToGenerateRoute?: boolean;
+        travelPlan?: TravelPlan | null;
+      };
+
+      let data: ApiV5;
+      try {
+        const res = await fetch("/api/v5/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: apiMessages }),
+        });
+        if (!res.ok) throw new Error(`chat ${res.status}`);
+        data = (await res.json()) as ApiV5;
+      } catch {
+        const { content: aiContent, plan } = getMockResponse(content);
+        data = {
+          content: aiContent,
+          preferenceChips: null,
+          readyToGenerateRoute: false,
+          travelPlan: plan ?? null,
+        };
+      }
+
+      const hasPlan = data.travelPlan && Array.isArray(data.travelPlan.spots);
+      const chips =
+        !hasPlan && data.preferenceChips && data.preferenceChips.length > 0
+          ? data.preferenceChips
+          : undefined;
+
+      const aiMsg: Message = {
+        id: `tmp-ai-${Date.now()}`,
+        role: "assistant",
+        content: data.content ?? "",
+        timestamp: new Date(),
+        travelPlan: hasPlan ? (data.travelPlan as TravelPlan) : undefined,
+        preferenceChips: chips,
+        canGenerateRoute: hasPlan ? undefined : Boolean(data.readyToGenerateRoute),
+      };
+
+      setConversations((prev) =>
+        prev.map((c) => (c.id !== activeConvId ? c : { ...c, messages: [...c.messages, aiMsg] }))
+      );
+      setIsTyping(false);
+
+      persistAssistantMessage(aiMsg, activeConvId);
+    },
+    [
+      inputValue,
+      isTyping,
+      routeGeneratingMessageId,
+      activeConvId,
+      userId,
+      conversations,
+      persistAssistantMessage,
+    ]
+  );
+
+  const handleConfirmRoute = useCallback(
+    async (chipSourceMessageId: string, slots: PreferenceChip[]) => {
+      if (!slots.length || isTyping || routeGeneratingMessageId || !activeConvId) return;
+
+      const priorMsgs = conversations.find((c) => c.id === activeConvId)?.messages ?? [];
+      const userContent = "확정한 조건으로 여행 동선을 짜줘.";
+      const userMsg: Message = {
+        id: `tmp-${Date.now()}`,
+        role: "user",
+        content: userContent,
+        timestamp: new Date(),
+      };
+
+      setConversations((prev) =>
+        prev.map((c) =>
+          c.id !== activeConvId ? c : { ...c, messages: [...c.messages, userMsg] }
+        )
+      );
+
+      if (userId) {
+        void saveMessage(activeConvId, "user", userContent).then((saved) => {
+          if (!saved) return;
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== activeConvId) return c;
+              return {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === userMsg.id ? { ...m, id: saved.id, dbId: saved.id } : m
+                ),
+              };
+            })
+          );
+        });
+      }
+
+      setRouteGeneratingMessageId(chipSourceMessageId);
+      setIsTyping(true);
+
+      const apiMessages = messagesToApiPayload([...priorMsgs, userMsg]);
+
+      type ApiV5 = {
+        content?: string;
+        travelPlan?: TravelPlan | null;
+      };
+
+      let data: ApiV5;
+      try {
+        const res = await fetch("/api/v5/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: apiMessages, confirmRoute: { slots } }),
+        });
+        if (!res.ok) throw new Error(`chat ${res.status}`);
+        data = (await res.json()) as ApiV5;
+      } catch {
+        const synthetic = slots.map((s) => s.value).join(" ");
+        const { content: aiContent, plan } = getMockResponse(synthetic);
+        data = { content: aiContent, travelPlan: plan ?? null };
+      }
+
+      const hasPlan = data.travelPlan && Array.isArray(data.travelPlan.spots);
+      const aiMsg: Message = {
+        id: `tmp-ai-${Date.now()}`,
+        role: "assistant",
+        content:
+          data.content ??
+          (hasPlan ? "요청하신 조건으로 동선을 구성했어요." : "동선을 만들지 못했어요. 다시 시도해 주세요."),
+        timestamp: new Date(),
+        travelPlan: hasPlan ? (data.travelPlan as TravelPlan) : undefined,
+      };
+
+      setConversations((prev) =>
+        prev.map((c) => (c.id !== activeConvId ? c : { ...c, messages: [...c.messages, aiMsg] }))
+      );
+      setIsTyping(false);
+      setRouteGeneratingMessageId(null);
+
+      persistAssistantMessage(aiMsg, activeConvId);
+    },
+    [
+      activeConvId,
+      conversations,
+      isTyping,
+      routeGeneratingMessageId,
+      userId,
+      persistAssistantMessage,
+    ]
+  );
 
   // ── handleNewChat ─────────────────────────────────────────────────────────
   const handleNewChat = useCallback(() => {
@@ -934,10 +1219,16 @@ export function V5ChatShell() {
             ) : (
               <div className="max-w-[720px] mx-auto px-4 md:px-5 py-6 space-y-5">
                 {messages.map((msg) => (
-                  <MessageBubble key={msg.id} message={msg}
+                  <MessageBubble
+                    key={msg.id}
+                    message={msg}
                     savedPlanIds={savedPlanIds}
                     onSavePlan={handleSavePlan}
-                    onViewMap={setMapModalPlan} />
+                    onViewMap={setMapModalPlan}
+                    onRemovePreferenceChip={handleRemovePreferenceChip}
+                    onConfirmRoute={handleConfirmRoute}
+                    routeGeneratingMessageId={routeGeneratingMessageId}
+                  />
                 ))}
                 {isTyping && <TypingIndicator />}
                 <div ref={messagesEndRef} />
@@ -952,13 +1243,13 @@ export function V5ChatShell() {
                 <textarea ref={textareaRef} value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="여행지, 기간, 스타일을 알려주세요 (예: 경주 2박 3일 맛집 중심)"
+                  placeholder="지역·일정·인원·교통·분위기·음식 취향을 알려주세요 (예: 경주 2박 3일 맛집·도보 위주)"
                   rows={1}
                   className="flex-1 bg-transparent resize-none outline-none text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] leading-relaxed py-0.5" />
                 <button onClick={() => void handleSend()}
-                  disabled={!inputValue.trim() || isTyping}
+                  disabled={!inputValue.trim() || isTyping || Boolean(routeGeneratingMessageId)}
                   className={`flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 ${
-                    inputValue.trim() && !isTyping
+                    inputValue.trim() && !isTyping && !routeGeneratingMessageId
                       ? "bg-[var(--brand-primary)] text-[var(--text-on-brand)] hover:bg-[var(--brand-primary-hover)] active:scale-95 shadow-sm"
                       : "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] cursor-not-allowed"
                   }`}>

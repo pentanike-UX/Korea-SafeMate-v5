@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
+import { fetchV5PlanRouteGeometry } from "@/lib/v5/fetch-v5-plan-route.server";
 import "maplibre-gl/dist/maplibre-gl.css";
 import {
   X,
@@ -90,6 +91,64 @@ function createPinElement(index: number, type: SpotType, selected: boolean) {
   return el;
 }
 
+// ─── Route helpers ───────────────────────────────────────────────────────────
+
+function straightLineFromSpots(spots: TravelSpot[]): [number, number][] {
+  return spots
+    .filter((s) => s.lat != null && s.lng != null && Number.isFinite(s.lat) && Number.isFinite(s.lng))
+    .map((s) => [s.lng!, s.lat!] as [number, number]);
+}
+
+function boundsFromLngLats(coords: [number, number][]): maplibregl.LngLatBoundsLike | null {
+  if (coords.length === 0) return null;
+  let minLng = coords[0]![0];
+  let maxLng = coords[0]![0];
+  let minLat = coords[0]![1];
+  let maxLat = coords[0]![1];
+  for (const [lng, lat] of coords) {
+    minLng = Math.min(minLng, lng);
+    maxLng = Math.max(maxLng, lng);
+    minLat = Math.min(minLat, lat);
+    maxLat = Math.max(maxLat, lat);
+  }
+  return [
+    [minLng, minLat],
+    [maxLng, maxLat],
+  ];
+}
+
+function setRouteGeoJSON(map: maplibregl.Map, coordinates: [number, number][]) {
+  const empty = {
+    type: "Feature" as const,
+    properties: {},
+    geometry: { type: "LineString" as const, coordinates: [] as [number, number][] },
+  };
+  const feature = {
+    type: "Feature" as const,
+    properties: {},
+    geometry: { type: "LineString" as const, coordinates },
+  };
+  const data = coordinates.length >= 2 ? feature : empty;
+
+  const existing = map.getSource("route-src");
+  if (existing?.type === "geojson") {
+    (existing as maplibregl.GeoJSONSource).setData(data);
+    return;
+  }
+  map.addSource("route-src", { type: "geojson", data });
+  map.addLayer({
+    id: "route-line",
+    type: "line",
+    source: "route-src",
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": "#2f4f8f",
+      "line-width": 4,
+      "line-opacity": 0.88,
+    },
+  });
+}
+
 // ─── Map Component ────────────────────────────────────────────────────────────
 
 function PlanMap({
@@ -104,8 +163,81 @@ function PlanMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
+  const onSpotSelectRef = useRef(onSpotSelect);
+  onSpotSelectRef.current = onSpotSelect;
 
-  const spotsWithCoords = plan.spots.filter((s) => s.lat != null && s.lng != null);
+  const spotsWithCoords = useMemo(
+    () =>
+      plan.spots.filter(
+        (s) =>
+          s.lat != null &&
+          s.lng != null &&
+          Number.isFinite(s.lat) &&
+          Number.isFinite(s.lng),
+      ),
+    [plan.spots],
+  );
+
+  const [mapReady, setMapReady] = useState(false);
+  const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [routeKind, setRouteKind] = useState<string | null>(null);
+
+  const spotsFingerprint = useMemo(
+    () => spotsWithCoords.map((s) => `${s.id}:${s.lat},${s.lng}`).join("|"),
+    [spotsWithCoords],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    if (spotsWithCoords.length < 2) {
+      setRouteCoords(null);
+      setRouteLoading(false);
+      setRouteKind(null);
+      return;
+    }
+    setRouteLoading(true);
+    setRouteKind(null);
+    const pts = spotsWithCoords.map((s) => ({ lat: s.lat!, lng: s.lng! }));
+    void fetchV5PlanRouteGeometry(pts).then((res) => {
+      if (cancelled) return;
+      setRouteLoading(false);
+      if (res.ok && res.coordinates.length >= 2) {
+        setRouteCoords(res.coordinates);
+        setRouteKind(res.kind);
+      } else {
+        setRouteCoords(straightLineFromSpots(spotsWithCoords));
+        setRouteKind(
+          !res.ok && res.code === "RATE_LIMIT" ? "rate-limit-fallback" : "straight-fallback",
+        );
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [spotsFingerprint]);
+
+  const refreshMarkers = useCallback(
+    (map: maplibregl.Map) => {
+      markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
+      spotsWithCoords.forEach((spot, idx) => {
+        const el = createPinElement(idx, spot.type, spot.id === selectedSpotId);
+        const down = (e: MouseEvent) => e.stopPropagation();
+        el.addEventListener("mousedown", down);
+        el.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onSpotSelectRef.current(spot.id);
+        });
+        const marker = new maplibregl.Marker({ element: el, anchor: "center" })
+          .setLngLat([spot.lng!, spot.lat!])
+          .addTo(map);
+        markersRef.current.push(marker);
+      });
+    },
+    [spotsWithCoords, selectedSpotId],
+  );
 
   useEffect(() => {
     const container = containerRef.current;
@@ -113,8 +245,8 @@ function PlanMap({
 
     const center: [number, number] =
       spotsWithCoords.length > 0
-        ? [spotsWithCoords[0].lng!, spotsWithCoords[0].lat!]
-        : [129.2134, 35.8326]; // Gyeongju fallback
+        ? [spotsWithCoords[0]!.lng!, spotsWithCoords[0]!.lat!]
+        : [129.2134, 35.8326];
 
     const map = new maplibregl.Map({
       container,
@@ -131,96 +263,102 @@ function PlanMap({
     ro.observe(container);
 
     map.on("load", () => {
-      // Route line
+      setMapReady(true);
       if (spotsWithCoords.length >= 2) {
-        const coords: [number, number][] = spotsWithCoords.map((s) => [s.lng!, s.lat!]);
-        map.addSource("route-src", {
-          type: "geojson",
-          data: {
-            type: "Feature",
-            properties: {},
-            geometry: { type: "LineString", coordinates: coords },
-          },
+        const straight = straightLineFromSpots(spotsWithCoords);
+        setRouteGeoJSON(map, straight);
+        const b = boundsFromLngLats(straight);
+        if (b) map.fitBounds(b, { padding: 72, maxZoom: 14, duration: 0 });
+      } else if (spotsWithCoords.length === 1) {
+        map.jumpTo({
+          center: [spotsWithCoords[0]!.lng!, spotsWithCoords[0]!.lat!],
+          zoom: 13,
         });
-        map.addLayer({
-          id: "route-line",
-          type: "line",
-          source: "route-src",
-          layout: { "line-cap": "round", "line-join": "round" },
-          paint: {
-            "line-color": "#2f4f8f",
-            "line-width": 3,
-            "line-dasharray": [2, 1.5],
-            "line-opacity": 0.7,
-          },
-        });
-      }
-
-      // Markers
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
-      spotsWithCoords.forEach((spot, idx) => {
-        const el = createPinElement(idx, spot.type, spot.id === selectedSpotId);
-        el.addEventListener("click", (e) => {
-          e.stopPropagation();
-          onSpotSelect(spot.id);
-        });
-        const marker = new maplibregl.Marker({ element: el, anchor: "center" })
-          .setLngLat([spot.lng!, spot.lat!])
-          .addTo(map);
-        markersRef.current.push(marker);
-      });
-
-      // Fit bounds
-      if (spotsWithCoords.length >= 2) {
-        const lngs = spotsWithCoords.map((s) => s.lng!);
-        const lats = spotsWithCoords.map((s) => s.lat!);
-        map.fitBounds(
-          [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
-          { padding: 60, maxZoom: 15, duration: 0 }
-        );
       }
     });
 
     return () => {
       ro.disconnect();
       markersRef.current.forEach((m) => m.remove());
+      markersRef.current = [];
       map.remove();
       mapRef.current = null;
+      setMapReady(false);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update marker styles when selection changes
   useEffect(() => {
     const map = mapRef.current;
-    if (!map?.isStyleLoaded()) return;
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
-    spotsWithCoords.forEach((spot, idx) => {
-      const el = createPinElement(idx, spot.type, spot.id === selectedSpotId);
-      el.addEventListener("click", (e) => {
-        e.stopPropagation();
-        onSpotSelect(spot.id);
-      });
-      const marker = new maplibregl.Marker({ element: el, anchor: "center" })
-        .setLngLat([spot.lng!, spot.lat!])
-        .addTo(map);
-      markersRef.current.push(marker);
-    });
-    // Pan to selected
+    if (!mapReady || !map?.isStyleLoaded()) return;
+    const coords =
+      routeCoords && routeCoords.length >= 2
+        ? routeCoords
+        : straightLineFromSpots(spotsWithCoords);
+    if (coords.length >= 2) {
+      setRouteGeoJSON(map, coords);
+    }
+  }, [mapReady, routeCoords, spotsWithCoords]);
+
+  const prevRouteLoadingRef = useRef(false);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map?.isStyleLoaded()) return;
+    refreshMarkers(map);
     if (selectedSpotId) {
       const s = spotsWithCoords.find((x) => x.id === selectedSpotId);
-      if (s) map.easeTo({ center: [s.lng!, s.lat!], duration: 300 });
+      if (s) {
+        map.easeTo({
+          center: [s.lng!, s.lat!],
+          zoom: Math.max(map.getZoom(), 13),
+          duration: 280,
+        });
+      }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSpotId]);
+  }, [mapReady, selectedSpotId, spotsWithCoords, refreshMarkers]);
+
+  /** 경로 fetch가 true → false로 바뀐 뒤 한 번만 범위 맞춤 (초기 로딩 false에서 오동작하지 않도록 ref 사용) */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map?.isStyleLoaded()) return;
+    const wasLoading = prevRouteLoadingRef.current;
+    prevRouteLoadingRef.current = routeLoading;
+    if (!wasLoading || routeLoading) return;
+    const coords =
+      routeCoords && routeCoords.length >= 2
+        ? routeCoords
+        : straightLineFromSpots(spotsWithCoords);
+    if (coords.length < 2) return;
+    const b = boundsFromLngLats(coords);
+    if (b) map.fitBounds(b, { padding: 72, maxZoom: 14, duration: 450 });
+  }, [mapReady, routeLoading, routeCoords, spotsWithCoords]);
+
+  const routeHint = routeLoading
+    ? "실제 도로 기준 경로 불러오는 중…"
+    : routeKind?.startsWith("full-")
+      ? "도보·차도 네트워크를 따라 연결한 경로예요."
+      : routeKind?.startsWith("chained-")
+        ? "구간별로 이어 붙인 경로예요. 일부는 직선일 수 있어요."
+        : routeKind === "rate-limit-fallback"
+          ? "요청이 많아 경로를 생략하고 직선으로 표시했어요. 잠시 후 다시 열어 보세요."
+          : routeKind === "straight-fallback"
+            ? "경로를 가져오지 못해 직선으로 표시했어요."
+            : spotsWithCoords.length < 2
+            ? "좌표가 있는 스팟이 2곳 이상이면 길을 이어 표시해요."
+            : null;
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full h-full [&_.maplibregl-ctrl]:m-2"
-    />
+    <div className="relative w-full h-full [&_.maplibregl-ctrl]:m-2">
+      <div ref={containerRef} className="w-full h-full" />
+      {routeHint && (
+        <div
+          className="absolute top-3 left-3 right-12 z-10 pointer-events-none rounded-xl px-3 py-2 text-[11px] font-medium text-[var(--text-secondary)] bg-[var(--bg-elevated)]/95 border border-[var(--border-default)] shadow-sm"
+          role="status"
+        >
+          {routeHint}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -237,6 +375,23 @@ export function V5PlanMapModal({
     plan.spots[0]?.id ?? null
   );
   const [listExpanded, setListExpanded] = useState(true);
+
+  const spotCoordsKey = useMemo(
+    () =>
+      plan.spots
+        .filter((s) => s.lat != null && s.lng != null && Number.isFinite(s.lat) && Number.isFinite(s.lng))
+        .map((s) => `${s.id}:${s.lat},${s.lng}`)
+        .join("|"),
+    [plan.spots],
+  );
+
+  useEffect(() => {
+    setSelectedSpotId((prev) =>
+      prev != null && plan.spots.some((s) => s.id === prev)
+        ? prev
+        : plan.spots[0]?.id ?? null
+    );
+  }, [plan.id, plan.spots]);
 
   const selectedSpot = plan.spots.find((s) => s.id === selectedSpotId) ?? null;
 
@@ -283,6 +438,7 @@ export function V5PlanMapModal({
           {/* Map */}
           <div className="flex-1 min-h-0 relative">
             <PlanMap
+              key={`${plan.id}-${spotCoordsKey}`}
               plan={plan}
               selectedSpotId={selectedSpotId}
               onSpotSelect={setSelectedSpotId}
