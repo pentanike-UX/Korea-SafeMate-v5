@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   Plus, MapPin, Clock, CloudSun, Bookmark, BookmarkCheck,
   Send, Utensils, Coffee, Train, Camera, ChevronRight,
   Sparkles, MoreHorizontal, Trash2, PanelLeftClose, PanelLeft,
-  Navigation, Hotel, Menu, X, Map, Compass,
+  Navigation, Hotel, Menu, X, Map, Compass, Check,
 } from "lucide-react";
 import { useAuthUser } from "@/hooks/use-auth-user";
 import {
@@ -19,6 +19,40 @@ import { consumeTravelChatSse } from "@/lib/travel-chat/consume-chat-sse";
 import { BRAND } from "@/lib/constants";
 import { Link } from "@/i18n/navigation";
 import { V5ChatPricingModal, type PricingModalFocus } from "./v5-chat-pricing-modal";
+
+// ─── Composer: 여행 프롬프트 체크리스트 (실시간 키워드 감지) ───────────────────
+
+type TravelPromptCheckKey = "region" | "schedule" | "people" | "transport" | "atmosphere" | "food";
+
+const TRAVEL_PROMPT_CHECKLIST: { key: TravelPromptCheckKey; label: string; hint: string }[] = [
+  { key: "region", label: "지역", hint: "도시·지역명" },
+  { key: "schedule", label: "일정", hint: "박·일·기간" },
+  { key: "people", label: "인원", hint: "명수·동행" },
+  { key: "transport", label: "교통", hint: "이동 수단" },
+  { key: "atmosphere", label: "분위기", hint: "느낌·스타일" },
+  { key: "food", label: "음식", hint: "취향·맛집" },
+];
+
+function evaluateTravelPromptChecklist(text: string): Record<TravelPromptCheckKey, boolean> {
+  const s = text;
+  const c = s.replace(/\s/g, "");
+  return {
+    region:
+      /서울|부산|대구|인천|광주|대전|울산|세종|제주|경주|전주|여수|속초|평창|안동|통영|해운대|명동|홍대|강남|강릉|춘천|양양|안양|수원|용인|고양|파주|화성|김해|창원|진주|목포|순천|원주|충주|청주|포항|군산|남해|거제|하동|보성|광양|제주도|전라|경상|충청|강원|경기|전북|전남|경북|경남|충북|충남|내륙|동해|서해|한국|국내/i.test(
+        s,
+      ) || /[가-힣]{2,8}(시|도|군)(으로|에서|\s|,|\.|$)/.test(c) || /[가-힣]{2,6}(으로|에서)(여행|간|갈|놀러)/.test(c),
+    schedule:
+      /\d+\s*박|\d+\s*일|\d+박\s*\d+일|일정|며칠|주말|평일|당일|하루|이틀|사흘|일주|연휴|방학|휴가|2박|3박|1박/i.test(s),
+    people:
+      /\d+\s*명|명\s*\d+|인원|혼자|둘이|셋이|넷이|커플|가족|친구|아이|유아|초등|중학|고등|청소년|단체|성인|소인|어른/i.test(s),
+    transport:
+      /지하철|버스|ktx|srt|기차|철도|택시|렌트|리무진|자가용|도보|걸어|드라이브|비행기|공항|셔틀|전철|itx|무궁화|고속버스|시외버스/i.test(s),
+    atmosphere:
+      /한적|조용|북적|활기|분위기|로컬|현지|관광|힐링|사진|인생샷|럭셔리|가성비|감성|힙|빈티지|조용한|붐비는/i.test(s),
+    food:
+      /맛집|음식|먹|한식|중식|양식|일식|분식|카페|커피|술|술집|디저트|브런치|채식|비건|미슐랭|순대|삼겹|해산물|회|고기|뷔페|밥집/i.test(s),
+  };
+}
 
 // ─── Domain Types ──────────────────────────────────────────────────────────────
 
@@ -769,6 +803,10 @@ export function V5ChatShell() {
   const [chatHeaderMenuOpen, setChatHeaderMenuOpen] = useState(false);
   const [pricingModalOpen, setPricingModalOpen] = useState(false);
   const [pricingModalFocus, setPricingModalFocus] = useState<PricingModalFocus>("overview");
+  const [composerFocused, setComposerFocused] = useState(false);
+
+  const promptChecklist = useMemo(() => evaluateTravelPromptChecklist(inputValue), [inputValue]);
+  const showComposerGuide = composerFocused || inputValue.trim().length > 0;
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatHeaderMenuRef = useRef<HTMLDivElement>(null);
@@ -1451,8 +1489,8 @@ export function V5ChatShell() {
         {/* ── Main Chat ────────────────────────────────────────── */}
         <div className="flex-1 flex flex-col min-w-0 h-full">
           {/* Top Bar */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-default)] bg-[var(--bg-surface)] flex-shrink-0">
-            <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center justify-between px-5 py-3.5 md:py-4 border-b border-[var(--border-default)] bg-[var(--bg-surface)] flex-shrink-0 min-h-[52px]">
+            <div className="flex items-center gap-3 min-w-0">
               <button onClick={() => setMobileSidebarOpen(true)}
                 className="md:hidden w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] transition-all">
                 <Menu className="w-5 h-5" />
@@ -1472,7 +1510,7 @@ export function V5ChatShell() {
                 {hasUserMessage ? activeConv?.title : `${BRAND.name} · 여행 동선`}
               </span>
             </div>
-            <div ref={chatHeaderMenuRef} className="flex items-center gap-1.5 relative">
+            <div ref={chatHeaderMenuRef} className="flex items-center gap-2 relative">
               {!isAuthLoading && (
                 <button
                   type="button"
@@ -1536,7 +1574,7 @@ export function V5ChatShell() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto pt-1 md:pt-2">
             {/* 메시지 로드 중 (대화 전환 후 DB 로드 전) */}
             {activeConv && !activeConv.messagesLoaded && userId ? (
               <div className="flex-1 flex items-center justify-center py-20">
@@ -1551,7 +1589,7 @@ export function V5ChatShell() {
                 onOpenPricing={() => openPricing("overview")}
               />
             ) : (
-              <div className="max-w-[720px] mx-auto px-4 md:px-5 py-6 space-y-5">
+              <div className="max-w-[720px] mx-auto px-4 md:px-5 py-7 md:py-8 space-y-5">
                 {messages.map((msg) => (
                   <MessageBubble
                     key={msg.id}
@@ -1571,26 +1609,70 @@ export function V5ChatShell() {
           </div>
 
           {/* Input Bar */}
-          <div className="flex-shrink-0 px-4 pb-5 pt-3 bg-[var(--bg-page)]">
-            <div className="max-w-[720px] mx-auto">
-              <div className="flex items-end gap-2 px-4 py-3 rounded-2xl bg-[var(--bg-elevated)] border border-[var(--border-default)] shadow-[0_4px_20px_rgba(20,20,20,0.07)] focus-within:border-[var(--brand-trust-blue)] focus-within:shadow-[0_4px_20px_rgba(47,79,143,0.12)] transition-all duration-200">
+          <div className="flex-shrink-0 px-5 pb-6 md:pb-8 pt-5 md:pt-7 bg-[var(--bg-page)] border-t border-[var(--border-default)]/40">
+            <div className="max-w-[720px] mx-auto space-y-3">
+              {showComposerGuide && (
+                <div
+                  className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)]/90 px-3.5 py-3 md:px-4 md:py-3.5 shadow-[0_2px_16px_rgba(20,20,20,0.04)] backdrop-blur-sm transition-all duration-200 ease-out"
+                  role="status"
+                  aria-live="polite"
+                  aria-label="입력 가이드"
+                >
+                  <p className="text-[11px] md:text-[12px] font-medium text-[var(--text-muted)] tracking-tight mb-2.5">
+                    알려주시면 동선 짜기가 수월해요
+                  </p>
+                  <ul className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-2">
+                    {TRAVEL_PROMPT_CHECKLIST.map(({ key, label, hint }) => {
+                      const done = promptChecklist[key];
+                      return (
+                        <li
+                          key={key}
+                          className={`flex items-start gap-2 min-w-0 transition-colors duration-150 ${
+                            done ? "text-[var(--text-strong)]" : "text-[var(--text-muted)]"
+                          }`}
+                        >
+                          <span
+                            className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-all duration-200 ${
+                              done
+                                ? "border-[var(--success)] bg-[var(--success)] text-white scale-100"
+                                : "border-[var(--border-strong)] bg-transparent"
+                            }`}
+                            aria-hidden
+                          >
+                            {done && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                          </span>
+                          <span className="min-w-0 leading-snug">
+                            <span className="block text-[12px] md:text-[13px] font-semibold">{label}</span>
+                            <span className="block text-[10px] md:text-[11px] opacity-80 font-normal">{hint}</span>
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+              <div className="flex items-end gap-2.5 px-4 py-3.5 md:px-5 md:py-4 rounded-[1.25rem] bg-[var(--bg-elevated)] border border-[var(--border-default)] shadow-[0_4px_24px_rgba(20,20,20,0.06)] focus-within:border-[var(--brand-trust-blue)] focus-within:shadow-[0_6px_28px_rgba(47,79,143,0.1)] transition-all duration-200">
                 <textarea ref={textareaRef} value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
+                  onFocus={() => setComposerFocused(true)}
+                  onBlur={() => setComposerFocused(false)}
                   placeholder="지역·일정·인원·교통·분위기·음식 취향을 알려주세요 (예: 경주 2박 3일 맛집·도보 위주)"
                   rows={1}
-                  className="flex-1 bg-transparent resize-none outline-none text-[14px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] leading-relaxed py-0.5" />
-                <button onClick={() => void handleSend()}
+                  className="flex-1 bg-transparent resize-none outline-none text-[14px] md:text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] leading-relaxed py-1 min-h-[22px]" />
+                <button type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => void handleSend()}
                   disabled={!inputValue.trim() || isTyping || Boolean(routeGeneratingMessageId)}
-                  className={`flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-150 ${
+                  className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-150 ${
                     inputValue.trim() && !isTyping && !routeGeneratingMessageId
                       ? "bg-[var(--brand-primary)] text-[var(--text-on-brand)] hover:bg-[var(--brand-primary-hover)] active:scale-95 shadow-sm"
                       : "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] cursor-not-allowed"
                   }`}>
-                  <Send className="w-3.5 h-3.5" />
+                  <Send className="w-4 h-4" />
                 </button>
               </div>
-              <p className="text-center text-[11px] text-[var(--text-muted)] mt-2 hidden md:block">
+              <p className="text-center text-[11px] text-[var(--text-muted)] mt-1 hidden md:block">
                 Enter로 전송 · Shift+Enter 줄바꿈 ·{" "}
                 <button
                   type="button"
