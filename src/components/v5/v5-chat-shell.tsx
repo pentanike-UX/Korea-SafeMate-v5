@@ -20,6 +20,13 @@ import { consumeTravelChatSse } from "@/lib/travel-chat/consume-chat-sse";
 import { BRAND } from "@/lib/constants";
 import { Link } from "@/i18n/navigation";
 import { V5ChatPricingModal, type PricingModalFocus } from "./v5-chat-pricing-modal";
+import {
+  HybridTripComposer,
+  HYBRID_TRIP_EMPTY,
+  buildHybridPrompt,
+  hybridHasMinimumForSend,
+  useLgUp,
+} from "./v5-hybrid-trip-composer";
 import { V5TravelAiAnalysisLoadingOverlay } from "./v5-travel-ai-analysis-loading";
 import type { SpotTourEnrichment } from "@/lib/tour-api/tour-spot-client";
 import { tourImageUnoptimized, tourSearchQuery } from "@/lib/tour-api/tour-spot-client";
@@ -1267,9 +1274,18 @@ export function V5ChatShell() {
   const [composerFocused, setComposerFocused] = useState(false);
   const [keyboardOverlapPx, setKeyboardOverlapPx] = useState(0);
   const [isNarrowViewport, setIsNarrowViewport] = useState(false);
+  const isLg = useLgUp();
+  const [hybridDraft, setHybridDraft] = useState(HYBRID_TRIP_EMPTY);
+  const [mobileFreeInput, setMobileFreeInput] = useState(false);
+  const [composerDesktopMode, setComposerDesktopMode] = useState<"picker" | "free">("picker");
 
   const promptChecklist = useMemo(() => evaluateTravelPromptChecklist(inputValue), [inputValue]);
-  const showComposerGuide = composerFocused || inputValue.trim().length > 0;
+  const showFreeComposerGuide = useMemo(
+    () => (isLg && composerDesktopMode === "free") || (!isLg && mobileFreeInput),
+    [isLg, composerDesktopMode, mobileFreeInput],
+  );
+  const showComposerGuide =
+    showFreeComposerGuide && (composerFocused || inputValue.trim().length > 0);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatHeaderMenuRef = useRef<HTMLDivElement>(null);
@@ -1481,6 +1497,25 @@ export function V5ChatShell() {
     sync();
     mq.addEventListener("change", sync);
     return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const v = localStorage.getItem("wayly-v5-composer-mode");
+      if (v === "picker" || v === "free") setComposerDesktopMode(v);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const setDesktopComposerMode = useCallback((mode: "picker" | "free") => {
+    setComposerDesktopMode(mode);
+    try {
+      localStorage.setItem("wayly-v5-composer-mode", mode);
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   useEffect(() => {
@@ -1797,6 +1832,13 @@ export function V5ChatShell() {
     ]
   );
 
+  const submitHybrid = useCallback(() => {
+    const text = buildHybridPrompt(hybridDraft);
+    if (!text.trim() || !hybridHasMinimumForSend(hybridDraft)) return;
+    setHybridDraft({ ...HYBRID_TRIP_EMPTY });
+    void handleSend(text);
+  }, [hybridDraft, handleSend]);
+
   const handleConfirmRoute = useCallback(
     async (chipSourceMessageId: string, slots: PreferenceChip[]) => {
       if (!slots.length || isTyping || routeGeneratingMessageId || !activeConvId) return;
@@ -1988,6 +2030,12 @@ export function V5ChatShell() {
   const composerKeyboardTight =
     composerFocused && keyboardOverlapPx >= 72 && isNarrowViewport;
 
+  const showHybridComposer =
+    (isLg && composerDesktopMode === "picker") || (!isLg && !mobileFreeInput);
+  const showFreeComposer =
+    (isLg && composerDesktopMode === "free") || (!isLg && mobileFreeInput);
+  const composerBusy = isTyping || Boolean(routeGeneratingMessageId);
+
   const sidebarProps = {
     conversations, savedPlans, activeConvId,
     onSelectConv: setActiveConvId, onNewChat: handleNewChat,
@@ -2130,6 +2178,8 @@ export function V5ChatShell() {
                 <EmptyState
                   onApplyPrompt={(text) => {
                     setInputValue(text);
+                    if (isLg) setDesktopComposerMode("free");
+                    else setMobileFreeInput(true);
                     queueMicrotask(() => {
                       textareaRef.current?.focus();
                       textareaRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -2176,6 +2226,57 @@ export function V5ChatShell() {
             }`}
           >
             <div className="max-w-[720px] mx-auto space-y-3">
+              <div className="hidden lg:flex items-center justify-between gap-3 px-0.5">
+                <span className="text-[11px] font-medium text-[var(--text-muted)] tracking-tight">
+                  입력 방식
+                </span>
+                <div
+                  className="inline-flex rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)] p-1"
+                  role="tablist"
+                  aria-label="입력 방식 전환"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={composerDesktopMode === "picker"}
+                    onClick={() => setDesktopComposerMode("picker")}
+                    className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                      composerDesktopMode === "picker"
+                        ? "bg-[var(--bg-elevated)] text-[var(--text-strong)] shadow-sm"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-strong)]"
+                    }`}
+                  >
+                    간편 선택
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={composerDesktopMode === "free"}
+                    onClick={() => setDesktopComposerMode("free")}
+                    className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                      composerDesktopMode === "free"
+                        ? "bg-[var(--bg-elevated)] text-[var(--text-strong)] shadow-sm"
+                        : "text-[var(--text-muted)] hover:text-[var(--text-strong)]"
+                    }`}
+                  >
+                    자유 입력
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex lg:hidden items-center justify-between gap-2 px-0.5">
+                <span className="text-[11px] font-medium text-[var(--text-muted)]">
+                  선택 입력을 기본으로 씁니다
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMobileFreeInput((v) => !v)}
+                  className="shrink-0 text-[12px] font-semibold text-[var(--brand-trust-blue)] touch-manipulation"
+                >
+                  {mobileFreeInput ? "선택 모드로" : "키보드로 직접 입력"}
+                </button>
+              </div>
+
               {showComposerGuide && (
                 <div
                   className="v5-composer-guide-box rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)]/90 px-3 py-2.5 md:px-4 md:py-3.5 shadow-[0_2px_16px_rgba(20,20,20,0.04)] backdrop-blur-sm transition-all duration-200 ease-out"
@@ -2229,59 +2330,81 @@ export function V5ChatShell() {
                   </div>
                 </div>
               )}
-              <div className="v5-composer-input-shell flex items-end gap-2.5 px-4 py-3.5 md:px-5 md:py-4 rounded-[1.25rem] bg-[var(--bg-elevated)] border border-[var(--border-default)] shadow-[0_4px_24px_rgba(20,20,20,0.06)] focus-within:border-[var(--brand-trust-blue)] focus-within:shadow-[0_6px_28px_rgba(47,79,143,0.1)] transition-all duration-200 touch-manipulation">
-                <textarea ref={textareaRef} value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  onFocus={() => {
-                    setComposerFocused(true);
-                    if (!isNarrowViewport) {
-                      requestAnimationFrame(() => {
-                        composerShellRef.current?.scrollIntoView({
-                          block: "end",
-                          behavior: "smooth",
-                        });
-                      });
-                    }
-                  }}
-                  onBlur={() => setComposerFocused(false)}
-                  enterKeyHint="send"
-                  placeholder="출발지·지역·일정·인원·교통 등을 알려주세요 (예: 서울역 출발 경주 2박 3일 맛집·도보)"
-                  rows={1}
-                  className="flex-1 bg-transparent resize-none outline-none text-base lg:text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] leading-relaxed py-1 min-h-[22px] touch-manipulation"
+
+              {showHybridComposer && (
+                <HybridTripComposer
+                  draft={hybridDraft}
+                  onDraftChange={setHybridDraft}
+                  onSubmit={submitHybrid}
+                  disabled={composerBusy}
+                  showSendButton
                 />
-                <button type="button"
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => void handleSend()}
-                  disabled={!inputValue.trim() || isTyping || Boolean(routeGeneratingMessageId)}
-                  className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-150 ${
-                    inputValue.trim() && !isTyping && !routeGeneratingMessageId
-                      ? "bg-[var(--brand-primary)] text-[var(--text-on-brand)] hover:bg-[var(--brand-primary-hover)] active:scale-95 shadow-sm"
-                      : "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] cursor-not-allowed"
-                  }`}>
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
-              <p className="v5-composer-footnote text-center text-[11px] text-[var(--text-muted)] mt-1 hidden md:block">
-                Enter로 전송 · Shift+Enter 줄바꿈 ·{" "}
-                <button
-                  type="button"
-                  onClick={() => openPricing("overview")}
-                  className="text-[var(--brand-trust-blue)] font-medium hover:underline underline-offset-2"
-                >
-                  요금·한도 안내
-                </button>
-              </p>
-              <p className="v5-composer-footnote text-center text-[10px] text-[var(--text-muted)] mt-1.5 md:hidden px-2">
-                무료 한도는 정책에 따라 달라질 수 있어요.{" "}
-                <button
-                  type="button"
-                  onClick={() => openPricing("overview")}
-                  className="text-[var(--brand-trust-blue)] font-medium"
-                >
-                  요금 안내
-                </button>
-              </p>
+              )}
+
+              {showFreeComposer && (
+                <div className="v5-composer-input-shell flex items-end gap-2.5 px-4 py-3.5 md:px-5 md:py-4 rounded-[1.25rem] bg-[var(--bg-elevated)] border border-[var(--border-default)] shadow-[0_4px_24px_rgba(20,20,20,0.06)] focus-within:border-[var(--brand-trust-blue)] focus-within:shadow-[0_6px_28px_rgba(47,79,143,0.1)] transition-all duration-200 touch-manipulation">
+                  <textarea
+                    ref={textareaRef}
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onFocus={() => {
+                      setComposerFocused(true);
+                      if (!isNarrowViewport) {
+                        requestAnimationFrame(() => {
+                          composerShellRef.current?.scrollIntoView({
+                            block: "end",
+                            behavior: "smooth",
+                          });
+                        });
+                      }
+                    }}
+                    onBlur={() => setComposerFocused(false)}
+                    enterKeyHint="send"
+                    placeholder="출발지·지역·일정·인원·교통 등을 알려주세요 (예: 서울역 출발 경주 2박 3일 맛집·도보)"
+                    rows={1}
+                    className="flex-1 bg-transparent resize-none outline-none text-base lg:text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] leading-relaxed py-1 min-h-[22px] touch-manipulation"
+                  />
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => void handleSend()}
+                    disabled={!inputValue.trim() || composerBusy}
+                    className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-150 ${
+                      inputValue.trim() && !composerBusy
+                        ? "bg-[var(--brand-primary)] text-[var(--text-on-brand)] hover:bg-[var(--brand-primary-hover)] active:scale-95 shadow-sm"
+                        : "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] cursor-not-allowed"
+                    }`}
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {showFreeComposer && (
+                <>
+                  <p className="v5-composer-footnote text-center text-[11px] text-[var(--text-muted)] mt-1 hidden md:block">
+                    Enter로 전송 · Shift+Enter 줄바꿈 ·{" "}
+                    <button
+                      type="button"
+                      onClick={() => openPricing("overview")}
+                      className="text-[var(--brand-trust-blue)] font-medium hover:underline underline-offset-2"
+                    >
+                      요금·한도 안내
+                    </button>
+                  </p>
+                  <p className="v5-composer-footnote text-center text-[10px] text-[var(--text-muted)] mt-1.5 md:hidden px-2">
+                    무료 한도는 정책에 따라 달라질 수 있어요.{" "}
+                    <button
+                      type="button"
+                      onClick={() => openPricing("overview")}
+                      className="text-[var(--brand-trust-blue)] font-medium"
+                    >
+                      요금 안내
+                    </button>
+                  </p>
+                </>
+              )}
             </div>
           </div>
           </div>

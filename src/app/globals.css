@@ -308,6 +308,19 @@
   scroll-snap-align: start;
 }
 
+/* ── V5 하이브리드 여행 선택: 슬롯 시트·칩 스트립 ── */
+.v5-hybrid-wheel {
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: y proximity;
+  overscroll-behavior-y: contain;
+}
+.v5-hybrid-wheel-item {
+  scroll-snap-align: start;
+}
+.v5-hybrid-chip-strip {
+  -webkit-overflow-scrolling: touch;
+}
+
 /* ── V5 채팅: 태블릿 가로 모드 2분할 (채팅 | 미리보기) ── */
 .v5-chat-split-root {
   flex: 1;
