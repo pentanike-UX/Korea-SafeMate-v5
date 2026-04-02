@@ -196,12 +196,15 @@ export function HybridTripComposer({
   onSubmit,
   disabled,
   showSendButton = true,
+  onSlotSheetOpen,
 }: {
   draft: Record<HybridTripKey, string>;
   onDraftChange: (next: Record<HybridTripKey, string>) => void;
   onSubmit: () => void;
   disabled: boolean;
   showSendButton?: boolean;
+  /** 8칩 중 하나를 눌러 선택 시트를 열 때 — 상위에서 입력 독 접기 등 */
+  onSlotSheetOpen?: () => void;
 }) {
   const [openKey, setOpenKey] = useState<HybridTripKey | null>(null);
   const [customLine, setCustomLine] = useState("");
@@ -215,6 +218,7 @@ export function HybridTripComposer({
 
   const openSheet = useCallback(
     (key: HybridTripKey) => {
+      onSlotSheetOpen?.();
       setOpenKey(key);
       setCustomLine(draft[key] ?? "");
       if (key === "schedule") {
@@ -222,7 +226,7 @@ export function HybridTripComposer({
         setRangeEnd("");
       }
     },
-    [draft],
+    [draft, onSlotSheetOpen],
   );
 
   const applyValue = useCallback(

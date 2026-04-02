@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
 import {
   Plus, MapPin, Clock, CloudSun, Bookmark, BookmarkCheck,
   Send, Utensils, Coffee, Train, Camera, ChevronRight,
@@ -1562,7 +1562,7 @@ export function V5ChatShell() {
   const showComposerGuide =
     showFreeComposerGuide && (composerFocused || inputValue.trim().length > 0);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
   const chatHeaderMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const composerShellRef = useRef<HTMLDivElement>(null);
@@ -1705,9 +1705,6 @@ export function V5ChatShell() {
     streamRafRef.current = requestAnimationFrame(() => {
       streamRafRef.current = null;
       flushStreamBufferToConversations();
-      queueMicrotask(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      });
     });
   }, [flushStreamBufferToConversations]);
 
@@ -1728,10 +1725,22 @@ export function V5ChatShell() {
     };
   }, []);
 
-  // ── Auto-scroll ───────────────────────────────────────────────────────────
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeConv?.messages, isTyping, routeGeneratingMessageId, showTravelAnalysisLoading]);
+  // ── 메시지 영역 하단 고정 (조회 중·동선 카드가 입력창 안이 아니라 스크롤 영역에 보이도록) ──
+  useLayoutEffect(() => {
+    const root = messagesScrollRef.current;
+    if (!root) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        root.scrollTop = root.scrollHeight;
+      });
+    });
+  }, [
+    activeConv?.id,
+    activeConv?.messages,
+    isTyping,
+    routeGeneratingMessageId,
+    showTravelAnalysisLoading,
+  ]);
 
   // ── Textarea auto-resize ──────────────────────────────────────────────────
   useEffect(() => {
@@ -1851,6 +1860,7 @@ export function V5ChatShell() {
     async (text?: string) => {
       const content = (text ?? inputValue).trim();
       if (!content || isTyping || routeGeneratingMessageId || !activeConvId) return;
+      setComposerDockExpanded(false);
       setInputValue("");
 
       const priorMsgs = conversations.find((c) => c.id === activeConvId)?.messages ?? [];
@@ -1950,9 +1960,6 @@ export function V5ChatShell() {
           });
 
           finalizeStreamRaf();
-          queueMicrotask(() => {
-            messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-          });
 
           streamMsgIdRef.current = null;
           streamConvIdRef.current = null;
@@ -2118,6 +2125,8 @@ export function V5ChatShell() {
     async (chipSourceMessageId: string, slots: PreferenceChip[]) => {
       const slotsFiltered = slots.filter((s) => !isDeparturePreferenceChip(s));
       if (!slotsFiltered.length || isTyping || routeGeneratingMessageId || !activeConvId) return;
+
+      setComposerDockExpanded(false);
 
       const priorMsgs = conversations.find((c) => c.id === activeConvId)?.messages ?? [];
       const userContent = "확정한 조건으로 여행 동선을 짜줘.";
@@ -2458,7 +2467,7 @@ export function V5ChatShell() {
 
           {/* Messages */}
           <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden pt-1 md:pt-2">
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div ref={messagesScrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               {/* 메시지 로드 중 (대화 전환 후 DB 로드 전) */}
               {activeConv && !activeConv.messagesLoaded && userId ? (
                 <div className="flex flex-1 flex-col items-center justify-center py-20">
@@ -2489,7 +2498,6 @@ export function V5ChatShell() {
                   hybridDraft={hybridDraft}
                   onHybridDraftChange={setHybridDraft}
                   onSubmitHybridFromCard={() => {
-                    setComposerDockExpanded(true);
                     submitHybrid();
                   }}
                   composerBusy={composerBusy}
@@ -2517,7 +2525,6 @@ export function V5ChatShell() {
                       />
                     </div>
                   )}
-                  <div ref={messagesEndRef} />
                 </div>
               )}
             </div>
@@ -2698,6 +2705,7 @@ export function V5ChatShell() {
                   onSubmit={submitHybrid}
                   disabled={composerBusy}
                   showSendButton
+                  onSlotSheetOpen={() => setComposerDockExpanded(false)}
                 />
               )}
 
@@ -2710,7 +2718,11 @@ export function V5ChatShell() {
                     onKeyDown={handleKeyDown}
                     onFocus={() => {
                       setComposerFocused(true);
-                      if (!isNarrowViewport) {
+                      if (
+                        !isNarrowViewport &&
+                        !composerBusy &&
+                        !showTravelAnalysisLoading
+                      ) {
                         requestAnimationFrame(() => {
                           composerShellRef.current?.scrollIntoView({
                             block: "end",
