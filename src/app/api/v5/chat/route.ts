@@ -1,5 +1,8 @@
 import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
+import { groq } from "@ai-sdk/groq";
+import type { z } from "zod";
+import { shouldFallbackFromGeminiToGroq } from "@/lib/gemini";
 import {
   gatherResponseSchema,
   planResponseSchema,
@@ -58,6 +61,41 @@ function model() {
   return google(id);
 }
 
+/** Groq 무료 티어 백업 — `GROQ_CHAT_MODEL`로 재정의 (기본 llama-3.3-70b-versatile) */
+function groqChatModel() {
+  const id = process.env.GROQ_CHAT_MODEL?.trim() || "llama-3.3-70b-versatile";
+  return groq(id);
+}
+
+async function generateObjectGeminiOrGroq<S extends z.ZodType>(args: {
+  schema: S;
+  system: string;
+  prompt: string;
+  temperature: number;
+}): Promise<{ object: z.infer<S> }> {
+  try {
+    return await generateObject({
+      model: model(),
+      schema: args.schema,
+      system: args.system,
+      prompt: args.prompt,
+      temperature: args.temperature,
+    });
+  } catch (e) {
+    if (!shouldFallbackFromGeminiToGroq(e) || !process.env.GROQ_API_KEY?.trim()) {
+      throw e;
+    }
+    console.warn("[v5/chat] Gemini generateObject failed, falling back to Groq:", e);
+    return generateObject({
+      model: groqChatModel(),
+      schema: args.schema,
+      system: args.system,
+      prompt: args.prompt,
+      temperature: args.temperature,
+    });
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -78,8 +116,7 @@ export async function POST(req: Request) {
 
       const history = formatHistory(messages.slice(-24));
 
-      const { object } = await generateObject({
-        model: model(),
+      const { object } = await generateObjectGeminiOrGroq({
         schema: planResponseSchema,
         system: PLAN_SYSTEM,
         prompt: `아래는 지금까지의 대화 맥락입니다.\n\n${history || "(이전 맥락 없음)"}\n\n---\n사용자가 다음 여행 조건을 확정했습니다. 이 조건에 맞는 하루 이상의 여행 동선을 plan으로 구조화하세요.\n\n${slotText}`,
@@ -110,8 +147,7 @@ export async function POST(req: Request) {
     const history = formatHistory(messages.slice(-24));
     const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
 
-    const { object } = await generateObject({
-      model: model(),
+    const { object } = await generateObjectGeminiOrGroq({
       schema: gatherResponseSchema,
       system: GATHER_SYSTEM,
       prompt: `대화 맥락:\n\n${history || "(첫 메시지)"}\n\n---\n마지막 사용자 발화:\n${lastUser}\n\n위를 반영해 assistantMessage, chips, readyToGenerateRoute를 생성하세요.`,
@@ -141,7 +177,7 @@ export async function POST(req: Request) {
     console.error("[v5/chat]", e);
     return jsonResponse({
       content:
-        "일시적으로 응답을 만들지 못했어요. 잠시 후 다시 시도해 주세요. (Gemini API 키와 모델 설정을 확인해 주세요.)",
+        "일시적으로 응답을 만들지 못했어요. 잠시 후 다시 시도해 주세요. (Gemini·Groq API 키와 모델 설정을 확인해 주세요.)",
       preferenceChips: [],
       readyToGenerateRoute: false,
       travelPlan: null,

@@ -1,5 +1,6 @@
 import type { Content } from "@google/genai";
-import { getGeminiClient } from "@/lib/gemini";
+import { getGeminiClient, shouldFallbackFromGeminiToGroq } from "@/lib/gemini";
+import { getGroqClient, streamGroqTravelPlanner } from "@/lib/groq-travel-chat.server";
 import {
   GEMINI_CHAT_HISTORY_LIMIT,
   insertChatMessage,
@@ -290,6 +291,35 @@ export async function POST(req: Request) {
           return;
         }
 
+        const runGroqFallbackStream = () =>
+          streamGroqTravelPlanner({
+            systemInstruction: TRAVEL_PLANNER_SYSTEM_INSTRUCTION,
+            history,
+            userMessage: message,
+            abortSignal,
+            onDelta: (t) => sendSse({ type: "delta", text: t }),
+          });
+
+        const persistAssistantAndDone = async (trimmed: string, opts?: { groqFallback?: boolean }) => {
+          const savedAi = await insertChatMessage(sb, userId, trimmed, "assistant");
+          recordWaylyUsageFireAndForget(sb, {
+            geminiGenerations: 1,
+            geminiEstInputTokens: Math.ceil(message.length / 4) + 1500,
+            geminiEstOutputTokens: Math.ceil(trimmed.length / 4),
+          });
+          const parts: string[] = [];
+          if (opts?.groqFallback) {
+            parts.push("Gemini API 한도·오류로 Groq 백업 모델이 응답했습니다.");
+          }
+          if (!savedAi.ok) {
+            parts.push(`AI 답변은 전송했으나 저장에 실패했습니다: ${savedAi.message}`);
+          }
+          sendSse({
+            type: "done",
+            ...(parts.length ? { warning: parts.join(" ") } : {}),
+          });
+        };
+
         let chat;
         try {
           chat = aiClient.chats.create({
@@ -303,7 +333,21 @@ export async function POST(req: Request) {
           });
         } catch (e) {
           console.error("[api/chat] chats.create", e);
-          await fallbackDummy();
+          if (shouldFallbackFromGeminiToGroq(e, abortSignal) && getGroqClient()) {
+            try {
+              const groqText = (await runGroqFallbackStream()).trim();
+              if (groqText) {
+                await persistAssistantAndDone(groqText, { groqFallback: true });
+              } else {
+                await fallbackDummy();
+              }
+            } catch (ge) {
+              console.error("[api/chat] Groq fallback after chats.create", ge);
+              await fallbackDummy();
+            }
+          } else {
+            await fallbackDummy();
+          }
           return;
         }
 
@@ -315,7 +359,21 @@ export async function POST(req: Request) {
           });
         } catch (e) {
           console.error("[api/chat] sendMessageStream", e);
-          await fallbackDummy();
+          if (shouldFallbackFromGeminiToGroq(e, abortSignal) && getGroqClient()) {
+            try {
+              const groqText = (await runGroqFallbackStream()).trim();
+              if (groqText) {
+                await persistAssistantAndDone(groqText, { groqFallback: true });
+              } else {
+                await fallbackDummy();
+              }
+            } catch (ge) {
+              console.error("[api/chat] Groq fallback after sendMessageStream", ge);
+              await fallbackDummy();
+            }
+          } else {
+            await fallbackDummy();
+          }
           return;
         }
 
@@ -357,6 +415,20 @@ export async function POST(req: Request) {
               warning:
                 "응답이 중간에 끊겼어요. 아래까지는 전달됐고, API 할당량·네트워크를 확인해 주세요.",
             });
+            return;
+          }
+          if (shouldFallbackFromGeminiToGroq(e, abortSignal) && getGroqClient()) {
+            try {
+              const groqText = (await runGroqFallbackStream()).trim();
+              if (groqText) {
+                await persistAssistantAndDone(groqText, { groqFallback: true });
+              } else {
+                await fallbackDummy();
+              }
+            } catch (ge) {
+              console.error("[api/chat] Groq fallback after stream error", ge);
+              await fallbackDummy();
+            }
           } else {
             await fallbackDummy();
           }
@@ -369,24 +441,25 @@ export async function POST(req: Request) {
 
         const trimmed = accumulated.trim();
         if (!trimmed) {
-          await fallbackDummy("모델이 빈 응답을 돌려줘서 샘플 동선으로 대체했어요.");
+          if (getGroqClient()) {
+            try {
+              const groqText = (await runGroqFallbackStream()).trim();
+              if (groqText) {
+                await persistAssistantAndDone(groqText, { groqFallback: true });
+              } else {
+                await fallbackDummy("모델이 빈 응답을 돌려줘서 샘플 동선으로 대체했어요.");
+              }
+            } catch (ge) {
+              console.error("[api/chat] Groq fallback after empty Gemini", ge);
+              await fallbackDummy("모델이 빈 응답을 돌려줘서 샘플 동선으로 대체했어요.");
+            }
+          } else {
+            await fallbackDummy("모델이 빈 응답을 돌려줘서 샘플 동선으로 대체했어요.");
+          }
           return;
         }
 
-        const savedAi = await insertChatMessage(sb, userId, trimmed, "assistant");
-        recordWaylyUsageFireAndForget(sb, {
-          geminiGenerations: 1,
-          geminiEstInputTokens: Math.ceil(message.length / 4) + 1500,
-          geminiEstOutputTokens: Math.ceil(trimmed.length / 4),
-        });
-        if (!savedAi.ok) {
-          sendSse({
-            type: "done",
-            warning: `AI 답변은 전송했으나 저장에 실패했습니다: ${savedAi.message}`,
-          });
-        } else {
-          sendSse({ type: "done" });
-        }
+        await persistAssistantAndDone(trimmed);
       } catch (e) {
         console.error("[api/chat] stream", e);
         try {
