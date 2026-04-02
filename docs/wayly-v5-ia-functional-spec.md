@@ -123,6 +123,8 @@ Gemini generateObject → planResponseSchema
 
 **프로덕션**: `OPENAI_API_KEY`는 Vercel(또는 호스트) 환경 변수에 넣어야 하며, `.env.local`만 있으면 배포 URL 요청에서는 OpenAI가 호출되지 않습니다.
 
+**Structured Outputs / strict `json_schema`**: Groq 등은 `properties`에 있는 키를 `required`에도 전부 넣어야 합니다. Zod에서 `.optional()`만 쓰면 스키마 불일치로 400이 날 수 있어, `travel-chat-schema.server.ts`는 빈 문자열·`null`·`default()`로 맞춥니다.
+
 ---
 
 ## 5. 하이브리드 입력 시스템 (HybridTripComposer)
@@ -317,6 +319,7 @@ saved_at              TIMESTAMPTZ
 | `GROQ_CHAT_MODEL` | Groq 모델 ID (선택) |
 | `OPENAI_API_KEY` | OpenAI 폴백 (선택) |
 | `OPENAI_CHAT_MODEL` | OpenAI 모델 ID (선택, 기본 `gpt-4o-mini`) |
+| `TOUR_API_KEY` | 한국관광공사 Tour API (선택) — 없으면 `/api/tour/spot`이 `NO_API_KEY`로 503, 스팟 보강은 위키 등 폴백 |
 | `STRIPE_SECRET_KEY` | Stripe 결제 |
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe 클라이언트 |
 
