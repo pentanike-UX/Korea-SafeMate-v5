@@ -22,10 +22,12 @@ import { Link } from "@/i18n/navigation";
 import { V5ChatPricingModal, type PricingModalFocus } from "./v5-chat-pricing-modal";
 import {
   HybridTripComposer,
+  HYBRID_SLOT_OPTIONS,
   HYBRID_TRIP_EMPTY,
   buildHybridPrompt,
   hybridHasMinimumForSend,
   useLgUp,
+  type HybridTripKey,
 } from "./v5-hybrid-trip-composer";
 import { V5TravelAiAnalysisLoadingOverlay } from "./v5-travel-ai-analysis-loading";
 import type { SpotTourEnrichment } from "@/lib/tour-api/tour-spot-client";
@@ -620,52 +622,28 @@ function TravelRouteCard({
   );
 }
 
-/** 태블릿 가로 2분할 우측: 타임라인 + 지도 진입 (투어 API 미호출 — 채팅 카드와 중복 요청 방지) */
-function TabletPlanPreviewPane({
+/** 동선 타임라인 본문 — 데스크톱 우측 패널 / 모바일·태블릿 풀스크린 공통 */
+function PlanPreviewTimelineBody({
   plan,
   isSaved,
   onSave,
   onViewMap,
 }: {
-  plan: TravelPlan | null;
+  plan: TravelPlan;
   isSaved: boolean;
   onSave: (p: TravelPlan) => void;
   onViewMap: (p: TravelPlan) => void;
 }) {
-  const hasMapCoords =
-    plan != null &&
-    plan.spots.some(
-      (s) =>
-        s.lat != null &&
-        s.lng != null &&
-        Number.isFinite(s.lat) &&
-        Number.isFinite(s.lng),
-    );
-
-  if (!plan) {
-    return (
-      <aside
-        className="v5-chat-split-preview border-l border-[var(--border-default)] bg-[var(--bg-surface)]"
-        aria-label="동선 미리보기"
-      >
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-5 py-8 text-center">
-          <Map className="h-8 w-8 text-[var(--text-muted)]/40" aria-hidden />
-          <p className="text-[13px] font-medium text-[var(--text-secondary)] leading-snug">
-            동선이 생성되면
-          </p>
-          <p className="text-[12px] text-[var(--text-muted)] leading-relaxed max-w-[220px]">
-            이 패널에 타임라인이 보이고, 지도로 바로 열 수 있어요.
-          </p>
-        </div>
-      </aside>
-    );
-  }
+  const hasMapCoords = plan.spots.some(
+    (s) =>
+      s.lat != null &&
+      s.lng != null &&
+      Number.isFinite(s.lat) &&
+      Number.isFinite(s.lng),
+  );
 
   return (
-    <aside
-      className="v5-chat-split-preview border-l border-[var(--border-default)] bg-[var(--bg-surface)]"
-      aria-label="지도 및 타임라인"
-    >
+    <>
       <div className="flex-shrink-0 px-4 py-3 border-b border-[var(--border-default)] bg-[var(--bg-elevated)]/50">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
           지도 · 타임라인
@@ -716,7 +694,7 @@ function TabletPlanPreviewPane({
           ))}
         </ol>
       </div>
-      <div className="flex-shrink-0 p-3 border-t border-[var(--border-default)] bg-[var(--bg-page)] flex flex-col gap-2">
+      <div className="flex-shrink-0 p-3 border-t border-[var(--border-default)] bg-[var(--bg-page)] flex flex-col gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <button
           type="button"
           disabled={!hasMapCoords}
@@ -757,7 +735,110 @@ function TabletPlanPreviewPane({
           )}
         </button>
       </div>
+    </>
+  );
+}
+
+/** lg 이상 가로 분할 우측 패널 (1024px+ landscape 그리드에서만 표시) */
+function TabletPlanPreviewPane({
+  plan,
+  isSaved,
+  onSave,
+  onViewMap,
+}: {
+  plan: TravelPlan | null;
+  isSaved: boolean;
+  onSave: (p: TravelPlan) => void;
+  onViewMap: (p: TravelPlan) => void;
+}) {
+  if (!plan) {
+    return (
+      <aside
+        className="v5-chat-split-preview border-l border-[var(--border-default)] bg-[var(--bg-surface)]"
+        aria-label="동선 미리보기"
+      >
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-5 py-8 text-center">
+          <Map className="h-8 w-8 text-[var(--text-muted)]/40" aria-hidden />
+          <p className="text-[13px] font-medium text-[var(--text-secondary)] leading-snug">
+            동선이 생성되면
+          </p>
+          <p className="text-[12px] text-[var(--text-muted)] leading-relaxed max-w-[220px]">
+            이 패널에 타임라인이 보이고, 지도로 바로 열 수 있어요.
+          </p>
+          <p className="text-[11px] text-[var(--text-muted)] mt-2 max-w-[260px]">
+            좁은 화면에서는 채팅 상단 <strong className="text-[var(--text-strong)]">내 플랜</strong>으로 전체 화면을 열 수 있어요.
+          </p>
+        </div>
+      </aside>
+    );
+  }
+
+  return (
+    <aside
+      className="v5-chat-split-preview border-l border-[var(--border-default)] bg-[var(--bg-surface)] flex flex-col min-h-0 min-w-0"
+      aria-label="지도 및 타임라인"
+    >
+      <PlanPreviewTimelineBody
+        plan={plan}
+        isSaved={isSaved}
+        onSave={onSave}
+        onViewMap={onViewMap}
+      />
     </aside>
+  );
+}
+
+/** 모바일·태블릿(lg 미만): 동선 타임라인 풀스크린 */
+function MobilePlanFullscreenOverlay({
+  open,
+  onClose,
+  plan,
+  isSaved,
+  onSave,
+  onViewMap,
+}: {
+  open: boolean;
+  onClose: () => void;
+  plan: TravelPlan;
+  isSaved: boolean;
+  onSave: (p: TravelPlan) => void;
+  onViewMap: (p: TravelPlan) => void;
+}) {
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex flex-col bg-[var(--bg-page)] lg:hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label="내 플랜 전체 보기"
+    >
+      <header className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b border-[var(--border-default)] bg-[var(--bg-surface)] pt-[max(0.75rem,env(safe-area-inset-top))]">
+        <div className="flex min-w-0 items-center gap-2">
+          <Map className="h-5 w-5 shrink-0 text-[var(--brand-trust-blue)]" aria-hidden />
+          <span className="text-[15px] font-semibold text-[var(--text-strong)] truncate">내 플랜</span>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)] touch-manipulation"
+          aria-label="닫기"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </header>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <PlanPreviewTimelineBody
+          plan={plan}
+          isSaved={isSaved}
+          onSave={onSave}
+          onViewMap={(p) => {
+            onViewMap(p);
+            onClose();
+          }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -1022,16 +1103,209 @@ function WaylyMark({
   );
 }
 
+/** 빈 화면용 — 대화 중 `PreferenceChipsCard`와 같은 칩·출발 입력 UX */
+const EMPTY_HYBRID_CARD_KEYS: HybridTripKey[] = [
+  "region",
+  "schedule",
+  "people",
+  "transport",
+  "destination",
+  "vibe",
+  "food",
+];
+
+const EMPTY_SLOT_HINT: Record<HybridTripKey, string> = {
+  region: "여행지",
+  origin: "출발",
+  destination: "도착지",
+  schedule: "일정",
+  people: "인원",
+  transport: "이동수단",
+  vibe: "분위기",
+  food: "음식",
+};
+
+function EmptyStateHybridCard({
+  draft,
+  onDraftChange,
+  onSubmit,
+  disabled,
+}: {
+  draft: Record<HybridTripKey, string>;
+  onDraftChange: (next: Record<HybridTripKey, string>) => void;
+  onSubmit: () => void;
+  disabled: boolean;
+}) {
+  const [openKey, setOpenKey] = useState<HybridTripKey | null>(null);
+  const [departure, setDeparture] = useState(draft.origin);
+
+  useEffect(() => {
+    setDeparture(draft.origin);
+  }, [draft.origin]);
+
+  const syncDeparture = (v: string) => {
+    setDeparture(v);
+    onDraftChange({ ...draft, origin: v.trim() });
+  };
+
+  const depEffective = departure.trim();
+  const canSubmit =
+    depEffective.length > 0 &&
+    draft.region.trim().length > 0 &&
+    draft.schedule.trim().length > 0 &&
+    !disabled;
+
+  return (
+    <div className="w-full max-w-[480px] rounded-[20px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-4 shadow-[0_4px_24px_rgba(20,20,20,0.06)] select-text mb-6">
+      <div className="flex items-center gap-2 mb-2">
+        <Sparkles className="w-3.5 h-3.5 text-[var(--brand-trust-blue)] shrink-0" aria-hidden />
+        <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
+          정리한 여행 조건
+        </span>
+      </div>
+      <p className="text-[12px] text-[var(--text-secondary)] mb-3 leading-relaxed">
+        출발·귀경지를 입력하고 아래 칩에서 항목을 골라 주세요. 하단 입력 영역과{" "}
+        <strong className="font-semibold text-[var(--text-strong)]">같은 조건</strong>이 실시간으로 맞춰집니다.
+      </p>
+
+      <label className="block mb-3">
+        <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          출발·귀경지 <span className="text-[var(--error)]">*</span>
+        </span>
+        <input
+          type="text"
+          value={departure}
+          onChange={(e) => syncDeparture(e.target.value)}
+          placeholder="예: 서울역, 강남구 논현동 집, 대전역"
+          className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-page)] px-3.5 py-2.5 text-base md:text-[14px] text-[var(--text-strong)] placeholder:text-[var(--text-muted)] outline-none transition-shadow focus:border-[var(--brand-trust-blue)] focus:ring-2 focus:ring-[var(--brand-trust-blue)]/20"
+          autoComplete="street-address"
+        />
+      </label>
+
+      <div className="v5-prompt-chips-strip overflow-x-auto -mx-1 px-1 pb-1 mb-2 touch-pan-x">
+        <div className="flex flex-wrap gap-2 w-full">
+          {EMPTY_HYBRID_CARD_KEYS.map((key) => {
+            const v = draft[key].trim();
+            const hint = EMPTY_SLOT_HINT[key];
+            if (v) {
+              return (
+                <span
+                  key={key}
+                  className="v5-prompt-chip-item inline-flex shrink-0 items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full text-[12px] font-medium bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] border border-blue-100 max-w-full"
+                >
+                  <span className="text-[10px] opacity-80 shrink-0">{hint}</span>
+                  <span className="text-[var(--text-strong)] truncate min-w-0 max-w-[10rem] sm:max-w-[14rem]">
+                    {v}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onDraftChange({ ...draft, [key]: "" });
+                      setOpenKey((k) => (k === key ? null : k));
+                    }}
+                    className="ml-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:bg-white/80 hover:text-[var(--error)] transition-colors shrink-0 touch-manipulation"
+                    aria-label={`${hint} 선택 취소`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              );
+            }
+            return (
+              <div
+                key={key}
+                className="v5-prompt-chip-item inline-flex shrink-0 items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full text-[12px] font-medium bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] border border-blue-100"
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenKey((k) => (k === key ? null : key))}
+                  className="flex items-center gap-1 touch-manipulation"
+                >
+                  <span>
+                    {hint} 미정
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenKey((k) => (k === key ? null : k));
+                  }}
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:bg-white/80 transition-colors touch-manipulation"
+                  aria-label={openKey === key ? `${hint} 후보 닫기` : `${hint} 고르기`}
+                  title={openKey === key ? "닫기" : "후보 보기"}
+                >
+                  <X className="w-3 h-3 opacity-70" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {openKey && (
+        <div className="mb-4 rounded-xl border border-[var(--border-default)] bg-[var(--bg-page)] p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2">
+            {EMPTY_SLOT_HINT[openKey]} 선택
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {HYBRID_SLOT_OPTIONS[openKey].map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => {
+                  onDraftChange({ ...draft, [openKey]: opt });
+                  setOpenKey(null);
+                }}
+                className="rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-1.5 text-[11px] font-medium text-[var(--text-strong)] hover:bg-[var(--brand-trust-blue-soft)] hover:border-[var(--brand-trust-blue)]/25 transition-colors touch-manipulation"
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={onSubmit}
+        disabled={!canSubmit}
+        className={`w-full py-3.5 rounded-2xl text-[14px] font-semibold transition-all duration-200 touch-manipulation ${
+          canSubmit
+            ? "bg-[var(--brand-primary)] text-[var(--text-on-brand)] hover:bg-[var(--brand-primary-hover)] active:scale-[0.99]"
+            : "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] cursor-not-allowed"
+        }`}
+      >
+        이 정보로 동선 짜기
+      </button>
+      {(!depEffective || !draft.region.trim() || !draft.schedule.trim()) && (
+        <p className="mt-2 text-center text-[11px] text-[var(--text-muted)]">
+          출발·귀경지·여행지·일정을 채우면 보낼 수 있어요.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function EmptyState({
   onApplyPrompt,
   onOpenPricing,
   onScrollToComposer,
+  hybridDraft,
+  onHybridDraftChange,
+  onSubmitHybridFromCard,
+  composerBusy,
 }: {
   /** 입력창에 문장을 넣고 포커스 — 괄호 부분만 고친 뒤 전송 */
   onApplyPrompt: (text: string) => void;
   onOpenPricing: () => void;
   /** 화면 하단 하이브리드 칩 영역으로 스크롤 */
   onScrollToComposer: () => void;
+  hybridDraft: Record<HybridTripKey, string>;
+  onHybridDraftChange: (next: Record<HybridTripKey, string>) => void;
+  /** 카드의 「이 정보로 동선 짜기」— 독 펼침 + 전송 */
+  onSubmitHybridFromCard: () => void;
+  composerBusy: boolean;
 }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 pb-28 md:pb-32 select-none overflow-y-auto">
@@ -1043,16 +1317,24 @@ function EmptyState({
       <h1 className="text-[22px] font-bold text-[var(--text-strong)] text-center mb-2 tracking-tight">
         어디로 여행을 떠나시나요?
       </h1>
-      <p className="text-[14px] text-[var(--text-secondary)] text-center max-w-md leading-relaxed mb-3">
-        <strong className="font-semibold text-[var(--text-strong)]">아래 8가지 칩</strong>(지역·출발·도착·일정·인원·교통·분위기·음식)으로
-        탭만 해서 조합할 수 있어요. 키보드는 &quot;직접 입력&quot;으로 켤 때만 쓰면 됩니다.
+      <p className="text-[14px] text-[var(--text-secondary)] text-center max-w-md leading-relaxed mb-4">
+        먼저 <strong className="font-semibold text-[var(--text-strong)]">카드에서 칩으로 고르거나</strong>, 하단{" "}
+        <strong className="font-semibold text-[var(--text-strong)]">8가지 칩</strong>으로 이어서 조합할 수 있어요.
       </p>
+
+      <EmptyStateHybridCard
+        draft={hybridDraft}
+        onDraftChange={onHybridDraftChange}
+        onSubmit={onSubmitHybridFromCard}
+        disabled={composerBusy}
+      />
+
       <button
         type="button"
         onClick={onScrollToComposer}
         className="mb-6 text-[13px] font-semibold text-[var(--brand-trust-blue)] underline-offset-4 hover:underline touch-manipulation"
       >
-        여행 조건 칩 영역으로 이동 ↓
+        하단 하이브리드 입력 영역으로 이동 ↓
       </button>
       <p className="text-[13px] text-[var(--text-muted)] text-center max-w-md leading-relaxed mb-6">
         긴 문장이 편하면 <strong className="text-[var(--text-strong)]">자유 입력</strong>(데스크톱) 또는{" "}
@@ -1295,6 +1577,7 @@ export function V5ChatShell() {
   const [mobileFreeInput, setMobileFreeInput] = useState(false);
   /** 입력 독(하이브리드·자유입력) 접기/펼치기 — 모바일·태블릿·데스크톱 공통 */
   const [composerDockExpanded, setComposerDockExpanded] = useState(true);
+  const [mobilePlanFullscreenOpen, setMobilePlanFullscreenOpen] = useState(false);
   const [composerDesktopMode, setComposerDesktopMode] = useState<"picker" | "free">("picker");
 
   const promptChecklist = useMemo(() => evaluateTravelPromptChecklist(inputValue), [inputValue]);
@@ -2045,6 +2328,10 @@ export function V5ChatShell() {
     return null;
   }, [messages]);
 
+  useEffect(() => {
+    if (!latestPlanForSplitPanel) setMobilePlanFullscreenOpen(false);
+  }, [latestPlanForSplitPanel]);
+
   const composerKeyboardTight =
     composerFocused && keyboardOverlapPx >= 72 && isNarrowViewport;
 
@@ -2120,6 +2407,17 @@ export function V5ChatShell() {
               </span>
             </div>
             <div ref={chatHeaderMenuRef} className="flex items-center gap-2 relative">
+              {!isLg && latestPlanForSplitPanel && (
+                <button
+                  type="button"
+                  onClick={() => setMobilePlanFullscreenOpen(true)}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full border border-[var(--brand-trust-blue)]/35 bg-[var(--brand-trust-blue-soft)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--brand-trust-blue)] hover:bg-blue-100/80 touch-manipulation"
+                  title="동선 타임라인 전체 보기"
+                >
+                  <Map className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  내 플랜
+                </button>
+              )}
               {!isAuthLoading && (
                 <button
                   type="button"
@@ -2212,6 +2510,13 @@ export function V5ChatShell() {
                       behavior: "smooth",
                     });
                   }}
+                  hybridDraft={hybridDraft}
+                  onHybridDraftChange={setHybridDraft}
+                  onSubmitHybridFromCard={() => {
+                    setComposerDockExpanded(true);
+                    submitHybrid();
+                  }}
+                  composerBusy={composerBusy}
                 />
               ) : (
                 <div className="mx-auto max-w-[720px] space-y-5 px-4 py-7 md:px-5 md:py-8">
@@ -2246,7 +2551,7 @@ export function V5ChatShell() {
           <div
             id="wayly-trip-composer"
             ref={composerShellRef}
-            className={`wayly-trip-composer-anchor v5-composer-dock flex-shrink-0 scroll-mt-4 bg-[var(--bg-page)] border-t border-[var(--border-default)]/40 transition-[padding] duration-150 ease-out ${
+            className={`wayly-trip-composer-anchor v5-composer-dock v5-composer-liquid-dock flex-shrink-0 scroll-mt-4 transition-[padding] duration-150 ease-out ${
               composerKeyboardTight
                 ? "v5-composer-keyboard-tight"
                 : composerDockCompact
@@ -2259,7 +2564,7 @@ export function V5ChatShell() {
                 <button
                   type="button"
                   onClick={() => setComposerDockExpanded(true)}
-                  className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3.5 py-2.5 text-left shadow-[0_2px_12px_rgba(20,20,20,0.04)] touch-manipulation active:scale-[0.99] transition-transform"
+                  className="v5-composer-liquid-panel flex w-full items-center justify-between gap-3 rounded-2xl px-3.5 py-2.5 text-left touch-manipulation active:scale-[0.99] transition-transform"
                   aria-expanded={false}
                 >
                   <span className="flex min-w-0 items-center gap-2">
@@ -2289,7 +2594,7 @@ export function V5ChatShell() {
                 </span>
                 <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
                   <div
-                    className="inline-flex shrink-0 rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)] p-1"
+                    className="v5-composer-liquid-panel inline-flex shrink-0 rounded-xl p-1"
                     role="tablist"
                     aria-label="입력 방식 전환"
                   >
@@ -2323,7 +2628,7 @@ export function V5ChatShell() {
                   <button
                     type="button"
                     onClick={() => setComposerDockExpanded(false)}
-                    className="flex shrink-0 items-center gap-1 rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-strong)] transition-colors"
+                    className="v5-composer-liquid-panel flex shrink-0 items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-muted)] hover:text-[var(--text-strong)] transition-colors"
                     aria-expanded={composerDockExpanded}
                     title="입력 영역 접기"
                   >
@@ -2358,7 +2663,7 @@ export function V5ChatShell() {
 
               {showComposerGuide && (
                 <div
-                  className="v5-composer-guide-box rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)]/90 px-3 py-2.5 md:px-4 md:py-3.5 shadow-[0_2px_16px_rgba(20,20,20,0.04)] backdrop-blur-sm transition-all duration-200 ease-out"
+                  className="v5-composer-guide-box v5-composer-liquid-guide rounded-2xl px-3 py-2.5 md:px-4 md:py-3.5 transition-all duration-200 ease-out"
                   role="status"
                   aria-live="polite"
                   aria-label="입력 가이드"
@@ -2421,7 +2726,7 @@ export function V5ChatShell() {
               )}
 
               {showFreeComposer && (
-                <div className="v5-composer-input-shell flex items-end gap-2.5 px-4 py-3.5 md:px-5 md:py-4 rounded-[1.25rem] bg-[var(--bg-elevated)] border border-[var(--border-default)] shadow-[0_4px_24px_rgba(20,20,20,0.06)] focus-within:border-[var(--brand-trust-blue)] focus-within:shadow-[0_6px_28px_rgba(47,79,143,0.1)] transition-all duration-200 touch-manipulation">
+                <div className="v5-composer-input-shell v5-composer-liquid-input flex items-end gap-2.5 px-4 py-3.5 md:px-5 md:py-4 rounded-[1.25rem] focus-within:ring-2 focus-within:ring-[var(--brand-trust-blue)]/25 focus-within:border-[var(--brand-trust-blue)]/50 transition-all duration-200 touch-manipulation">
                   <textarea
                     ref={textareaRef}
                     value={inputValue}
@@ -2505,6 +2810,17 @@ export function V5ChatShell() {
 
       {mapModalPlan && (
         <V5PlanMapModal plan={mapModalPlan} onClose={() => setMapModalPlan(null)} />
+      )}
+
+      {!isLg && latestPlanForSplitPanel && (
+        <MobilePlanFullscreenOverlay
+          open={mobilePlanFullscreenOpen}
+          onClose={() => setMobilePlanFullscreenOpen(false)}
+          plan={latestPlanForSplitPanel}
+          isSaved={savedPlanIds.has(latestPlanForSplitPanel.id)}
+          onSave={handleSavePlan}
+          onViewMap={setMapModalPlan}
+        />
       )}
 
       <V5ChatPricingModal

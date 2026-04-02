@@ -52,7 +52,7 @@ const SLOT_META: {
   { key: "food", label: "음식", short: "음식", icon: Utensils },
 ];
 
-const OPTIONS: Record<HybridTripKey, string[]> = {
+export const HYBRID_SLOT_OPTIONS: Record<HybridTripKey, string[]> = {
   region: [
     "제주",
     "부산·해운대",
@@ -219,7 +219,7 @@ export function HybridTripComposer({
   const canSend = hybridHasMinimumForSend(draft) && !disabled;
 
   return (
-    <div className="space-y-3 rounded-2xl border border-[var(--border-default)]/80 bg-[var(--bg-elevated)]/40 px-3 py-3 md:px-4 md:py-4">
+    <div className="v5-composer-liquid-panel space-y-3 rounded-2xl px-3 py-3 md:px-4 md:py-4">
       <p className="text-[12px] font-semibold text-[var(--text-strong)] tracking-tight px-0.5">
         하이브리드 입력 · 8가지 칩으로 조합
       </p>
@@ -344,7 +344,7 @@ export function HybridTripComposer({
                   </p>
                 </div>
               )}
-              {OPTIONS[openKey].map((opt) => (
+              {HYBRID_SLOT_OPTIONS[openKey].map((opt) => (
                 <button
                   key={opt}
                   type="button"
