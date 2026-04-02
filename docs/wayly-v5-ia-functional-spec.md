@@ -117,7 +117,7 @@ Gemini generateObject → planResponseSchema
 ### AI 모델 우선순위 (`POST /api/v5/chat` · 스트리밍 `POST /api/chat` 공통)
 1. **Gemini** — `GEMINI_MODEL` → `GEMINI_CHAT_MODEL` → 코드 기본 모델 순
 2. **OpenAI** — `OPENAI_API_KEY`가 있으면 Gemini 실패 직후 (`OPENAI_CHAT_MODEL`, 기본 `gpt-4o-mini`). 구조화 `generateObject`에서 Groq가 HTTP 400을 내는 경우가 있어 **OpenAI를 Groq보다 앞에** 둡니다.
-3. **Groq** — `GROQ_API_KEY`가 있고 `shouldFallbackFromGeminiToGroq`가 참이면 OpenAI 실패·미설정 뒤 (`GROQ_CHAT_MODEL`, 기본 `llama-3.3-70b-versatile`)
+3. **Groq** — `GROQ_API_KEY`가 있고 `shouldFallbackFromGeminiToGroq`가 참이면 OpenAI 실패·미설정 뒤 (`GROQ_CHAT_MODEL`, 기본 `openai/gpt-oss-20b`). V5 `generateObject`는 Groq `json_schema`를 쓰므로 [Structured Outputs 지원 모델](https://console.groq.com/docs/structured-outputs#supported-models)만 사용 가능(예: `llama-3.3-70b-versatile`는 미지원으로 400 발생).
 
 `/api/chat`은 SSE 스트리밍이며, 폴백 시 `streamOpenAiTravelPlanner` → `streamGroqTravelPlanner` 순입니다.
 

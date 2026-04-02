@@ -57,9 +57,14 @@ function model() {
   return google(id);
 }
 
-/** Groq 무료 티어 백업 — `GROQ_CHAT_MODEL`로 재정의 (기본 llama-3.3-70b-versatile) */
+/**
+ * Groq 백업 — `generateObject`는 `response_format: json_schema`를 씁니다.
+ * llama-3.3-70b-versatile 등은 미지원 → HTTP 400. 지원 목록:
+ * https://console.groq.com/docs/structured-outputs#supported-models
+ * 기본: `openai/gpt-oss-20b` (Structured Outputs + 일반 채팅 스트리밍 모두 사용 가능)
+ */
 function groqChatModel() {
-  const id = process.env.GROQ_CHAT_MODEL?.trim() || "llama-3.3-70b-versatile";
+  const id = process.env.GROQ_CHAT_MODEL?.trim() || "openai/gpt-oss-20b";
   return groq(id);
 }
 

@@ -3,7 +3,8 @@ import "server-only";
 import type { Content } from "@google/genai";
 import Groq from "groq-sdk";
 
-const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
+/** `generateObject`(json_schema)와 호환되려면 Groq Structured Outputs 지원 모델이어야 함. @see https://console.groq.com/docs/structured-outputs#supported-models */
+const DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b";
 
 function groqModelId(): string {
   return process.env.GROQ_CHAT_MODEL?.trim() || DEFAULT_GROQ_MODEL;
