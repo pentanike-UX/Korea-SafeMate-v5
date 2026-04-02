@@ -116,10 +116,12 @@ Gemini generateObject → planResponseSchema
 
 ### AI 모델 우선순위 (`POST /api/v5/chat` · 스트리밍 `POST /api/chat` 공통)
 1. **Gemini** — `GEMINI_MODEL` → `GEMINI_CHAT_MODEL` → 코드 기본 모델 순
-2. **Groq** — `GROQ_API_KEY`가 있고 Gemini 오류가 폴백 대상이면 (`GROQ_CHAT_MODEL`, 기본 `llama-3.3-70b-versatile`)
-3. **OpenAI** — `OPENAI_API_KEY`가 있으면 Groq까지 실패했거나 Groq 미설정인 경우 (`OPENAI_CHAT_MODEL`, 기본 `gpt-4o-mini`)
+2. **OpenAI** — `OPENAI_API_KEY`가 있으면 Gemini 실패 직후 (`OPENAI_CHAT_MODEL`, 기본 `gpt-4o-mini`). 구조화 `generateObject`에서 Groq가 HTTP 400을 내는 경우가 있어 **OpenAI를 Groq보다 앞에** 둡니다.
+3. **Groq** — `GROQ_API_KEY`가 있고 `shouldFallbackFromGeminiToGroq`가 참이면 OpenAI 실패·미설정 뒤 (`GROQ_CHAT_MODEL`, 기본 `llama-3.3-70b-versatile`)
 
-`/api/chat`은 SSE 스트리밍이며, 폴백 시에도 동일 순서로 델타를 전송합니다 (`streamGroqTravelPlanner` → `streamOpenAiTravelPlanner`).
+`/api/chat`은 SSE 스트리밍이며, 폴백 시 `streamOpenAiTravelPlanner` → `streamGroqTravelPlanner` 순입니다.
+
+**프로덕션**: `OPENAI_API_KEY`는 Vercel(또는 호스트) 환경 변수에 넣어야 하며, `.env.local`만 있으면 배포 URL 요청에서는 OpenAI가 호출되지 않습니다.
 
 ---
 

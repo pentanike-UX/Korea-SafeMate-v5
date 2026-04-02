@@ -304,21 +304,12 @@ export async function POST(req: Request) {
           onDelta: (t: string) => sendSse({ type: "delta", text: t }),
         };
 
-        /** Gemini 실패 시 Groq → OpenAI 순 (`/api/v5/chat`와 동일) */
+        /** Gemini 실패 시 OpenAI → Groq 순 (구조화 스트리밍과 동일 정책; Groq 단독 오류 시에도 OpenAI 우선) */
         const tryFallbackProviders = async (
           err: unknown,
           errorLabel: string,
         ): Promise<{ text: string; source: "groq" | "openai" } | null> => {
           if (abortSignal.aborted || isChatProviderAbortError(err)) return null;
-
-          if (shouldFallbackFromGeminiToGroq(err, abortSignal) && getGroqClient()) {
-            try {
-              const groqText = (await streamGroqTravelPlanner(streamFallbackOpts)).trim();
-              if (groqText) return { text: groqText, source: "groq" };
-            } catch (ge) {
-              console.error(`[api/chat] Groq fallback ${errorLabel}`, ge);
-            }
-          }
 
           if (process.env.OPENAI_API_KEY?.trim()) {
             try {
@@ -326,6 +317,15 @@ export async function POST(req: Request) {
               if (openaiText) return { text: openaiText, source: "openai" };
             } catch (oe) {
               console.error(`[api/chat] OpenAI fallback ${errorLabel}`, oe);
+            }
+          }
+
+          if (shouldFallbackFromGeminiToGroq(err, abortSignal) && getGroqClient()) {
+            try {
+              const groqText = (await streamGroqTravelPlanner(streamFallbackOpts)).trim();
+              if (groqText) return { text: groqText, source: "groq" };
+            } catch (ge) {
+              console.error(`[api/chat] Groq fallback ${errorLabel}`, ge);
             }
           }
 
@@ -346,7 +346,7 @@ export async function POST(req: Request) {
           if (opts?.fallbackSource === "groq") {
             parts.push("Gemini API 한도·오류로 Groq 백업 모델이 응답했습니다.");
           } else if (opts?.fallbackSource === "openai") {
-            parts.push("Gemini·Groq를 쓰지 못해 OpenAI 백업 모델이 응답했습니다.");
+            parts.push("Gemini 대신 OpenAI 백업 모델이 응답했습니다.");
           }
           if (!savedAi.ok) {
             parts.push(`AI 답변은 전송했으나 저장에 실패했습니다: ${savedAi.message}`);

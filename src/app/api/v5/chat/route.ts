@@ -88,9 +88,28 @@ async function generateObjectGeminiGroqOrOpenai<S extends z.ZodType>(args: {
 
     let lastErr: unknown = geminiErr;
 
+    // OpenAI를 Groq보다 먼저: Groq+structured(generateObject)가 HTTP 400을 자주 내어
+    // 이전 순서(Groq→OpenAI)면 OpenAI까지 도달하지 못하는 경우가 많음.
+    if (process.env.OPENAI_API_KEY?.trim()) {
+      try {
+        console.warn("[v5/chat] Gemini generateObject failed, falling back to OpenAI:", geminiErr);
+        return await generateObject({
+          model: openaiChatModel(),
+          schema: args.schema,
+          system: args.system,
+          prompt: args.prompt,
+          temperature: args.temperature,
+        });
+      } catch (openaiErr) {
+        if (isChatProviderAbortError(openaiErr)) throw openaiErr;
+        lastErr = openaiErr;
+        console.warn("[v5/chat] OpenAI generateObject failed:", openaiErr);
+      }
+    }
+
     if (shouldFallbackFromGeminiToGroq(geminiErr)) {
       try {
-        console.warn("[v5/chat] Gemini generateObject failed, falling back to Groq:", geminiErr);
+        console.warn("[v5/chat] Falling back to Groq:", lastErr);
         return await generateObject({
           model: groqChatModel(),
           schema: args.schema,
@@ -103,17 +122,6 @@ async function generateObjectGeminiGroqOrOpenai<S extends z.ZodType>(args: {
         lastErr = groqErr;
         console.warn("[v5/chat] Groq generateObject failed:", groqErr);
       }
-    }
-
-    if (process.env.OPENAI_API_KEY?.trim()) {
-      console.warn("[v5/chat] Falling back to OpenAI:", lastErr);
-      return await generateObject({
-        model: openaiChatModel(),
-        schema: args.schema,
-        system: args.system,
-        prompt: args.prompt,
-        temperature: args.temperature,
-      });
     }
 
     throw lastErr;
@@ -201,7 +209,7 @@ export async function POST(req: Request) {
     console.error("[v5/chat]", e);
     return jsonResponse({
       content:
-        "일시적으로 응답을 만들지 못했어요. 잠시 후 다시 시도해 주세요. (Gemini·Groq·OpenAI API 키와 모델 설정을 확인해 주세요.)",
+        "일시적으로 응답을 만들지 못했어요. 잠시 후 다시 시도해 주세요. (Vercel 등 배포 환경에 OPENAI_API_KEY·GROQ_API_KEY·모델 ID를 확인해 주세요. 로컬에만 있으면 프로덕션에서는 OpenAI가 호출되지 않습니다.)",
       preferenceChips: [],
       readyToGenerateRoute: false,
       travelPlan: null,
