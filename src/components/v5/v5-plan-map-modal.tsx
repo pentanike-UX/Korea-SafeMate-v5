@@ -22,6 +22,7 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
   Maximize2,
   Minimize2,
   Map as MapIcon,
@@ -514,6 +515,449 @@ function PlanMap({
   );
 }
 
+// ─── Plan map modal: responsive layout + animated detail ───────────────────────
+
+type PlanMapLayout = "phone" | "tabletPortrait" | "tabletLandscape" | "desktop";
+
+function usePlanMapLayout(): PlanMapLayout {
+  const [layout, setLayout] = useState<PlanMapLayout>("phone");
+  useEffect(() => {
+    const compute = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      if (w > 1368) {
+        setLayout("desktop");
+        return;
+      }
+      if (w >= 768) {
+        setLayout(h >= w ? "tabletPortrait" : "tabletLandscape");
+        return;
+      }
+      setLayout("phone");
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    window.addEventListener("orientationchange", compute);
+    return () => {
+      window.removeEventListener("resize", compute);
+      window.removeEventListener("orientationchange", compute);
+    };
+  }, []);
+  return layout;
+}
+
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const sync = () => setReduced(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+  return reduced;
+}
+
+function SpotDetailPanelContent({
+  plan,
+  detailSpot,
+  detailWiki,
+  detailTour,
+  isFs,
+}: {
+  plan: TravelPlan;
+  detailSpot: TravelSpot;
+  detailWiki: SpotWikiEnrichment | "err" | undefined;
+  detailTour: SpotTourEnrichment | "err" | undefined;
+  isFs: boolean;
+}) {
+  return (
+    <>
+      <div
+        className={`relative w-full bg-[var(--bg-surface-subtle)] ${
+          isFs ? "aspect-[16/9] md:aspect-[21/9] md:max-h-[min(40vh,320px)]" : "aspect-[16/10]"
+        }`}
+      >
+        {(() => {
+          const tourHero =
+            detailTour && detailTour !== "err" && detailTour.imageUrl
+              ? detailTour.imageUrl
+              : null;
+          const wikiHero =
+            detailWiki && detailWiki !== "err" && detailWiki.thumbnail
+              ? detailWiki.thumbnail
+              : null;
+          const fallbackHero =
+            detailTour && detailTour !== "err" ? detailTour.displayImageUrl : null;
+          const src = tourHero ?? wikiHero ?? fallbackHero;
+          if (!src) {
+            return (
+              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+                <SpotTypeIcon type={detailSpot.type} size={40} />
+              </div>
+            );
+          }
+          return (
+            <Image
+              src={src}
+              alt=""
+              fill
+              className="object-cover"
+              sizes={isFs ? "(min-width:768px) 55vw, 100vw" : "380px"}
+              unoptimized={src.includes("wikimedia") || tourImageUnoptimized(src)}
+              priority
+            />
+          );
+        })()}
+      </div>
+
+      <div className={`space-y-4 py-4 ${isFs ? "md:px-8 px-4" : "px-4"}`}>
+        <div className="flex items-start gap-2 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/60 px-3 py-3 md:px-4 md:py-3.5">
+          <Star className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" fill="currentColor" />
+          <div>
+            <p className="text-[12px] font-semibold text-[var(--text-strong)]">별점·리뷰</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-muted)]">
+              실시간 평점과 방문자 리뷰는 네이버·구글 지도에서 가장 정확해요. 아래에서 바로 열어 보세요.
+            </p>
+          </div>
+        </div>
+
+        {detailTour && detailTour !== "err" && detailTour.overview ? (
+          <div>
+            <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+              <Landmark className="h-3.5 w-3.5" />
+              소개 · 한국관광공사 TourAPI
+            </div>
+            <p className="text-[13px] leading-relaxed text-[var(--text-secondary)] whitespace-pre-line">
+              {detailTour.overview}
+            </p>
+          </div>
+        ) : null}
+
+        {detailWiki && detailWiki !== "err" ? (
+          <>
+            <div>
+              <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
+                <BookOpen className="h-3.5 w-3.5" />
+                추가 참고 · 위키백과
+              </div>
+              <p className="text-[13px] leading-relaxed text-[var(--text-secondary)] whitespace-pre-line">
+                {detailWiki.extract}
+              </p>
+            </div>
+            <a
+              href={detailWiki.articleUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--border-default)] py-3 text-[13px] font-semibold text-[var(--brand-trust-blue)] transition-colors hover:bg-[var(--brand-trust-blue-soft)]"
+            >
+              위키백과에서 전문 읽기
+              <ExternalLink className="h-4 w-4" />
+            </a>
+          </>
+        ) : null}
+
+        {(() => {
+          const tourR = detailTour !== undefined;
+          const wikiR = detailWiki !== undefined;
+          const hasTourOv = Boolean(detailTour && detailTour !== "err" && detailTour.overview);
+          const hasWikiEx = Boolean(detailWiki && detailWiki !== "err");
+          const hasAny = hasTourOv || hasWikiEx;
+          if (!tourR || !wikiR) {
+            if (!hasAny) {
+              return (
+                <p className="text-[12px] text-[var(--text-muted)]">정보를 불러오는 중…</p>
+              );
+            }
+            return null;
+          }
+          if (hasAny) return null;
+          if (detailTour === "err" && detailWiki === "err") {
+            return (
+              <p className="text-[12px] leading-relaxed text-[var(--text-muted)]">
+                TourAPI·위키 요약을 불러오지 못했어요. 지도 앱에서 상세 정보를 확인해 보세요.
+              </p>
+            );
+          }
+          return (
+            <p className="text-[12px] leading-relaxed text-[var(--text-muted)]">
+              공식 개요·위키 요약을 찾지 못했어요. 플랜 메모와 지도 링크를 참고해 주세요.
+            </p>
+          );
+        })()}
+
+        {detailSpot.note && (
+          <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/40 px-3 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">
+              플랜 메모
+            </p>
+            <p className="text-[12px] leading-relaxed text-[var(--text-secondary)]">{detailSpot.note}</p>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2 pb-2">
+          <a
+            href={`https://map.naver.com/p/search/${encodeURIComponent(detailSpot.name)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 rounded-2xl bg-[#03c75a] py-3 text-[13px] font-semibold text-white transition-opacity hover:opacity-95"
+          >
+            네이버 지도에서 보기
+            <ExternalLink className="h-4 w-4" />
+          </a>
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${detailSpot.name} ${plan.region}`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 rounded-2xl border-2 border-[var(--border-strong)] py-3 text-[13px] font-semibold text-[var(--text-strong)] transition-colors hover:bg-[var(--bg-surface-subtle)]"
+          >
+            구글 지도에서 보기
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function PlanSpotListBody({
+  plan,
+  listExpanded,
+  setListExpanded,
+  selectedSpotId,
+  selectSpotFromList,
+  openDetailSpot,
+  spotTimes,
+  planLegByFromIndex,
+  wikiBySpotId,
+  tourBySpotId,
+  headerCollapseChevron = true,
+}: {
+  plan: TravelPlan;
+  listExpanded: boolean;
+  setListExpanded: (v: boolean | ((p: boolean) => boolean)) => void;
+  selectedSpotId: string | null;
+  selectSpotFromList: (id: string) => void;
+  openDetailSpot: (id: string) => void;
+  spotTimes: { arrive: string; depart: string }[];
+  planLegByFromIndex: (V5PlanRouteLegSummary | undefined)[];
+  wikiBySpotId: Record<string, SpotWikiEnrichment | "err" | undefined>;
+  tourBySpotId: Record<string, SpotTourEnrichment | "err" | undefined>;
+  /** false면 헤더에 접기 화살표 숨김(태블릿 가로 드로어 등) */
+  headerCollapseChevron?: boolean;
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setListExpanded((v) => !v)}
+        className={`flex flex-col items-stretch gap-0.5 px-4 pt-4 pb-2 text-left md:px-5 md:pt-5 md:pb-3 flex-shrink-0 ${headerCollapseChevron ? "md:cursor-default" : ""}`}
+      >
+        <span className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2 min-w-0">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--bg-surface-subtle)] text-[var(--brand-trust-blue)]">
+              <MapIcon className="w-4 h-4" strokeWidth={2.25} />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[15px] font-semibold text-[var(--text-strong)] tracking-tight">
+                일정 스팟
+              </span>
+              <span className="block text-[12px] text-[var(--text-muted)] font-normal mt-0.5">
+                {plan.spots.length}곳 · 탭하면 지도로 이동
+              </span>
+            </span>
+          </span>
+          {headerCollapseChevron && (
+            <span className="md:hidden text-[var(--text-muted)] shrink-0">
+              {listExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
+            </span>
+          )}
+        </span>
+      </button>
+
+      {listExpanded && (
+        <div className="overflow-y-auto flex-1 px-3 pb-5 md:px-4 space-y-3 md:space-y-3.5 scroll-smooth min-h-0">
+          {plan.spots.map((spot, idx) => {
+            const st = spotTimes[idx];
+            const legAfter = planLegByFromIndex[idx];
+            const wiki = wikiBySpotId[spot.id];
+            const tour = tourBySpotId[spot.id];
+            const tourImg =
+              tour && tour !== "err" && tour.imageUrl && tour.imageUrl.length > 0
+                ? tour.imageUrl
+                : null;
+            const wikiThumb = wiki && wiki !== "err" && wiki.thumbnail ? wiki.thumbnail : null;
+            const thumb = tourImg ?? wikiThumb;
+            const metaLoading = tour === undefined || wiki === undefined;
+            return (
+              <div key={spot.id}>
+                <div
+                  className={`rounded-[22px] transition-all duration-300 ease-out ${
+                    selectedSpotId === spot.id
+                      ? "border border-[var(--brand-trust-blue)]/20 bg-[var(--brand-trust-blue-soft)]/75 shadow-[0_10px_36px_rgba(47,79,143,0.11)] ring-1 ring-[var(--brand-trust-blue)]/12"
+                      : "border border-transparent bg-[var(--bg-elevated)] shadow-[0_2px_14px_rgba(0,0,0,0.04)] hover:border-[var(--border-default)] hover:shadow-[0_8px_28px_rgba(0,0,0,0.07)]"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => selectSpotFromList(spot.id)}
+                    className="w-full text-left flex gap-3.5 p-3.5 rounded-[22px] active:scale-[0.99] transition-transform duration-150"
+                  >
+                    <div className="relative h-[5.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-2xl bg-[var(--bg-surface-subtle)] ring-1 ring-black/[0.06] dark:ring-white/[0.08]">
+                      {thumb ? (
+                        <Image
+                          src={thumb}
+                          alt=""
+                          width={168}
+                          height={168}
+                          className="h-full w-full object-cover"
+                          sizes="84px"
+                          unoptimized={
+                            thumb.includes("wikimedia") || tourImageUnoptimized(thumb)
+                          }
+                        />
+                      ) : metaLoading ? (
+                        <div className="flex h-full w-full animate-pulse items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+                          <MapPin className="h-6 w-6 text-[var(--text-muted)]/40" />
+                        </div>
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+                          <SpotTypeIcon type={spot.type} size={22} />
+                        </div>
+                      )}
+                      <span className="absolute bottom-1.5 right-1.5 flex h-6 min-w-[1.35rem] items-center justify-center rounded-full bg-[var(--text-strong)]/90 px-1.5 text-[10px] font-bold text-white shadow-sm backdrop-blur-[2px]">
+                        {idx + 1}
+                      </span>
+                    </div>
+                    <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
+                      <p
+                        className={`text-[15px] font-semibold leading-snug tracking-tight line-clamp-2 ${
+                          selectedSpotId === spot.id
+                            ? "text-[var(--brand-trust-blue)]"
+                            : "text-[var(--text-strong)]"
+                        }`}
+                      >
+                        {spot.name}
+                      </p>
+                      {st && (
+                        <p className="text-[11px] font-medium tabular-nums tracking-wide text-[var(--brand-trust-blue)]">
+                          {st.arrive} – {st.depart}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-1.5 text-[12px] text-[var(--text-muted)]">
+                        <Clock className="w-3.5 h-3.5 opacity-70 shrink-0" strokeWidth={2} />
+                        <span className="leading-snug">{spot.duration}</span>
+                      </div>
+                    </div>
+                  </button>
+                  <div className="flex items-center justify-end gap-2 border-t border-[var(--border-default)]/50 px-3.5 py-2.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openDetailSpot(spot.id);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full px-3.5 py-2 text-[12px] font-semibold text-[var(--brand-trust-blue)] transition-colors hover:bg-[var(--brand-trust-blue-soft)] active:opacity-90"
+                    >
+                      자세히 보기
+                      <ChevronRight className="h-3.5 w-3.5 opacity-80" />
+                    </button>
+                  </div>
+                </div>
+                {idx < plan.spots.length - 1 &&
+                  (spot.transitToNext ||
+                    legAfter?.mode === "flight" ||
+                    legAfter?.mode === "ferry") && (
+                  <div className="flex items-start gap-2.5 py-2.5 pl-4 ml-2">
+                    <div className="flex flex-col items-center pt-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[var(--border-strong)]" />
+                      <span className="w-px flex-1 min-h-[1.25rem] bg-gradient-to-b from-[var(--border-default)] to-transparent" />
+                    </div>
+                    <div className="min-w-0 pt-0.5">
+                      <p className="text-[12px] text-[var(--text-secondary)] leading-snug">
+                        {spot.transitToNext ||
+                          (legAfter?.mode === "flight"
+                            ? "항공 이동 (공항 대기·비행·하기 포함 추정)"
+                            : legAfter?.mode === "ferry"
+                              ? "페리·여객선 이동 (선착장 대기 포함 추정)"
+                              : "")}
+                      </p>
+                      {legAfter && (
+                        <p className="text-[11px] text-[var(--brand-trust-blue)] font-medium mt-1 tabular-nums">
+                          {legAfter.mode === "flight" || legAfter.mode === "ferry" ? (
+                            <span className="mr-1.5 rounded bg-[var(--brand-trust-blue-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--brand-trust-blue)]">
+                              {legAfter.mode === "flight" ? "항공" : "페리"}
+                            </span>
+                          ) : null}
+                          약 {formatLegDuration(legAfter.durationSeconds)}
+                          {legAfter.distanceMeters != null
+                            ? ` · ${(legAfter.distanceMeters / 1000).toFixed(1)}km${
+                                legAfter.mode === "flight" || legAfter.mode === "ferry"
+                                  ? " 직선"
+                                  : ""
+                              }`
+                            : ""}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          <div className="space-y-2 pt-2">
+            {plan.weatherNote && (
+              <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-[var(--bg-surface-subtle)]">
+                <CloudSun className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
+                  {plan.weatherNote}
+                </p>
+              </div>
+            )}
+            {plan.alternativeNote && (
+              <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-amber-50">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <p className="text-[11px] text-amber-700 leading-relaxed">{plan.alternativeNote}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function SpotDetailHeader({
+  title,
+  isFs,
+  onClose,
+}: {
+  title: string;
+  isFs: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 border-b border-[var(--border-default)]/80 px-4 py-3.5 md:px-5 bg-[var(--bg-elevated)] shrink-0">
+      <p
+        className={`min-w-0 font-semibold text-[var(--text-strong)] line-clamp-2 tracking-tight ${
+          isFs ? "text-[15px] md:text-[16px]" : "text-[13px]"
+        }`}
+      >
+        {title}
+      </p>
+      <button
+        type="button"
+        onClick={onClose}
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)]"
+        aria-label="닫기"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 // ─── Modal ────────────────────────────────────────────────────────────────────
 
 export function V5PlanMapModal({
@@ -545,6 +989,15 @@ export function V5PlanMapModal({
 
   const shellRef = useRef<HTMLDivElement>(null);
   const [isFs, setIsFs] = useState(false);
+
+  const planLayout = usePlanMapLayout();
+  const reduceMotion = usePrefersReducedMotion();
+  const [detailAnimOpen, setDetailAnimOpen] = useState(false);
+  const [listDrawerOpen, setListDrawerOpen] = useState(true);
+  const closeDetailTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tDur = reduceMotion ? "duration-100" : "duration-300";
+  const tEase = reduceMotion ? "ease-linear" : "ease-[cubic-bezier(0.32,0.72,0,1)]";
+  const stackedDetailSheet = planLayout === "phone" || planLayout === "tabletPortrait";
 
   const spotsWithCoords = useMemo(
     () =>
@@ -753,11 +1206,43 @@ export function V5PlanMapModal({
     return () => document.removeEventListener("fullscreenchange", onFs);
   }, []);
 
+  const closeDetailSpot = useCallback(() => {
+    setDetailAnimOpen(false);
+    if (closeDetailTimerRef.current) clearTimeout(closeDetailTimerRef.current);
+    const ms = reduceMotion ? 90 : 380;
+    closeDetailTimerRef.current = setTimeout(() => {
+      setDetailSpotId(null);
+      closeDetailTimerRef.current = null;
+    }, ms);
+  }, [reduceMotion]);
+
+  const openDetailSpot = useCallback(
+    (id: string) => {
+      if (closeDetailTimerRef.current) {
+        clearTimeout(closeDetailTimerRef.current);
+        closeDetailTimerRef.current = null;
+      }
+      setSelectedSpotId(id);
+      setEaseToRevision((k) => k + 1);
+      const wasEmpty = detailSpotId == null;
+      setDetailSpotId(id);
+      if (wasEmpty) {
+        setDetailAnimOpen(false);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => setDetailAnimOpen(true));
+        });
+      } else {
+        setDetailAnimOpen(true);
+      }
+    },
+    [detailSpotId],
+  );
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (detailSpotId) {
-        setDetailSpotId(null);
+        closeDetailSpot();
         return;
       }
       if (document.fullscreenElement) {
@@ -768,7 +1253,7 @@ export function V5PlanMapModal({
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [onClose, detailSpotId]);
+  }, [onClose, detailSpotId, closeDetailSpot]);
 
   const toggleFullscreen = useCallback(async () => {
     const el = shellRef.current;
@@ -788,6 +1273,83 @@ export function V5PlanMapModal({
     setSelectedSpotId(id);
     setEaseToRevision((k) => k + 1);
   }, []);
+
+  const listBodyProps = {
+    plan,
+    listExpanded,
+    setListExpanded,
+    selectedSpotId,
+    selectSpotFromList,
+    openDetailSpot,
+    spotTimes,
+    planLegByFromIndex,
+    wikiBySpotId,
+    tourBySpotId,
+  };
+
+  const renderMapArea = (mapWrapClass: string) => (
+    <div className={mapWrapClass}>
+      <PlanMap
+        key={`${plan.id}-${spotCoordsKey}`}
+        plan={plan}
+        selectedSpotId={selectedSpotId}
+        easeToRevision={easeToRevision}
+        onSpotSelectFromMap={(id) => {
+          setSelectedSpotId(id);
+          setEaseToRevision((k) => k + 1);
+        }}
+        routeCoordinates={routeCoordinates}
+        routeLegs={routeLegs}
+        routeLoading={routeLoading}
+        routeKind={routeKind}
+      />
+      {routeLoading && spotsWithCoords.length >= 2 && (
+        <V5TravelAiAnalysisLoadingOverlay
+          open
+          variant="panel"
+          className="absolute inset-0 z-[18] justify-start overflow-y-auto pt-6 md:pt-10"
+        />
+      )}
+      {selectedSpot && (
+        <div
+          className="absolute bottom-3 left-3 right-3 md:right-auto md:max-w-[300px] px-4 py-3 rounded-2xl shadow-lg pointer-events-none z-[5]"
+          style={{
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--border-default)",
+          }}
+        >
+          <p className="text-[13px] font-bold text-[var(--text-strong)] truncate">
+            {selectedSpot.name}
+          </p>
+          {selectedSpot.note && (
+            <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 leading-relaxed line-clamp-2">
+              {selectedSpot.note}
+            </p>
+          )}
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <Clock className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
+            <span className="text-[11px] text-[var(--text-muted)]">{selectedSpot.duration}</span>
+            {(() => {
+              const idx = plan.spots.findIndex((s) => s.id === selectedSpot.id);
+              if (idx < 0) return null;
+              const st = spotTimes[idx];
+              if (!st) return null;
+              return (
+                <span className="text-[11px] font-semibold text-[var(--brand-trust-blue)]">
+                  {st.arrive} 도착 · {st.depart} 출발(예상)
+                </span>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const detailAsideWide =
+    isFs && detailSpotId
+      ? "md:flex-1 md:min-w-0 md:max-w-none md:w-auto min-w-[min(100%,380px)] w-[min(100%,380px)]"
+      : "min-w-[min(100%,380px)] w-[min(100%,380px)] max-w-[min(100%,380px)]";
 
   return (
     <div
@@ -858,448 +1420,173 @@ export function V5PlanMapModal({
           </p>
         </div>
 
-        <div className="flex-1 flex flex-col md:flex-row min-h-0">
-          <div className="relative flex-1 min-h-0 min-w-0 min-h-[42dvh] md:min-h-0">
-            <PlanMap
-              key={`${plan.id}-${spotCoordsKey}`}
-              plan={plan}
-              selectedSpotId={selectedSpotId}
-              easeToRevision={easeToRevision}
-              onSpotSelectFromMap={(id) => {
-                setSelectedSpotId(id);
-                setEaseToRevision((k) => k + 1);
-              }}
-              routeCoordinates={routeCoordinates}
-              routeLegs={routeLegs}
-              routeLoading={routeLoading}
-              routeKind={routeKind}
-            />
-            {routeLoading && spotsWithCoords.length >= 2 && (
-              <V5TravelAiAnalysisLoadingOverlay
-                open
-                variant="panel"
-                className="absolute inset-0 z-[18] justify-start overflow-y-auto pt-6 md:pt-10"
-              />
-            )}
-            {selectedSpot && (
-              <div
-                className="absolute bottom-3 left-3 right-3 md:right-auto md:max-w-[300px] px-4 py-3 rounded-2xl shadow-lg pointer-events-none z-[5]"
-                style={{
-                  background: "var(--bg-elevated)",
-                  border: "1px solid var(--border-default)",
-                }}
-              >
-                <p className="text-[13px] font-bold text-[var(--text-strong)] truncate">
-                  {selectedSpot.name}
-                </p>
-                {selectedSpot.note && (
-                  <p className="text-[11px] text-[var(--text-secondary)] mt-0.5 leading-relaxed line-clamp-2">
-                    {selectedSpot.note}
-                  </p>
-                )}
-                <div className="flex flex-wrap items-center gap-2 mt-1">
-                  <Clock className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
-                  <span className="text-[11px] text-[var(--text-muted)]">{selectedSpot.duration}</span>
-                  {(() => {
-                    const idx = plan.spots.findIndex((s) => s.id === selectedSpot.id);
-                    if (idx < 0) return null;
-                    const st = spotTimes[idx];
-                    if (!st) return null;
-                    return (
-                      <span className="text-[11px] font-semibold text-[var(--brand-trust-blue)]">
-                        {st.arrive} 도착 · {st.depart} 출발(예상)
-                      </span>
-                    );
-                  })()}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div
-            className={`relative flex flex-shrink-0 flex-col border-t border-[var(--border-default)] md:flex-row md:border-t-0 md:border-l max-h-[48vh] md:max-h-none md:min-h-0 min-h-0 overflow-visible md:overflow-hidden ${
-              isFs && detailSpotId
-                ? "md:flex-1 md:min-w-0 md:max-w-none"
-                : detailSpotId
-                  ? "md:w-auto md:max-w-[min(100%,820px)] md:shrink-0"
-                  : "md:w-[min(100%,392px)] md:shrink-0"
-            }`}
-          >
+        {planLayout === "tabletLandscape" ? (
+          <div className="flex-1 relative min-h-0 min-w-0">
             <div
-              className={`flex min-h-0 min-w-0 flex-col border-[var(--border-default)]/0 md:border-r md:border-[var(--border-default)]/60 ${
-                isFs && detailSpotId
-                  ? "md:w-[min(100%,380px)] md:max-w-[380px] md:shrink-0"
-                  : "md:w-[min(100%,392px)] md:max-w-[392px] md:shrink-0"
+              className={`absolute left-0 top-0 bottom-0 z-[25] flex w-[min(100%,392px)] max-w-[min(100%,92vw)] flex-col bg-[var(--bg-elevated)] border-r border-[var(--border-default)] shadow-[4px_0_28px_rgba(0,0,0,0.12)] transition-transform will-change-transform ${tDur} ${tEase} ${
+                listDrawerOpen ? "translate-x-0" : "-translate-x-full"
               }`}
             >
-            <button
-              type="button"
-              onClick={() => setListExpanded((v) => !v)}
-              className="flex flex-col items-stretch gap-0.5 px-4 pt-4 pb-2 text-left md:px-5 md:pt-5 md:pb-3 flex-shrink-0 md:cursor-default"
-            >
-              <span className="flex items-center justify-between gap-2">
-                <span className="flex items-center gap-2 min-w-0">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--bg-surface-subtle)] text-[var(--brand-trust-blue)]">
-                    <MapIcon className="w-4 h-4" strokeWidth={2.25} />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-[15px] font-semibold text-[var(--text-strong)] tracking-tight">
-                      일정 스팟
-                    </span>
-                    <span className="block text-[12px] text-[var(--text-muted)] font-normal mt-0.5">
-                      {plan.spots.length}곳 · 탭하면 지도로 이동
-                    </span>
-                  </span>
-                </span>
-                <span className="md:hidden text-[var(--text-muted)] shrink-0">
-                  {listExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
-                </span>
-              </span>
-            </button>
-
-            {listExpanded && (
-              <div className="overflow-y-auto flex-1 px-3 pb-5 md:px-4 space-y-3 md:space-y-3.5 scroll-smooth">
-                {plan.spots.map((spot, idx) => {
-                  const st = spotTimes[idx];
-                  const legAfter = planLegByFromIndex[idx];
-                  const wiki = wikiBySpotId[spot.id];
-                  const tour = tourBySpotId[spot.id];
-                  const tourImg =
-                    tour && tour !== "err" && tour.imageUrl && tour.imageUrl.length > 0
-                      ? tour.imageUrl
-                      : null;
-                  const wikiThumb = wiki && wiki !== "err" && wiki.thumbnail ? wiki.thumbnail : null;
-                  const thumb = tourImg ?? wikiThumb;
-                  const metaLoading = tour === undefined || wiki === undefined;
-                  return (
-                    <div key={spot.id}>
-                      <div
-                        className={`rounded-[22px] transition-all duration-300 ease-out ${
-                          selectedSpotId === spot.id
-                            ? "border border-[var(--brand-trust-blue)]/20 bg-[var(--brand-trust-blue-soft)]/75 shadow-[0_10px_36px_rgba(47,79,143,0.11)] ring-1 ring-[var(--brand-trust-blue)]/12"
-                            : "border border-transparent bg-[var(--bg-elevated)] shadow-[0_2px_14px_rgba(0,0,0,0.04)] hover:border-[var(--border-default)] hover:shadow-[0_8px_28px_rgba(0,0,0,0.07)]"
-                        }`}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => selectSpotFromList(spot.id)}
-                          className="w-full text-left flex gap-3.5 p-3.5 rounded-[22px] active:scale-[0.99] transition-transform duration-150"
-                        >
-                          <div className="relative h-[5.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-2xl bg-[var(--bg-surface-subtle)] ring-1 ring-black/[0.06] dark:ring-white/[0.08]">
-                            {thumb ? (
-                              <Image
-                                src={thumb}
-                                alt=""
-                                width={168}
-                                height={168}
-                                className="h-full w-full object-cover"
-                                sizes="84px"
-                                unoptimized={
-                                  thumb.includes("wikimedia") || tourImageUnoptimized(thumb)
-                                }
-                              />
-                            ) : metaLoading ? (
-                              <div className="flex h-full w-full animate-pulse items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
-                                <MapPin className="h-6 w-6 text-[var(--text-muted)]/40" />
-                              </div>
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
-                                <SpotTypeIcon type={spot.type} size={22} />
-                              </div>
-                            )}
-                            <span className="absolute bottom-1.5 right-1.5 flex h-6 min-w-[1.35rem] items-center justify-center rounded-full bg-[var(--text-strong)]/90 px-1.5 text-[10px] font-bold text-white shadow-sm backdrop-blur-[2px]">
-                              {idx + 1}
-                            </span>
-                          </div>
-                          <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
-                            <p
-                              className={`text-[15px] font-semibold leading-snug tracking-tight line-clamp-2 ${
-                                selectedSpotId === spot.id
-                                  ? "text-[var(--brand-trust-blue)]"
-                                  : "text-[var(--text-strong)]"
-                              }`}
-                            >
-                              {spot.name}
-                            </p>
-                            {st && (
-                              <p className="text-[11px] font-medium tabular-nums tracking-wide text-[var(--brand-trust-blue)]">
-                                {st.arrive} – {st.depart}
-                              </p>
-                            )}
-                            <div className="flex items-center gap-1.5 text-[12px] text-[var(--text-muted)]">
-                              <Clock className="w-3.5 h-3.5 opacity-70 shrink-0" strokeWidth={2} />
-                              <span className="leading-snug">{spot.duration}</span>
-                            </div>
-                          </div>
-                        </button>
-                        <div className="flex items-center justify-end gap-2 border-t border-[var(--border-default)]/50 px-3.5 py-2.5">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDetailSpotId(spot.id);
-                              setSelectedSpotId(spot.id);
-                              setEaseToRevision((k) => k + 1);
-                            }}
-                            className="inline-flex items-center gap-1 rounded-full px-3.5 py-2 text-[12px] font-semibold text-[var(--brand-trust-blue)] transition-colors hover:bg-[var(--brand-trust-blue-soft)] active:opacity-90"
-                          >
-                            자세히 보기
-                            <ChevronRight className="h-3.5 w-3.5 opacity-80" />
-                          </button>
-                        </div>
-                      </div>
-                      {idx < plan.spots.length - 1 &&
-                        (spot.transitToNext ||
-                          legAfter?.mode === "flight" ||
-                          legAfter?.mode === "ferry") && (
-                        <div className="flex items-start gap-2.5 py-2.5 pl-4 ml-2">
-                          <div className="flex flex-col items-center pt-1">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--border-strong)]" />
-                            <span className="w-px flex-1 min-h-[1.25rem] bg-gradient-to-b from-[var(--border-default)] to-transparent" />
-                          </div>
-                          <div className="min-w-0 pt-0.5">
-                            <p className="text-[12px] text-[var(--text-secondary)] leading-snug">
-                              {spot.transitToNext ||
-                                (legAfter?.mode === "flight"
-                                  ? "항공 이동 (공항 대기·비행·하기 포함 추정)"
-                                  : legAfter?.mode === "ferry"
-                                    ? "페리·여객선 이동 (선착장 대기 포함 추정)"
-                                    : "")}
-                            </p>
-                            {legAfter && (
-                              <p className="text-[11px] text-[var(--brand-trust-blue)] font-medium mt-1 tabular-nums">
-                                {legAfter.mode === "flight" || legAfter.mode === "ferry" ? (
-                                  <span className="mr-1.5 rounded bg-[var(--brand-trust-blue-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--brand-trust-blue)]">
-                                    {legAfter.mode === "flight" ? "항공" : "페리"}
-                                  </span>
-                                ) : null}
-                                약 {formatLegDuration(legAfter.durationSeconds)}
-                                {legAfter.distanceMeters != null
-                                  ? ` · ${(legAfter.distanceMeters / 1000).toFixed(1)}km${
-                                      legAfter.mode === "flight" || legAfter.mode === "ferry"
-                                        ? " 직선"
-                                        : ""
-                                    }`
-                                  : ""}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                <div className="space-y-2 pt-2">
-                  {plan.weatherNote && (
-                    <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-[var(--bg-surface-subtle)]">
-                      <CloudSun className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
-                      <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-                        {plan.weatherNote}
-                      </p>
-                    </div>
-                  )}
-                  {plan.alternativeNote && (
-                    <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-amber-50">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
-                      <p className="text-[11px] text-amber-700 leading-relaxed">{plan.alternativeNote}</p>
-                    </div>
-                  )}
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                <div className="flex items-center justify-between gap-2 border-b border-[var(--border-default)] px-3 py-2.5 shrink-0 bg-[var(--bg-surface-subtle)]/50">
+                  <span className="text-[13px] font-semibold text-[var(--text-strong)]">일정 스팟</span>
+                  <button
+                    type="button"
+                    aria-label="일정 패널 접기"
+                    onClick={() => setListDrawerOpen(false)}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--bg-elevated)] text-[var(--text-muted)] ring-1 ring-[var(--border-default)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)] transition-colors"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="min-h-0 flex-1 flex flex-col overflow-hidden">
+                  <PlanSpotListBody {...listBodyProps} headerCollapseChevron={false} />
                 </div>
               </div>
-            )}
             </div>
-
+            {!listDrawerOpen && (
+              <button
+                type="button"
+                aria-label="일정 스팟 패널 열기"
+                onClick={() => setListDrawerOpen(true)}
+                className="absolute left-3 top-1/2 z-[24] -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--brand-trust-blue)] shadow-lg hover:bg-[var(--brand-trust-blue-soft)] transition-transform active:scale-95"
+              >
+                <MapIcon className="w-5 h-5" strokeWidth={2.25} />
+              </button>
+            )}
+            {renderMapArea("absolute inset-0 min-h-0")}
             {detailSpotId && detailSpot && (
               <>
                 <button
                   type="button"
-                  className="fixed inset-0 z-[55] bg-black/35 backdrop-blur-[1px] md:hidden"
                   aria-label="상세 닫기"
-                  onClick={() => setDetailSpotId(null)}
+                  onClick={closeDetailSpot}
+                  className={`absolute inset-0 z-[54] bg-black/30 backdrop-blur-[1px] transition-opacity ${tDur} ${
+                    detailAnimOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+                  }`}
                 />
                 <aside
-                  className={`fixed inset-y-0 right-0 z-[60] flex w-[min(100%,420px)] flex-col border-l border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[-12px_0_40px_rgba(0,0,0,0.14)] md:static md:z-0 md:flex md:h-full md:min-h-0 md:shadow-none ${
-                    isFs && detailSpotId
-                      ? "md:flex-1 md:min-w-0 md:max-w-none md:w-auto"
-                      : "md:w-[min(100%,380px)] md:max-w-[380px] md:shrink-0"
+                  className={`absolute right-0 top-0 bottom-0 z-[56] flex w-[min(100%,400px)] max-w-[min(100%,92vw)] flex-col border-l border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[-8px_0_32px_rgba(0,0,0,0.14)] transition-transform will-change-transform ${tDur} ${tEase} ${
+                    detailAnimOpen ? "translate-x-0" : "translate-x-full"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2 border-b border-[var(--border-default)]/80 px-4 py-3.5 md:px-5 bg-[var(--bg-elevated)]">
-                    <p
-                      className={`min-w-0 font-semibold text-[var(--text-strong)] line-clamp-2 tracking-tight ${
-                        isFs ? "text-[15px] md:text-[16px]" : "text-[13px]"
-                      }`}
-                    >
-                      {detailSpot.name}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setDetailSpotId(null)}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)]"
-                      aria-label="닫기"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-
-                  <div className="min-h-0 flex-1 overflow-y-auto">
-                    <div
-                      className={`relative w-full bg-[var(--bg-surface-subtle)] ${
-                        isFs ? "aspect-[16/9] md:aspect-[21/9] md:max-h-[min(40vh,320px)]" : "aspect-[16/10]"
-                      }`}
-                    >
-                      {(() => {
-                        const tourHero =
-                          detailTour && detailTour !== "err" && detailTour.imageUrl
-                            ? detailTour.imageUrl
-                            : null;
-                        const wikiHero =
-                          detailWiki && detailWiki !== "err" && detailWiki.thumbnail
-                            ? detailWiki.thumbnail
-                            : null;
-                        const fallbackHero =
-                          detailTour && detailTour !== "err"
-                            ? detailTour.displayImageUrl
-                            : null;
-                        const src = tourHero ?? wikiHero ?? fallbackHero;
-                        if (!src) {
-                          return (
-                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
-                              <SpotTypeIcon type={detailSpot.type} size={40} />
-                            </div>
-                          );
-                        }
-                        return (
-                          <Image
-                            src={src}
-                            alt=""
-                            fill
-                            className="object-cover"
-                            sizes={isFs ? "(min-width:768px) 55vw, 100vw" : "380px"}
-                            unoptimized={
-                              src.includes("wikimedia") || tourImageUnoptimized(src)
-                            }
-                            priority
-                          />
-                        );
-                      })()}
-                    </div>
-
-                    <div className={`space-y-4 py-4 ${isFs ? "md:px-8 px-4" : "px-4"}`}>
-                      <div className="flex items-start gap-2 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/60 px-3 py-3 md:px-4 md:py-3.5">
-                        <Star className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" fill="currentColor" />
-                        <div>
-                          <p className="text-[12px] font-semibold text-[var(--text-strong)]">별점·리뷰</p>
-                          <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-muted)]">
-                            실시간 평점과 방문자 리뷰는 네이버·구글 지도에서 가장 정확해요. 아래에서 바로 열어 보세요.
-                          </p>
-                        </div>
-                      </div>
-
-                      {detailTour && detailTour !== "err" && detailTour.overview ? (
-                        <div>
-                          <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                            <Landmark className="h-3.5 w-3.5" />
-                            소개 · 한국관광공사 TourAPI
-                          </div>
-                          <p className="text-[13px] leading-relaxed text-[var(--text-secondary)] whitespace-pre-line">
-                            {detailTour.overview}
-                          </p>
-                        </div>
-                      ) : null}
-
-                      {detailWiki && detailWiki !== "err" ? (
-                        <>
-                          <div>
-                            <div className="mb-2 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                              <BookOpen className="h-3.5 w-3.5" />
-                              추가 참고 · 위키백과
-                            </div>
-                            <p className="text-[13px] leading-relaxed text-[var(--text-secondary)] whitespace-pre-line">
-                              {detailWiki.extract}
-                            </p>
-                          </div>
-                          <a
-                            href={detailWiki.articleUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--border-default)] py-3 text-[13px] font-semibold text-[var(--brand-trust-blue)] transition-colors hover:bg-[var(--brand-trust-blue-soft)]"
-                          >
-                            위키백과에서 전문 읽기
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        </>
-                      ) : null}
-
-                      {(() => {
-                        const tourR = detailTour !== undefined;
-                        const wikiR = detailWiki !== undefined;
-                        const hasTourOv =
-                          Boolean(detailTour && detailTour !== "err" && detailTour.overview);
-                        const hasWikiEx = Boolean(detailWiki && detailWiki !== "err");
-                        const hasAny = hasTourOv || hasWikiEx;
-                        if (!tourR || !wikiR) {
-                          if (!hasAny) {
-                            return (
-                              <p className="text-[12px] text-[var(--text-muted)]">
-                                정보를 불러오는 중…
-                              </p>
-                            );
-                          }
-                          return null;
-                        }
-                        if (hasAny) return null;
-                        if (detailTour === "err" && detailWiki === "err") {
-                          return (
-                            <p className="text-[12px] leading-relaxed text-[var(--text-muted)]">
-                              TourAPI·위키 요약을 불러오지 못했어요. 지도 앱에서 상세 정보를 확인해 보세요.
-                            </p>
-                          );
-                        }
-                        return (
-                          <p className="text-[12px] leading-relaxed text-[var(--text-muted)]">
-                            공식 개요·위키 요약을 찾지 못했어요. 플랜 메모와 지도 링크를 참고해 주세요.
-                          </p>
-                        );
-                      })()}
-
-                      {detailSpot.note && (
-                        <div className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/40 px-3 py-3">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">
-                            플랜 메모
-                          </p>
-                          <p className="text-[12px] leading-relaxed text-[var(--text-secondary)]">{detailSpot.note}</p>
-                        </div>
-                      )}
-
-                      <div className="flex flex-col gap-2 pb-2">
-                        <a
-                          href={`https://map.naver.com/p/search/${encodeURIComponent(detailSpot.name)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-2 rounded-2xl bg-[#03c75a] py-3 text-[13px] font-semibold text-white transition-opacity hover:opacity-95"
-                        >
-                          네이버 지도에서 보기
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${detailSpot.name} ${plan.region}`)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-2 rounded-2xl border-2 border-[var(--border-strong)] py-3 text-[13px] font-semibold text-[var(--text-strong)] transition-colors hover:bg-[var(--bg-surface-subtle)]"
-                        >
-                          구글 지도에서 보기
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
-                      </div>
-                    </div>
+                  <SpotDetailHeader title={detailSpot.name} isFs={isFs} onClose={closeDetailSpot} />
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                    <SpotDetailPanelContent
+                      plan={plan}
+                      detailSpot={detailSpot}
+                      detailWiki={detailWiki}
+                      detailTour={detailTour}
+                      isFs={isFs}
+                    />
                   </div>
                 </aside>
               </>
             )}
           </div>
-        </div>
+        ) : (
+          <div
+            className={`flex-1 flex min-h-0 ${
+              planLayout === "desktop"
+                ? "flex-row"
+                : planLayout === "tabletPortrait"
+                  ? "relative flex-col"
+                  : "flex-col"
+            }`}
+          >
+            {renderMapArea(
+              planLayout === "tabletPortrait"
+                ? "relative flex-1 min-h-0 min-w-0 min-h-[36dvh]"
+                : "relative flex-1 min-h-0 min-w-0 min-h-[42dvh] md:min-h-0",
+            )}
+            <div
+              className={
+                planLayout === "tabletPortrait"
+                  ? "absolute bottom-0 left-0 right-0 z-[14] flex max-h-[min(52vh,560px)] min-h-0 flex-col overflow-hidden rounded-t-[1.75rem] border-t border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[0_-12px_48px_rgba(0,0,0,0.16)]"
+                  : planLayout === "desktop"
+                    ? `relative flex flex-shrink-0 flex-col border-t border-[var(--border-default)] md:flex-row md:border-t-0 md:border-l md:min-h-0 min-h-0 overflow-visible md:overflow-hidden max-h-[48vh] md:max-h-none ${
+                        isFs && detailSpotId
+                          ? "md:flex-1 md:min-w-0 md:max-w-none"
+                          : detailSpotId
+                            ? "md:w-auto md:max-w-[min(100%,820px)] md:shrink-0"
+                            : "md:w-[min(100%,392px)] md:shrink-0"
+                      }`
+                    : "relative flex flex-shrink-0 flex-col border-t border-[var(--border-default)] max-h-[48vh] min-h-0 overflow-visible"
+              }
+            >
+              <div
+                className={
+                  planLayout === "desktop"
+                    ? `flex min-h-0 min-w-0 flex-col md:border-r md:border-[var(--border-default)]/60 ${
+                        isFs && detailSpotId
+                          ? "md:w-[min(100%,380px)] md:max-w-[380px] md:shrink-0"
+                          : "md:w-[min(100%,392px)] md:max-w-[392px] md:shrink-0"
+                      }`
+                    : "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+                }
+              >
+                <PlanSpotListBody {...listBodyProps} />
+              </div>
+
+              {planLayout === "desktop" && detailSpotId && detailSpot && (
+                <aside
+                  className={`flex min-h-0 flex-shrink-0 flex-col overflow-hidden bg-[var(--bg-elevated)] transition-[min-width,width,max-width,opacity,transform,border-color] will-change-[width,opacity,transform] ${tDur} ${tEase} md:border-l border-[var(--border-default)] md:border-t-0 border-t ${
+                    detailAnimOpen
+                      ? `${detailAsideWide} translate-x-0 opacity-100`
+                      : "min-w-0 w-0 max-w-0 translate-x-3 border-transparent opacity-0 pointer-events-none"
+                  } ${isFs && detailSpotId ? "md:flex-1" : ""}`}
+                >
+                  <SpotDetailHeader title={detailSpot.name} isFs={isFs} onClose={closeDetailSpot} />
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                    <SpotDetailPanelContent
+                      plan={plan}
+                      detailSpot={detailSpot}
+                      detailWiki={detailWiki}
+                      detailTour={detailTour}
+                      isFs={isFs}
+                    />
+                  </div>
+                </aside>
+              )}
+            </div>
+          </div>
+        )}
+
+        {stackedDetailSheet && detailSpotId && detailSpot && (
+          <>
+            <button
+              type="button"
+              aria-label="상세 닫기"
+              onClick={closeDetailSpot}
+              className={`absolute inset-0 z-[62] bg-black/40 backdrop-blur-[2px] transition-opacity ${tDur} ${
+                detailAnimOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+              }`}
+            />
+            <div
+              className={`absolute inset-x-0 bottom-0 z-[64] flex max-h-[min(92dvh,720px)] flex-col rounded-t-[1.35rem] border-t border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[0_-20px_60px_rgba(0,0,0,0.22)] transition-transform will-change-transform ${tDur} ${tEase} ${
+                detailAnimOpen ? "translate-y-0" : "translate-y-full"
+              }`}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="v5-spot-detail-sheet-title"
+            >
+              <div className="mx-auto mt-2.5 h-1 w-11 shrink-0 rounded-full bg-[var(--border-strong)]/70" aria-hidden />
+              <div id="v5-spot-detail-sheet-title" className="sr-only">
+                {detailSpot.name} 상세 정보
+              </div>
+              <SpotDetailHeader title={detailSpot.name} isFs={isFs} onClose={closeDetailSpot} />
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom,0px)]">
+                <SpotDetailPanelContent
+                  plan={plan}
+                  detailSpot={detailSpot}
+                  detailWiki={detailWiki}
+                  detailTour={detailTour}
+                  isFs={isFs}
+                />
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
