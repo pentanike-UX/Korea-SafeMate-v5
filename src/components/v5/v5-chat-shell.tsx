@@ -45,6 +45,8 @@ const TRAVEL_PROMPT_CHECKLIST: { key: TravelPromptCheckKey; label: string; hint:
   { key: "food", label: "음식", hint: "취향·맛집" },
 ];
 
+const DEPARTURE_CHIP_ID = "trip_departure_origin";
+
 function evaluateTravelPromptChecklist(text: string): Record<TravelPromptCheckKey, boolean> {
   const s = text;
   const c = s.replace(/\s/g, "");
@@ -66,6 +68,112 @@ function evaluateTravelPromptChecklist(text: string): Record<TravelPromptCheckKe
     food:
       /맛집|음식|먹|한식|중식|양식|일식|분식|카페|커피|술|술집|디저트|브런치|채식|비건|미슐랭|순대|삼겹|해산물|회|고기|뷔페|밥집/i.test(s),
   };
+}
+
+/** AI gather(조회) 전 최소 조건: 지역 + 일정(기간) 힌트가 있어야 의미 있는 추출 가능 */
+function isGatherQueryReady(check: Record<TravelPromptCheckKey, boolean>): boolean {
+  return Boolean(check.region && check.schedule);
+}
+
+function extractRegionSnippet(text: string): string | null {
+  const s = text.trim();
+  const cityRe =
+    /서울|부산|대구|인천|광주|대전|울산|세종|제주도|제주|경주|전주|여수|속초|평창|안동|통영|해운대|명동|홍대|강남|강릉|춘천|양양|안양|수원|용인|고양|파주|화성|김해|창원|진주|목포|순천|원주|충주|청주|포항|군산|남해|거제|하동|보성|광양/gi;
+  const m = cityRe.exec(s);
+  if (m) return m[0];
+  const m2 = /([가-힣]{2,8}(?:시|도|군))/.exec(s.replace(/\s+/g, " "));
+  if (m2) return m2[1];
+  return null;
+}
+
+function extractScheduleSnippet(text: string): string | null {
+  const s = text.trim();
+  const m =
+    /\d+\s*박\s*\d+\s*일|\d+\s*박|\d+\s*일|당일\s*치기|당일|주말|평일|연휴|일주일|1박2일|2박3일|3박4일/i.exec(
+      s,
+    );
+  if (m) return m[0].replace(/\s+/g, " ").trim();
+  return null;
+}
+
+function extractDepartureSnippet(text: string): string | null {
+  const s = text.trim();
+  const labeled = /출발(?:지)?\s*[:：]\s*([^\n,.]{2,36})/i.exec(s);
+  if (labeled) return labeled[1].trim();
+  const station =
+    /([가-힣A-Za-z0-9·\s]{2,18}(?:역|공항|터미널))\s*(?:에서|출발|으로)?/i.exec(s);
+  if (station) return station[1].replace(/\s+/g, " ").trim();
+  return null;
+}
+
+/** 조회 조건이 부족할 때 LLM 없이 바로 띄울 칩(지역·일정 필수 슬롯 + 감지된 항목) */
+function buildQuickPreferenceChips(
+  text: string,
+  check: Record<TravelPromptCheckKey, boolean>,
+): PreferenceChip[] {
+  const chips: PreferenceChip[] = [];
+  const regionGuess = extractRegionSnippet(text);
+  const scheduleGuess = extractScheduleSnippet(text);
+
+  chips.push({
+    id: "trip_region",
+    label: "지역",
+    value: check.region
+      ? regionGuess ?? "지역명을 조금 더 구체적으로 적어 주세요"
+      : regionGuess ?? "(예: 경주, 제주, 부산 해운대)",
+  });
+  chips.push({
+    id: "trip_schedule",
+    label: "일정",
+    value: check.schedule
+      ? scheduleGuess ?? "박·일이나 당일 등 기간을 숫자로 적어 주세요"
+      : scheduleGuess ?? "(예: 2박 3일, 당일)",
+  });
+
+  if (check.departure) {
+    const dep = extractDepartureSnippet(text);
+    if (dep) {
+      chips.push({
+        id: DEPARTURE_CHIP_ID,
+        label: "출발·귀경지",
+        value: dep,
+      });
+    }
+  }
+
+  if (check.people) {
+    const p = /\d+\s*명|혼자|둘이|셋이|넷이|커플|가족|친구\s*\d+|가족\s*\d+명/i.exec(text);
+    chips.push({
+      id: "trip_people",
+      label: "인원",
+      value: p ? p[0].trim() : "인원·동행을 적어 주세요",
+    });
+  }
+  if (check.transport) {
+    const t =
+      /KTX|SRT|ITX|ktx|srt|렌터카|렌트|자가용|대중교통|지하철|버스|택시|도보|비행기|공항셔틀/i.exec(text);
+    chips.push({
+      id: "trip_transport",
+      label: "교통",
+      value: t ? t[0] : "이동 수단을 적어 주세요",
+    });
+  }
+  if (check.atmosphere) {
+    chips.push({
+      id: "trip_vibe",
+      label: "분위기",
+      value: "입력하신 분위기·스타일을 유지할게요 (칩에서 수정 가능)",
+    });
+  }
+  if (check.food) {
+    chips.push({
+      id: "trip_food",
+      label: "음식",
+      value: "맛집·음식 취향은 칩에서 다듬어 주세요",
+    });
+  }
+
+  return chips;
 }
 
 // ─── Domain Types ──────────────────────────────────────────────────────────────
@@ -643,8 +751,6 @@ function TabletPlanPreviewPane({
   );
 }
 
-const DEPARTURE_CHIP_ID = "trip_departure_origin";
-
 /**
  * Gemini가 주는 칩 id는 snake_case로 매번 달라질 수 있음.
  * UI에서는 label(출발·귀경지 등)으로도 동일 슬롯을 인식한다.
@@ -727,7 +833,7 @@ function PreferenceChipsCard({
           value={departure}
           onChange={(e) => setDeparture(e.target.value)}
           placeholder="예: 서울역, 강남구 논현동 집, 대전역"
-          className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-page)] px-3.5 py-2.5 text-[14px] text-[var(--text-strong)] placeholder:text-[var(--text-muted)] outline-none transition-shadow focus:border-[var(--brand-trust-blue)] focus:ring-2 focus:ring-[var(--brand-trust-blue)]/20"
+          className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-page)] px-3.5 py-2.5 text-base md:text-[14px] text-[var(--text-strong)] placeholder:text-[var(--text-muted)] outline-none transition-shadow focus:border-[var(--brand-trust-blue)] focus:ring-2 focus:ring-[var(--brand-trust-blue)]/20"
           autoComplete="street-address"
         />
       </label>
@@ -1606,6 +1712,25 @@ export function V5ChatShell() {
         }
       }
 
+      const promptCheck = evaluateTravelPromptChecklist(content);
+      if (!isGatherQueryReady(promptCheck)) {
+        const quickChips = buildQuickPreferenceChips(content, promptCheck);
+        const quickAi: Message = {
+          id: `tmp-ai-quick-${Date.now()}`,
+          role: "assistant",
+          content:
+            "지역과 일정(기간)이 함께 있어야 AI 조회로 조건을 정리할 수 있어요. 아래 칩을 확인·수정하고 출발·귀경지를 입력한 뒤 「이 정보로 동선 짜기」를 눌러 주세요. 두 가지가 모두 입력된 문장이면 다음부터는 바로 조회로 넘어가요.",
+          timestamp: new Date(),
+          preferenceChips: quickChips,
+          canGenerateRoute: false,
+        };
+        setConversations((prev) =>
+          prev.map((c) => (c.id !== convId ? c : { ...c, messages: [...c.messages, quickAi] })),
+        );
+        persistAssistantMessage(quickAi, convId);
+        return;
+      }
+
       setIsTyping(true);
 
       const apiMessages = messagesToApiPayload([...priorMsgs, userMsg]);
@@ -2104,24 +2229,27 @@ export function V5ChatShell() {
                   </div>
                 </div>
               )}
-              <div className="v5-composer-input-shell flex items-end gap-2.5 px-4 py-3.5 md:px-5 md:py-4 rounded-[1.25rem] bg-[var(--bg-elevated)] border border-[var(--border-default)] shadow-[0_4px_24px_rgba(20,20,20,0.06)] focus-within:border-[var(--brand-trust-blue)] focus-within:shadow-[0_6px_28px_rgba(47,79,143,0.1)] transition-all duration-200">
+              <div className="v5-composer-input-shell flex items-end gap-2.5 px-4 py-3.5 md:px-5 md:py-4 rounded-[1.25rem] bg-[var(--bg-elevated)] border border-[var(--border-default)] shadow-[0_4px_24px_rgba(20,20,20,0.06)] focus-within:border-[var(--brand-trust-blue)] focus-within:shadow-[0_6px_28px_rgba(47,79,143,0.1)] transition-all duration-200 touch-manipulation">
                 <textarea ref={textareaRef} value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyDown={handleKeyDown}
                   onFocus={() => {
                     setComposerFocused(true);
-                    requestAnimationFrame(() => {
-                      composerShellRef.current?.scrollIntoView({
-                        block: "end",
-                        behavior: "smooth",
+                    if (!isNarrowViewport) {
+                      requestAnimationFrame(() => {
+                        composerShellRef.current?.scrollIntoView({
+                          block: "end",
+                          behavior: "smooth",
+                        });
                       });
-                    });
+                    }
                   }}
                   onBlur={() => setComposerFocused(false)}
                   enterKeyHint="send"
                   placeholder="출발지·지역·일정·인원·교통 등을 알려주세요 (예: 서울역 출발 경주 2박 3일 맛집·도보)"
                   rows={1}
-                  className="flex-1 bg-transparent resize-none outline-none text-[14px] md:text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] leading-relaxed py-1 min-h-[22px]" />
+                  className="flex-1 bg-transparent resize-none outline-none text-base lg:text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] leading-relaxed py-1 min-h-[22px] touch-manipulation"
+                />
                 <button type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => void handleSend()}

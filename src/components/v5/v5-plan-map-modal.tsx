@@ -1423,7 +1423,7 @@ export function V5PlanMapModal({
         {planLayout === "tabletLandscape" ? (
           <div className="flex-1 relative min-h-0 min-w-0">
             <div
-              className={`absolute left-0 top-0 bottom-0 z-[25] flex w-[min(100%,392px)] max-w-[min(100%,92vw)] flex-col bg-[var(--bg-elevated)] border-r border-[var(--border-default)] shadow-[4px_0_28px_rgba(0,0,0,0.12)] transition-transform will-change-transform ${tDur} ${tEase} ${
+              className={`absolute left-0 top-0 bottom-0 z-[25] flex w-[min(100%,392px)] flex-col bg-[var(--bg-elevated)] border-r border-[var(--border-default)] rounded-none shadow-none transition-transform will-change-transform ${tDur} ${tEase} ${
                 listDrawerOpen ? "translate-x-0" : "-translate-x-full"
               }`}
             >
@@ -1449,7 +1449,7 @@ export function V5PlanMapModal({
                 type="button"
                 aria-label="일정 스팟 패널 열기"
                 onClick={() => setListDrawerOpen(true)}
-                className="absolute left-3 top-1/2 z-[24] -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--brand-trust-blue)] shadow-lg hover:bg-[var(--brand-trust-blue-soft)] transition-transform active:scale-95"
+                className="absolute left-0 top-1/2 z-[24] -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-r-2xl rounded-l-none border border-l-0 border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--brand-trust-blue)] shadow-md hover:bg-[var(--brand-trust-blue-soft)] transition-transform active:scale-95"
               >
                 <MapIcon className="w-5 h-5" strokeWidth={2.25} />
               </button>
@@ -1466,7 +1466,7 @@ export function V5PlanMapModal({
                   }`}
                 />
                 <aside
-                  className={`absolute right-0 top-0 bottom-0 z-[56] flex w-[min(100%,400px)] max-w-[min(100%,92vw)] flex-col border-l border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[-8px_0_32px_rgba(0,0,0,0.14)] transition-transform will-change-transform ${tDur} ${tEase} ${
+                  className={`absolute right-0 top-0 bottom-0 z-[56] flex w-[min(100%,400px)] flex-col rounded-none border-l border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-none transition-transform will-change-transform ${tDur} ${tEase} ${
                     detailAnimOpen ? "translate-x-0" : "translate-x-full"
                   }`}
                 >
@@ -1502,7 +1502,7 @@ export function V5PlanMapModal({
             <div
               className={
                 planLayout === "tabletPortrait"
-                  ? "absolute bottom-0 left-0 right-0 z-[14] flex max-h-[min(52vh,560px)] min-h-0 flex-col overflow-hidden rounded-t-[1.75rem] border-t border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[0_-12px_48px_rgba(0,0,0,0.16)]"
+                  ? "absolute bottom-0 left-0 right-0 z-[14] flex w-full max-h-[min(52vh,560px)] min-h-0 flex-col overflow-hidden rounded-none border-t border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-none"
                   : planLayout === "desktop"
                     ? `relative flex flex-shrink-0 flex-col border-t border-[var(--border-default)] md:flex-row md:border-t-0 md:border-l md:min-h-0 min-h-0 overflow-visible md:overflow-hidden max-h-[48vh] md:max-h-none ${
                         isFs && detailSpotId
@@ -1563,14 +1563,14 @@ export function V5PlanMapModal({
               }`}
             />
             <div
-              className={`absolute inset-x-0 bottom-0 z-[64] flex max-h-[min(92dvh,720px)] flex-col rounded-t-[1.35rem] border-t border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-[0_-20px_60px_rgba(0,0,0,0.22)] transition-transform will-change-transform ${tDur} ${tEase} ${
+              className={`absolute left-0 right-0 bottom-0 z-[64] flex w-full max-h-[min(92dvh,720px)] flex-col rounded-none border-t border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-none transition-transform will-change-transform ${tDur} ${tEase} ${
                 detailAnimOpen ? "translate-y-0" : "translate-y-full"
               }`}
               role="dialog"
               aria-modal="true"
               aria-labelledby="v5-spot-detail-sheet-title"
             >
-              <div className="mx-auto mt-2.5 h-1 w-11 shrink-0 rounded-full bg-[var(--border-strong)]/70" aria-hidden />
+              <div className="mx-auto mt-2 h-1 w-11 shrink-0 rounded-full bg-[var(--border-strong)]/70 md:hidden" aria-hidden />
               <div id="v5-spot-detail-sheet-title" className="sr-only">
                 {detailSpot.name} 상세 정보
               </div>
