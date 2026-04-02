@@ -633,12 +633,16 @@ function TypingIndicator() {
       >
         <Sparkles className="w-3.5 h-3.5 text-white drop-shadow-sm" />
       </div>
-      <div className="max-w-[min(100%,26rem)] px-4 py-3.5 rounded-2xl rounded-bl-sm bg-[var(--bg-elevated)] border border-[var(--border-default)] shadow-[0_1px_6px_rgba(20,20,20,0.05)]">
+      <div className="max-w-[min(100%,26rem)] px-4 pt-7 pb-3.5 rounded-2xl rounded-bl-sm bg-[var(--bg-elevated)] border border-[var(--border-default)] shadow-[0_1px_6px_rgba(20,20,20,0.05)]">
         <div
-          className="flex justify-center mb-2.5 motion-reduce:animate-none motion-safe:animate-[spin_2.8s_linear_infinite]"
+          className="flex justify-center mb-[3px] motion-reduce:animate-none motion-safe:animate-[spin_2.8s_linear_infinite]"
           aria-hidden
         >
-          <Compass className="w-7 h-7 text-[var(--brand-trust-blue)] drop-shadow-sm" strokeWidth={2.25} />
+          <Compass
+            className="w-7 h-7 drop-shadow-sm"
+            strokeWidth={2.25}
+            style={{ color: "#0891ff" }}
+          />
         </div>
         <p
           className={`text-[13px] leading-relaxed text-[var(--text-secondary)] text-center min-h-[3.5rem] flex items-center justify-center px-0.5 motion-reduce:transition-none motion-safe:transition-opacity motion-safe:duration-500 motion-safe:ease-in-out ${
