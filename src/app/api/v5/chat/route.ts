@@ -37,8 +37,12 @@ function formatHistory(messages: ChatMessage[]): string {
     .join("\n\n");
 }
 
+/** `GEMINI_MODEL` → 없으면 `GEMINI_CHAT_MODEL` → 기본은 스트리밍 `/api/chat`과 동일 */
 function model() {
-  const id = process.env.GEMINI_MODEL?.trim() || "gemini-2.0-flash";
+  const id =
+    process.env.GEMINI_MODEL?.trim() ||
+    process.env.GEMINI_CHAT_MODEL?.trim() ||
+    "gemini-3-flash-preview";
   return google(id);
 }
 

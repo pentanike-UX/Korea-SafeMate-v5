@@ -13,6 +13,139 @@ export const maxDuration = 60;
 const CHAT_MODEL =
   process.env.GEMINI_CHAT_MODEL?.trim() || "gemini-3-flash-preview";
 
+/** `1`/`true`/`yes`면 Gemini 호출 없이 할당량 초과 샘플 스트림만 반환(로컬·데모용) */
+function parseEnvBool(v: string | undefined): boolean {
+  if (!v) return false;
+  return ["1", "true", "yes", "on"].includes(v.trim().toLowerCase());
+}
+
+const GEMINI_CHAT_QUOTA_MOCK = parseEnvBool(process.env.GEMINI_CHAT_QUOTA_MOCK);
+
+const QUOTA_MOCK_NOTICE =
+  "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n⚠️ **API 한도에 도달해 샘플 데이터로 제공합니다.**\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+
+function isLikelyQuotaOrRateLimitError(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("quota") ||
+    m.includes("rate limit") ||
+    m.includes("resource exhausted") ||
+    m.includes("resource_exhausted") ||
+    m.includes("exceeded your current quota") ||
+    m.includes("limit: 0") ||
+    m.includes(" 429") ||
+    m.startsWith("429") ||
+    m.includes("too many requests")
+  );
+}
+
+function buildDummyTokyoItinerary(userHint: string): string {
+  const hint =
+    userHint.length > 0
+      ? `(참고: 질문에 「${userHint.slice(0, 80)}${userHint.length > 80 ? "…" : ""}」가 있었습니다 — 아래는 **샘플** 일정입니다.)\n\n`
+      : "";
+  return (
+    `${hint}` +
+    "더미 데이터로 생성된 **일본 도쿄 3박 4일** 일정입니다. 실제 예약·영업시간은 반드시 확인하세요.\n\n" +
+    "## 1일차 — 시부야·하라주쿠\n" +
+    "- 오전: 공항 → 숙소 체크인(시부야 권역 추천, **샘플**)\n" +
+    "- 오후: 메이지 신궁 산책 → 하라주쿠 다케시타 거리\n" +
+    "- 저녁: 시부야 스크램블 교차로 야경 · 이치란 라멘 등 가벼운 한 끼\n" +
+    "- 💡 샘플 꿀팁: 스크램블 전망대는 해 질 무렵 예약/대기가 길 수 있어요.\n\n" +
+    "## 2일차 — 아사쿠사·스카이트리\n" +
+    "- 오전: 센소지·나카미세 상점가\n" +
+    "- 오후: 스미다 강 루프 버스 또는 도보로 스카이트리\n" +
+    "- 저녁: 솔라마치 식사 후 야간 조명 감상\n\n" +
+    "## 3일차 — 시오도메·긴자\n" +
+    "- 오전: teamLab Planets(사전 예약 필수 — **샘플 문구**)\n" +
+    "- 오후: 긴자 윈도우 쇼핑 → 하마릭큐 가든\n" +
+    "- 저녁: 스시 오마카세는 예산에 맞는 곳을 미리 검색하세요(더미).\n\n" +
+    "## 4일차 — 출발\n" +
+    "- 오전: 편의점 간단 식사 후 공항 이동(Narita/Haneda는 항공권 기준)\n" +
+    "- ✈️ 여유 있게 **3시간 전** 공항 도착을 권장합니다(샘플 안내).\n\n" +
+    "---\n" +
+    "이 응답은 API 할당량 대응용 **더미 텍스트**입니다. 한도가 회복되면 실시간 AI 답변이 다시 제공됩니다."
+  );
+}
+
+async function sleepWithAbort(
+  ms: number,
+  signal: AbortSignal,
+): Promise<boolean> {
+  if (signal.aborted) return false;
+  return new Promise((resolve) => {
+    const id = setTimeout(() => resolve(true), ms);
+    const onAbort = () => {
+      clearTimeout(id);
+      resolve(false);
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+/** 가짜 스트리밍: 고정 지연 후 짧은 델타로 끊어서 전송 */
+function chunkTextForMockStream(text: string, maxChunk = 36): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < text.length; i += maxChunk) {
+    out.push(text.slice(i, i + maxChunk));
+  }
+  return out.length ? out : [""];
+}
+
+async function streamQuotaMockResponse(opts: {
+  sendSse: (payload: Record<string, unknown>) => void;
+  sb: Awaited<ReturnType<typeof getServerSupabaseForUser>>;
+  userId: string;
+  userMessage: string;
+  abortSignal: AbortSignal;
+}): Promise<void> {
+  const { sendSse, sb, userId, userMessage, abortSignal } = opts;
+
+  const okDelay = await sleepWithAbort(1000, abortSignal);
+  if (!okDelay || abortSignal.aborted) {
+    sendSse({ type: "error", message: "요청이 취소되었습니다.", code: "ABORTED" });
+    return;
+  }
+
+  const fullBody = QUOTA_MOCK_NOTICE + buildDummyTokyoItinerary(userMessage);
+  const chunks = chunkTextForMockStream(fullBody);
+
+  for (const piece of chunks) {
+    if (abortSignal.aborted) {
+      sendSse({ type: "error", message: "요청이 취소되었습니다.", code: "ABORTED" });
+      return;
+    }
+    sendSse({ type: "delta", text: piece });
+    const jitter = 45 + Math.floor(Math.random() * 75);
+    const slept = await sleepWithAbort(jitter, abortSignal);
+    if (!slept || abortSignal.aborted) {
+      sendSse({ type: "error", message: "요청이 취소되었습니다.", code: "ABORTED" });
+      return;
+    }
+  }
+
+  const trimmed = fullBody.trim();
+  if (!trimmed) {
+    sendSse({ type: "error", message: "샘플 응답 생성에 실패했습니다.", code: "EMPTY" });
+    return;
+  }
+
+  if (sb) {
+    const savedAi = await insertChatMessage(sb, userId, trimmed, "assistant");
+    if (!savedAi.ok) {
+      sendSse({
+        type: "done",
+        warning: `샘플 답변은 전송했으나 저장에 실패했습니다: ${savedAi.message}`,
+      });
+      return;
+    }
+  }
+  sendSse({
+    type: "done",
+    warning: "이 답변은 API 한도 대응용 샘플입니다. 실제 AI 응답이 아닙니다.",
+  });
+}
+
 const TRAVEL_PLANNER_SYSTEM_INSTRUCTION = `너는 15년 경력의 베테랑 여행 플래너이자, 현지 맛집과 숨은 명소를 꿰고 있는 유쾌한 로컬 가이드야.
 
 반드시 지킬 것:
@@ -100,7 +233,7 @@ export async function POST(req: Request) {
   }
 
   const ai = getGeminiClient();
-  if (!ai) {
+  if (!ai && !GEMINI_CHAT_QUOTA_MOCK) {
     return Response.json(
       {
         error:
@@ -151,6 +284,27 @@ export async function POST(req: Request) {
       };
 
       try {
+        if (GEMINI_CHAT_QUOTA_MOCK) {
+          await streamQuotaMockResponse({
+            sendSse,
+            sb,
+            userId,
+            userMessage: message,
+            abortSignal,
+          });
+          return;
+        }
+
+        if (!ai) {
+          sendSse({
+            type: "error",
+            message:
+              "Gemini 클라이언트를 만들 수 없습니다. `GOOGLE_GENERATIVE_AI_API_KEY`를 설정하거나 `GEMINI_CHAT_QUOTA_MOCK`을 끄세요.",
+            code: "NO_CLIENT",
+          });
+          return;
+        }
+
         const chat = ai.chats.create({
           model: CHAT_MODEL,
           config: {
@@ -222,11 +376,34 @@ export async function POST(req: Request) {
         console.error("[api/chat] stream", e);
         const msg =
           e instanceof Error ? e.message : "Gemini 스트리밍 요청에 실패했습니다.";
-        try {
-          const payload = JSON.stringify({ message: msg });
-          safeEnqueue(encoder.encode(`event: error\ndata: ${payload}\n\n`));
-        } catch {
-          /* ignore */
+        if (isLikelyQuotaOrRateLimitError(msg)) {
+          try {
+            await streamQuotaMockResponse({
+              sendSse,
+              sb,
+              userId,
+              userMessage: message,
+              abortSignal,
+            });
+          } catch (mockErr) {
+            console.error("[api/chat] quota mock", mockErr);
+            try {
+              const payload = JSON.stringify({
+                message:
+                  "샘플 응답을 보내는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+              });
+              safeEnqueue(encoder.encode(`event: error\ndata: ${payload}\n\n`));
+            } catch {
+              /* ignore */
+            }
+          }
+        } else {
+          try {
+            const payload = JSON.stringify({ message: msg });
+            safeEnqueue(encoder.encode(`event: error\ndata: ${payload}\n\n`));
+          } catch {
+            /* ignore */
+          }
         }
       } finally {
         safeClose();
