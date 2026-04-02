@@ -17,6 +17,8 @@ import {
 import { V5PlanMapModal } from "./v5-plan-map-modal";
 import { consumeTravelChatSse } from "@/lib/travel-chat/consume-chat-sse";
 import { BRAND } from "@/lib/constants";
+import { Link } from "@/i18n/navigation";
+import { V5ChatPricingModal, type PricingModalFocus } from "./v5-chat-pricing-modal";
 
 // ─── Domain Types ──────────────────────────────────────────────────────────────
 
@@ -523,24 +525,63 @@ const SUGGESTION_CHIPS = [
   "전주 한옥마을 1박 2일", "강릉 바다 드라이브 코스",
 ];
 
-function EmptyState({ onSuggestion }: { onSuggestion: (t: string) => void }) {
+function WaylyMark({
+  boxClass,
+  iconClass,
+  strokeWidth = 2.35,
+}: {
+  boxClass: string;
+  iconClass: string;
+  strokeWidth?: number;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-center border border-white/[0.08] shadow-[0_8px_28px_rgba(0,0,0,0.12)] ${boxClass}`}
+      style={{ backgroundColor: BRAND.logo.background }}
+      aria-hidden
+    >
+      <Compass
+        className={`shrink-0 ${iconClass}`}
+        style={{ color: BRAND.logo.electricBlue }}
+        strokeWidth={strokeWidth}
+      />
+    </div>
+  );
+}
+
+function EmptyState({
+  onSuggestion,
+  onOpenPricing,
+}: {
+  onSuggestion: (t: string) => void;
+  onOpenPricing: () => void;
+}) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-6 pb-32 select-none">
-      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--brand-trust-blue)] to-blue-400 flex items-center justify-center mb-5 shadow-[0_8px_24px_rgba(47,79,143,0.25)]">
-        <MapPin className="w-7 h-7 text-white" />
-      </div>
+      <WaylyMark
+        boxClass="w-16 h-16 rounded-[18px] mb-5"
+        iconClass="w-9 h-9"
+        strokeWidth={2.4}
+      />
       <h1 className="text-[22px] font-bold text-[var(--text-strong)] text-center mb-2">어디로 여행을 떠나시나요?</h1>
       <p className="text-[14px] text-[var(--text-secondary)] text-center max-w-xs leading-relaxed mb-8">
         지역, 기간, 여행 스타일을 알려주시면<br />최적의 동선과 스팟을 제안해 드려요.
       </p>
       <div className="flex flex-wrap gap-2 justify-center max-w-sm">
         {SUGGESTION_CHIPS.map((chip) => (
-          <button key={chip} onClick={() => onSuggestion(chip)}
+          <button key={chip} type="button" onClick={() => onSuggestion(chip)}
             className="px-3.5 py-2 rounded-full text-[13px] font-medium bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-secondary)] hover:border-[var(--brand-trust-blue)] hover:text-[var(--brand-trust-blue)] hover:bg-[var(--brand-trust-blue-soft)] transition-all duration-150 active:scale-95">
             {chip}
           </button>
         ))}
       </div>
+      <button
+        type="button"
+        onClick={onOpenPricing}
+        className="mt-8 text-[12px] font-medium text-[var(--brand-trust-blue)] underline-offset-4 hover:underline"
+      >
+        요금제·이용 한도·API 안내 보기
+      </button>
     </div>
   );
 }
@@ -725,8 +766,12 @@ export function V5ChatShell() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mapModalPlan, setMapModalPlan] = useState<TravelPlan | null>(null);
+  const [chatHeaderMenuOpen, setChatHeaderMenuOpen] = useState(false);
+  const [pricingModalOpen, setPricingModalOpen] = useState(false);
+  const [pricingModalFocus, setPricingModalFocus] = useState<PricingModalFocus>("overview");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatHeaderMenuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const streamRafRef = useRef<number | null>(null);
   const streamBufferRef = useRef("");
@@ -736,6 +781,22 @@ export function V5ChatShell() {
   const loadedForUserRef = useRef<string | null>(undefined as unknown as null);
 
   const activeConv = conversations.find((c) => c.id === activeConvId) ?? null;
+
+  useEffect(() => {
+    if (!chatHeaderMenuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      const el = chatHeaderMenuRef.current;
+      if (el && !el.contains(e.target as Node)) setChatHeaderMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [chatHeaderMenuOpen]);
+
+  const openPricing = useCallback((focus: PricingModalFocus) => {
+    setPricingModalFocus(focus);
+    setPricingModalOpen(true);
+    setChatHeaderMenuOpen(false);
+  }, []);
 
   // ── 로그인 시 DB에서 대화 기록 + 저장 플랜 복원 ─────────────────────────────
   useEffect(() => {
@@ -1411,20 +1472,66 @@ export function V5ChatShell() {
                 {hasUserMessage ? activeConv?.title : `${BRAND.name} · 여행 동선`}
               </span>
             </div>
-            <div className="flex items-center gap-1.5">
-              {/* 로그인 상태 뱃지 */}
+            <div ref={chatHeaderMenuRef} className="flex items-center gap-1.5 relative">
               {!isAuthLoading && (
-                <span className={`hidden sm:inline-flex text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                  userId
-                    ? "bg-[var(--success-soft)] text-[var(--success)]"
-                    : "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)]"
-                }`}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    openPricing(userId ? "overview" : "guest")
+                  }
+                  className={`inline-flex items-center shrink-0 whitespace-nowrap text-[10px] font-semibold px-2 py-0.5 rounded-full cursor-pointer transition-opacity hover:opacity-90 ${
+                    userId
+                      ? "bg-[var(--success-soft)] text-[var(--success)]"
+                      : "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] ring-1 ring-[var(--border-default)]"
+                  }`}
+                  title="요금제·이용 안내"
+                >
                   {userId ? "동기화 중" : "게스트"}
-                </span>
+                </button>
               )}
-              <button className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] transition-all">
+              <button
+                type="button"
+                onClick={() => setChatHeaderMenuOpen((v) => !v)}
+                className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] transition-all"
+                aria-expanded={chatHeaderMenuOpen}
+                aria-haspopup="menu"
+                aria-label="채팅 메뉴"
+              >
                 <MoreHorizontal className="w-4 h-4" />
               </button>
+              {chatHeaderMenuOpen && (
+                <div
+                  className="absolute right-0 top-full mt-1 z-50 min-w-[220px] rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] py-1 shadow-lg"
+                  role="menu"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="w-full text-left px-3 py-2.5 text-[13px] text-[var(--text-strong)] hover:bg-[var(--brand-primary-soft)]"
+                    onClick={() => openPricing("overview")}
+                  >
+                    요금제·이용 한도
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="w-full text-left px-3 py-2.5 text-[13px] text-[var(--text-strong)] hover:bg-[var(--brand-primary-soft)]"
+                    onClick={() => openPricing("api")}
+                  >
+                    외부 API·비용 안내
+                  </button>
+                  {!userId && (
+                    <Link
+                      href="/login?next=/chat"
+                      className="block px-3 py-2.5 text-[13px] font-medium text-[var(--brand-trust-blue)] hover:bg-[var(--brand-trust-blue-soft)]"
+                      role="menuitem"
+                      onClick={() => setChatHeaderMenuOpen(false)}
+                    >
+                      로그인
+                    </Link>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -1439,7 +1546,10 @@ export function V5ChatShell() {
                 </div>
               </div>
             ) : !hasUserMessage ? (
-              <EmptyState onSuggestion={(t) => void handleSend(t)} />
+              <EmptyState
+                onSuggestion={(t) => void handleSend(t)}
+                onOpenPricing={() => openPricing("overview")}
+              />
             ) : (
               <div className="max-w-[720px] mx-auto px-4 md:px-5 py-6 space-y-5">
                 {messages.map((msg) => (
@@ -1481,7 +1591,24 @@ export function V5ChatShell() {
                 </button>
               </div>
               <p className="text-center text-[11px] text-[var(--text-muted)] mt-2 hidden md:block">
-                Enter로 전송 · Shift+Enter 줄바꿈
+                Enter로 전송 · Shift+Enter 줄바꿈 ·{" "}
+                <button
+                  type="button"
+                  onClick={() => openPricing("overview")}
+                  className="text-[var(--brand-trust-blue)] font-medium hover:underline underline-offset-2"
+                >
+                  요금·한도 안내
+                </button>
+              </p>
+              <p className="text-center text-[10px] text-[var(--text-muted)] mt-1.5 md:hidden px-2">
+                무료 한도는 정책에 따라 달라질 수 있어요.{" "}
+                <button
+                  type="button"
+                  onClick={() => openPricing("overview")}
+                  className="text-[var(--brand-trust-blue)] font-medium"
+                >
+                  요금 안내
+                </button>
               </p>
             </div>
           </div>
@@ -1491,6 +1618,13 @@ export function V5ChatShell() {
       {mapModalPlan && (
         <V5PlanMapModal plan={mapModalPlan} onClose={() => setMapModalPlan(null)} />
       )}
+
+      <V5ChatPricingModal
+        open={pricingModalOpen}
+        onClose={() => setPricingModalOpen(false)}
+        focus={pricingModalFocus}
+        isGuest={!userId}
+      />
     </>
   );
 }
