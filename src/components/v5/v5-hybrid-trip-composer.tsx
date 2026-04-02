@@ -3,8 +3,8 @@
 import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import {
   MapPin,
-  Navigation,
-  Flag,
+  MapPinned,
+  Layers,
   CalendarDays,
   Users,
   Train,
@@ -15,10 +15,11 @@ import {
   Send,
 } from "lucide-react";
 
+/** 로컬 동선 탐색용 8슬롯 — 출발·귀경지 없음 */
 export type HybridTripKey =
   | "region"
-  | "origin"
-  | "destination"
+  | "zone"
+  | "depth"
   | "schedule"
   | "people"
   | "transport"
@@ -27,8 +28,8 @@ export type HybridTripKey =
 
 export const HYBRID_TRIP_EMPTY: Record<HybridTripKey, string> = {
   region: "",
-  origin: "",
-  destination: "",
+  zone: "",
+  depth: "",
   schedule: "",
   people: "",
   transport: "",
@@ -42,9 +43,9 @@ const SLOT_META: {
   short: string;
   icon: typeof MapPin;
 }[] = [
-  { key: "region", label: "지역", short: "어디로", icon: MapPin },
-  { key: "origin", label: "출발지", short: "출발", icon: Navigation },
-  { key: "destination", label: "도착지", short: "도착", icon: Flag },
+  { key: "region", label: "여행 지역", short: "어디로", icon: MapPin },
+  { key: "zone", label: "동선 중심", short: "구역·코스", icon: MapPinned },
+  { key: "depth", label: "탐색 스타일", short: "깊이·밀도", icon: Layers },
   { key: "schedule", label: "일정", short: "일정", icon: CalendarDays },
   { key: "people", label: "인원", short: "인원", icon: Users },
   { key: "transport", label: "교통", short: "교통", icon: Train },
@@ -54,13 +55,23 @@ const SLOT_META: {
 
 export const HYBRID_SLOT_OPTIONS: Record<HybridTripKey, string[]> = {
   region: [
-    "제주",
-    "부산·해운대",
-    "경주",
     "서울",
-    "강릉",
-    "여수",
+    "서울·종로·익선",
+    "서울·강남·신사",
+    "서울·홍대·연남",
+    "부산",
+    "부산·해운대",
+    "부산·광안리·남포",
+    "제주",
+    "제주·서귀포",
+    "제주·애월·한림",
+    "제주·중문",
+    "경주",
     "전주",
+    "전주·한옥마을",
+    "여수",
+    "강릉",
+    "강릉·안목·경포",
     "속초",
     "춘천",
     "대구",
@@ -70,27 +81,33 @@ export const HYBRID_SLOT_OPTIONS: Record<HybridTripKey, string[]> = {
     "울산",
     "통영",
     "안동",
+    "목포",
+    "순천",
+    "포항",
   ],
-  origin: [
-    "서울역",
-    "강남·신논현",
-    "용산역",
-    "인천공항",
-    "김포공항",
-    "부산역",
-    "대전역",
-    "수원역",
-    "집 근처에서 출발",
-    "회사 근처에서 출발",
+  zone: [
+    "시내·다운타운 한가운데",
+    "역·버스터미널·숙소 근처부터",
+    "해변·바다·산책로",
+    "한옥마을·골목",
+    "전통시장·먹거리 골목",
+    "카페·브런치 거리",
+    "야경·루프탑·야시장",
+    "박물관·유적 산책",
+    "공원·산·트레킹",
+    "드라이브·전망 위주",
+    "쇼핑·백화가",
+    "온천·휴양",
   ],
-  destination: [
-    "시내·숙소 근처",
-    "공항·항구 도착",
-    "역 앞에서 시작",
-    "관광지 중심",
-    "해변·바다 근처",
-    "한옥마을",
-    "다운타운·번화가",
+  depth: [
+    "핵심 랜드마크만 빠르게",
+    "하루 3~4곳 정도",
+    "두세 곳만 천천히 깊게",
+    "동선 촘촘히 이어가기",
+    "여유 일정·비워 두기",
+    "아침·점심·저녁 코스형",
+    "반나절만 짧게",
+    "며칠에 나눠 넓게 보기",
   ],
   schedule: [
     "당일 치기",
@@ -103,13 +120,13 @@ export const HYBRID_SLOT_OPTIONS: Record<HybridTripKey, string[]> = {
   ],
   people: ["혼자", "2명·커플", "3~4명", "가족(아이 동반)", "5명 이상·단체"],
   transport: [
-    "KTX·SRT",
-    "렌터카",
-    "자가용",
+    "도보 위주",
     "대중교통 위주",
     "택시·앱",
-    "도보 위주",
-    "국내선 비행",
+    "렌터카",
+    "자가용",
+    "자전거·킥보드",
+    "KTX·기차(현지 도착 후)",
   ],
   vibe: [
     "한적·힐링",
@@ -133,34 +150,34 @@ export const HYBRID_SLOT_OPTIONS: Record<HybridTripKey, string[]> = {
   ],
 };
 
-/** 자연어 한 줄로 조합 → 기존 handleSend / gather 파이프라인에 그대로 전달 */
+/** 자연어 한 줄로 조합 → handleSend / gather 파이프라인에 전달 */
 export function buildHybridPrompt(d: Record<HybridTripKey, string>): string {
   const parts: string[] = [];
   const r = d.region.trim();
-  const o = d.origin.trim();
-  const dest = d.destination.trim();
+  const z = d.zone.trim();
+  const dp = d.depth.trim();
   const sc = d.schedule.trim();
   const pe = d.people.trim();
   const tr = d.transport.trim();
   const vi = d.vibe.trim();
   const fo = d.food.trim();
-  if (r) parts.push(`여행 지역은 ${r}`);
-  if (o) parts.push(`출발·귀경은 ${o}`);
-  if (dest) parts.push(`도착 후 머무는 중심은 ${dest}`);
+  if (r) parts.push(`탐색할 지역은 ${r}`);
+  if (z) parts.push(`동선·코스 중심은 ${z}`);
+  if (dp) parts.push(`탐색 스타일·일정 밀도는 ${dp}`);
   if (sc) parts.push(`일정은 ${sc}`);
   if (pe) parts.push(`인원은 ${pe}`);
   if (tr) parts.push(`이동은 ${tr} 위주`);
   if (vi) parts.push(`분위기는 ${vi}`);
   if (fo) parts.push(`음식·취향은 ${fo}`);
   if (parts.length === 0) return "";
-  return `${parts.join(". ")}. 왕복 동선으로 짜 줘.`;
+  return `${parts.join(". ")}. 위 지역·권역 안에서만 현지 로컬 동선으로 짜 줘. 다른 도시로 이동하거나 집·역으로 돌아가는 왕복 구간은 넣지 마.`;
 }
 
 export function hybridHasMinimumForSend(d: Record<HybridTripKey, string>): boolean {
   return Boolean(d.region.trim() && d.schedule.trim());
 }
 
-/** Tailwind `lg`와 동일 1024px — useEffect보다 빨리 맞춰 깜빡임·모드 오판을 줄임 */
+/** Tailwind `lg`와 동일 1024px */
 export function useLgUp(): boolean {
   const [lg, setLg] = useState(false);
   useLayoutEffect(() => {
@@ -184,7 +201,6 @@ export function HybridTripComposer({
   onDraftChange: (next: Record<HybridTripKey, string>) => void;
   onSubmit: () => void;
   disabled: boolean;
-  /** 데스크톱에서 상단 바에 보내기가 있으면 false */
   showSendButton?: boolean;
 }) {
   const [openKey, setOpenKey] = useState<HybridTripKey | null>(null);
@@ -197,14 +213,17 @@ export function HybridTripComposer({
     [openKey],
   );
 
-  const openSheet = useCallback((key: HybridTripKey) => {
-    setOpenKey(key);
-    setCustomLine(draft[key] ?? "");
-    if (key === "schedule") {
-      setRangeStart("");
-      setRangeEnd("");
-    }
-  }, [draft]);
+  const openSheet = useCallback(
+    (key: HybridTripKey) => {
+      setOpenKey(key);
+      setCustomLine(draft[key] ?? "");
+      if (key === "schedule") {
+        setRangeStart("");
+        setRangeEnd("");
+      }
+    },
+    [draft],
+  );
 
   const applyValue = useCallback(
     (value: string) => {
@@ -221,10 +240,10 @@ export function HybridTripComposer({
   return (
     <div className="v5-composer-liquid-panel space-y-3 rounded-2xl px-3 py-3 md:px-4 md:py-4">
       <p className="text-[12px] font-semibold text-[var(--text-strong)] tracking-tight px-0.5">
-        하이브리드 입력 · 8가지 칩으로 조합
+        로컬 동선 입력 · 8가지 칩
       </p>
       <p className="text-[11px] font-medium text-[var(--text-muted)] tracking-tight px-0.5 -mt-1">
-        탭하면 시트에서 고르거나 짧게 직접 입력 · 지역·일정 필수 후 보내기
+        선택한 도시·지역 안에서만 코스를 짭니다 · 지역·일정 필수 후 보내기
       </p>
       <div className="v5-hybrid-chip-strip flex flex-wrap gap-2">
         {SLOT_META.map(({ key, label, short, icon: Icon }) => {
@@ -330,7 +349,7 @@ export function HybridTripComposer({
                         if (rangeStart && rangeEnd) {
                           applyValue(`${rangeStart} ~ ${rangeEnd}`);
                         } else if (rangeStart) {
-                          applyValue(`${rangeStart} 출발`);
+                          applyValue(`${rangeStart}부터`);
                         }
                       }}
                       disabled={!rangeStart}

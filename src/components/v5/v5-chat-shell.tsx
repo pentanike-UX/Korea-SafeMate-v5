@@ -37,7 +37,8 @@ import { tourImageUnoptimized, tourSearchQuery } from "@/lib/tour-api/tour-spot-
 
 type TravelPromptCheckKey =
   | "region"
-  | "departure"
+  | "localZone"
+  | "exploreDepth"
   | "schedule"
   | "people"
   | "transport"
@@ -45,11 +46,12 @@ type TravelPromptCheckKey =
   | "food";
 
 const TRAVEL_PROMPT_CHECKLIST: { key: TravelPromptCheckKey; label: string; hint: string }[] = [
-  { key: "region", label: "지역", hint: "도시·지역명" },
-  { key: "departure", label: "출발지", hint: "집·역·구간" },
+  { key: "region", label: "지역", hint: "도시·권역" },
+  { key: "localZone", label: "구역·코스", hint: "동네·해변·한옥 등" },
+  { key: "exploreDepth", label: "탐색 깊이", hint: "여유·촘촘·반나절" },
   { key: "schedule", label: "일정", hint: "박·일·기간" },
   { key: "people", label: "인원", hint: "명수·동행" },
-  { key: "transport", label: "교통", hint: "이동 수단" },
+  { key: "transport", label: "교통", hint: "도보·대중교통 등" },
   { key: "atmosphere", label: "분위기", hint: "느낌·스타일" },
   { key: "food", label: "음식", hint: "취향·맛집" },
 ];
@@ -67,8 +69,14 @@ function evaluateTravelPromptChecklist(text: string): Record<TravelPromptCheckKe
       /서울|부산|대구|인천|광주|대전|울산|세종|제주|경주|전주|여수|속초|평창|안동|통영|해운대|명동|홍대|강남|강릉|춘천|양양|안양|수원|용인|고양|파주|화성|김해|창원|진주|목포|순천|원주|충주|청주|포항|군산|남해|거제|하동|보성|광양|제주도|전라|경상|충청|강원|경기|전북|전남|경북|경남|충북|충남|내륙|동해|서해|한국|국내/i.test(
         s,
       ) || /[가-힣]{2,8}(시|도|군)(으로|에서|\s|,|\.|$)/.test(c) || /[가-힣]{2,6}(으로|에서)(여행|간|갈|놀러)/.test(c),
-    departure:
-      /출발|출발지|집에서|우리집|퇴근|거주|근무지|회사|역에서|공항에서|터미널|출발은|나가는\s*곳|귀가|돌아올|복귀/i.test(s),
+    localZone:
+      /한옥|해운대|광안리|남포|서면|황리단|불국사|첨성대|익선|종로|한옥마을|서귀포|애월|한림|중문|올레|명동|홍대|강남|안목|경포|권역|동네|골목|시장|해변|바다|유적|전망/i.test(
+        s,
+      ),
+    exploreDepth:
+      /천천히|여유|느긋|빡빡|촘촘|알차게|반나절|오전만|저녁만|핵심만|랜드마크|하루에|짧게|깊게|로컬\s*동선|현지만/i.test(
+        s,
+      ),
     schedule:
       /\d+\s*박|\d+\s*일|\d+박\s*\d+일|일정|며칠|주말|평일|당일|하루|이틀|사흘|일주|연휴|방학|휴가|2박|3박|1박/i.test(s),
     people:
@@ -108,13 +116,23 @@ function extractScheduleSnippet(text: string): string | null {
   return null;
 }
 
-function extractDepartureSnippet(text: string): string | null {
+function extractLocalZoneSnippet(text: string): string | null {
   const s = text.trim();
-  const labeled = /출발(?:지)?\s*[:：]\s*([^\n,.]{2,36})/i.exec(s);
-  if (labeled) return labeled[1].trim();
-  const station =
-    /([가-힣A-Za-z0-9·\s]{2,18}(?:역|공항|터미널))\s*(?:에서|출발|으로)?/i.exec(s);
-  if (station) return station[1].replace(/\s+/g, " ").trim();
+  const m =
+    /(해운대|광안리|남포|서면|황리단길|불국사|첨성대|익선동|한옥마을|서귀포|애월|한림|중문|명동|홍대|강남|안목|경포|코엑스|광화문)/i.exec(
+      s,
+    );
+  if (m) return m[1];
+  const hood = /([가-힣]{2,10}(?:동|가|로|길))\s*(?:근처|일대|중심)/.exec(s);
+  return hood ? hood[1].trim() : null;
+}
+
+function extractExploreDepthSnippet(text: string): string | null {
+  const s = text.trim();
+  if (/천천히|여유|느긋/i.test(s)) return "여유 있게";
+  if (/빡빡|촘촘|알차게|많이/i.test(s)) return "동선 촘촘히";
+  if (/반나절|오전만|저녁만|짧게/i.test(s)) return "반나절·짧게";
+  if (/핵심|대표만|유명한\s*것만/i.test(s)) return "핵심만";
   return null;
 }
 
@@ -142,15 +160,22 @@ function buildQuickPreferenceChips(
       : scheduleGuess ?? "(예: 2박 3일, 당일)",
   });
 
-  if (check.departure) {
-    const dep = extractDepartureSnippet(text);
-    if (dep) {
-      chips.push({
-        id: DEPARTURE_CHIP_ID,
-        label: "출발·귀경지",
-        value: dep,
-      });
-    }
+  if (check.localZone) {
+    const z = extractLocalZoneSnippet(text);
+    chips.push({
+      id: "trip_local_zone",
+      label: "동선 중심",
+      value: z ?? "구역·동네를 칩에서 다듬어 주세요",
+    });
+  }
+
+  if (check.exploreDepth) {
+    const d = extractExploreDepthSnippet(text);
+    chips.push({
+      id: "trip_explore_depth",
+      label: "탐색 스타일",
+      value: d ?? "일정 밀도는 칩에서 조정해 주세요",
+    });
   }
 
   if (check.people) {
@@ -314,7 +339,7 @@ const makeWelcomeMsg = (): Message => ({
   id: `welcome-${Date.now()}`,
   role: "assistant",
   content:
-    "안녕하세요! 한국 여행 동선을 함께 짤게요. 지역·일정·인원·교통·분위기·음식 취향 등을 말씀해 주시면 칩으로 정리해 드리고, 확인하신 뒤 「이 정보로 동선 짜기」를 누르면 스팟 순서·이동·소요 시간·대안까지 담은 코스를 만들어요. 아래 예시를 눌러 시작해 보세요.",
+    "안녕하세요! **도시·동네 안 로컬 동선**을 함께 짤게요. 여행 지역·구역(해변·한옥 등)·일정·탐색 스타일·인원·교통·분위기·음식을 말씀해 주시면 칩으로 정리해 드리고, 확인 후 「이 정보로 동선 짜기」를 누르면 그 권역 안에서만 스팟 순서·이동·소요 시간을 담은 코스를 만들어요. (출발·귀경지 왕복은 다루지 않아요.) 아래 예시를 눌러 시작해 보세요.",
   timestamp: new Date(),
 });
 
@@ -844,7 +869,7 @@ function MobilePlanFullscreenOverlay({
 
 /**
  * Gemini가 주는 칩 id는 snake_case로 매번 달라질 수 있음.
- * UI에서는 label(출발·귀경지 등)으로도 동일 슬롯을 인식한다.
+ * 레거시 칩(출발·귀경지)은 UI에서 숨기고 확정 시 제외합니다.
  */
 function isDeparturePreferenceChip(c: PreferenceChip): boolean {
   if (c.id === DEPARTURE_CHIP_ID) return true;
@@ -872,35 +897,18 @@ function PreferenceChipsCard({
   onConfirm: (slots: PreferenceChip[]) => void;
   isGenerating: boolean;
 }) {
-  const depFromChip =
-    chips.find((c) => isDeparturePreferenceChip(c))?.value?.trim() ?? "";
-  const [departure, setDeparture] = useState(depFromChip);
-
-  useEffect(() => {
-    if (depFromChip) setDeparture(depFromChip);
-  }, [depFromChip]);
-
   const displayChips = useMemo(
     () => chips.filter((c) => !isDeparturePreferenceChip(c)),
     [chips],
   );
 
-  /** 입력창 또는 대화에서 이미 확정된 출발·귀경지 칩 */
-  const depEffective = useMemo(
-    () => departure.trim() || depFromChip.trim(),
-    [departure, depFromChip],
-  );
+  const hasCoreSlots = useMemo(() => {
+    const regionOk = displayChips.some((c) => c.id === "trip_region" || c.label.includes("지역"));
+    const schedOk = displayChips.some((c) => c.id === "trip_schedule" || c.label.includes("일정"));
+    return regionOk && schedOk;
+  }, [displayChips]);
 
-  const mergedSlots = useMemo((): PreferenceChip[] => {
-    const base = displayChips;
-    if (!depEffective) return base;
-    return [
-      ...base,
-      { id: DEPARTURE_CHIP_ID, label: "출발·귀경지", value: depEffective },
-    ];
-  }, [displayChips, depEffective]);
-
-  const canSubmit = displayChips.length > 0 && depEffective.length > 0 && !isGenerating;
+  const canSubmit = displayChips.length > 0 && hasCoreSlots && !isGenerating;
 
   return (
     <div className="mt-3 w-full max-w-[480px] rounded-[20px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-4 shadow-[0_4px_24px_rgba(20,20,20,0.06)]">
@@ -912,22 +920,8 @@ function PreferenceChipsCard({
         )}
       </div>
       <p className="text-[12px] text-[var(--text-secondary)] mb-3 leading-relaxed">
-        출발지를 입력하면 <strong className="font-semibold text-[var(--text-strong)]">출발 → 여행지 동선 → 같은 곳으로 복귀</strong>하는 일정으로 짜 드려요. 칩을 정리한 뒤 동선 만들기를 눌러 주세요.
+        <strong className="font-semibold text-[var(--text-strong)]">선택한 지역 안에서만</strong> 로컬 동선으로 짭니다. 칩을 다듬은 뒤 동선 만들기를 눌러 주세요.
       </p>
-
-      <label className="block mb-3">
-        <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-          출발·귀경지 <span className="text-[var(--error)]">*</span>
-        </span>
-        <input
-          type="text"
-          value={departure}
-          onChange={(e) => setDeparture(e.target.value)}
-          placeholder="예: 서울역, 강남구 논현동 집, 대전역"
-          className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-page)] px-3.5 py-2.5 text-base md:text-[14px] text-[var(--text-strong)] placeholder:text-[var(--text-muted)] outline-none transition-shadow focus:border-[var(--brand-trust-blue)] focus:ring-2 focus:ring-[var(--brand-trust-blue)]/20"
-          autoComplete="street-address"
-        />
-      </label>
 
       <div className="v5-prompt-chips-strip overflow-x-auto -mx-1 px-1 pb-1 mb-4 touch-pan-x">
         <div className="flex flex-nowrap gap-2 pr-3 w-max max-w-none">
@@ -956,7 +950,7 @@ function PreferenceChipsCard({
       </div>
       <button
         type="button"
-        onClick={() => onConfirm(mergedSlots)}
+        onClick={() => onConfirm(displayChips)}
         disabled={!canSubmit}
         className={`w-full py-3.5 rounded-2xl text-[14px] font-semibold transition-all duration-200 ${
           canSubmit
@@ -966,8 +960,10 @@ function PreferenceChipsCard({
       >
         {isGenerating ? "동선 짜는 중…" : "이 정보로 동선 짜기"}
       </button>
-      {!depEffective && displayChips.length > 0 && (
-        <p className="mt-2 text-center text-[11px] text-[var(--text-muted)]">출발·귀경지를 입력해야 해요.</p>
+      {displayChips.length > 0 && !hasCoreSlots && (
+        <p className="mt-2 text-center text-[11px] text-[var(--text-muted)]">
+          지역·일정 칩이 있어야 동선을 만들 수 있어요.
+        </p>
       )}
     </div>
   );
@@ -1052,31 +1048,31 @@ function MessageBubble({
   );
 }
 
-/** 빈 화면 — 왕복 / 현지만 템플릿(괄호만 고치면 됨) */
+/** 빈 화면 — 로컬 동선 템플릿(괄호만 고치면 됨) */
 const TRIP_START_TEMPLATES = [
   {
-    key: "roundtrip",
-    title: "왕복 동선",
-    subtitle: "출발지 → 여행 → 같은 곳으로 복귀까지",
+    key: "local_day",
+    title: "당일·짧은 코스",
+    subtitle: "시내·동네 안에서만",
     prompt:
-      "왕복 동선으로 짜 줘. 출발지(집·역·주차장 등): (여기 입력) / 여행 지역: (예: 경주) / 일정: (예: 2박 3일) / 인원: (예: 2명·가족) / 이동 수단: (예: KTX·렌터카·대중교통). 같은 출발지로 돌아오는 일정까지 포함해 줘.",
+      "이 지역 안에서만 당일 동선으로 짜 줘. 지역: (예: 전주 한옥마을 일대 / 부산 해운대) / 일정: (예: 당일 또는 오전만) / 인원: ( ) / 이동: (예: 도보·버스) / 취향: (예: 맛집·한옥·사진). 다른 도시 이동·귀경 구간은 넣지 마.",
   },
   {
-    key: "local_only",
-    title: "현지 동선만",
-    subtitle: "도착한 도시·지역 안에서만 코스",
+    key: "local_multi",
+    title: "며칠·깊은 탐색",
+    subtitle: "같은 권역에서만 며칠치",
     prompt:
-      "여행 지역 안에서만 동선 짜 줘(집에서 오는 길·귀가 편은 빼고). 지역: (예: 강릉 시내·제주 서귀포) / 일정: (예: 당일 또는 1박 2일) / 인원: ( ) / 이동: (예: 도보·버스·택시) / 취향: (예: 카페·바다·맛집).",
+      "아래 조건으로 이 지역만 깊게 동선 짜 줘. 지역: (예: 제주 서귀포+중문) / 일정: (예: 2박 3일) / 동선 중심: (예: 바다·올레·시장) / 탐색 스타일: (여유 있게 또는 동선 촘촘히) / 인원·교통·분위기·음식: ( ). 외부 도시 왕복은 포함하지 마.",
   },
 ] as const;
 
 const RICH_START_EXAMPLES = [
-  "서울역 출발, 부산 2박 3일, 2명, KTX·지하철 위주, 맛집·해변, 왕복 동선으로.",
-  "인천공항 출발 제주 4박 5일, 가족 4명, 렌터카, 왕복 포함해서 짜 줘.",
-  "대전역에서 출발해 당일 부산(해운대·광안리), 친구 3명, SRT·지하철, 저녁에 대전으로 복귀.",
-  "경주 2박 3일, 혼자, KTX, 불국사·첨성대·황리단길 위주, 울산에서 출발했다가 울산으로 돌아오는 일정.",
-  "서울 종로·익선동 안에서만 하루 동선(외부 출발·귀경 없이), 도보·한옥·카페 위주.",
-  "강릉 1박 2일, 커플, 서울 청량리역 출발 ITX, 렌트, 카페·바다, 왕복.",
+  "전주 한옥마을 중심 당일, 혼자, 도보·국밥·카페, 천천히 두세 곳만.",
+  "부산 해운대·광안리 일대 1박 2일, 커플, 도보·버스, 바다·야경·맛집, 동선 촘촘히.",
+  "제주 서귀포 3박 4일, 가족, 렌터카, 오름·해변·시장, 여유 있게 이어가 줘.",
+  "서울 종로·익선동 안에서만 하루, 친구 2명, 한옥·골목·브런치.",
+  "강릉 시내·안목해변 2박 3일, 이미 현지에 있다고 가정하고 현지만 짜 줘.",
+  "경주 황리단길·대릉원 일대 당일, 도보 위주, 유적·감성 카페.",
 ] as const;
 
 function WaylyMark({
@@ -1103,24 +1099,25 @@ function WaylyMark({
   );
 }
 
-/** 빈 화면용 — 대화 중 `PreferenceChipsCard`와 같은 칩·출발 입력 UX */
+/** 빈 화면용 — `PreferenceChipsCard`와 맞춘 칩 미리보기 */
 const EMPTY_HYBRID_CARD_KEYS: HybridTripKey[] = [
   "region",
+  "zone",
+  "depth",
   "schedule",
   "people",
   "transport",
-  "destination",
   "vibe",
   "food",
 ];
 
 const EMPTY_SLOT_HINT: Record<HybridTripKey, string> = {
   region: "여행지",
-  origin: "출발",
-  destination: "도착지",
+  zone: "구역·코스",
+  depth: "탐색",
   schedule: "일정",
   people: "인원",
-  transport: "이동수단",
+  transport: "이동",
   vibe: "분위기",
   food: "음식",
 };
@@ -1137,23 +1134,9 @@ function EmptyStateHybridCard({
   disabled: boolean;
 }) {
   const [openKey, setOpenKey] = useState<HybridTripKey | null>(null);
-  const [departure, setDeparture] = useState(draft.origin);
 
-  useEffect(() => {
-    setDeparture(draft.origin);
-  }, [draft.origin]);
-
-  const syncDeparture = (v: string) => {
-    setDeparture(v);
-    onDraftChange({ ...draft, origin: v.trim() });
-  };
-
-  const depEffective = departure.trim();
   const canSubmit =
-    depEffective.length > 0 &&
-    draft.region.trim().length > 0 &&
-    draft.schedule.trim().length > 0 &&
-    !disabled;
+    draft.region.trim().length > 0 && draft.schedule.trim().length > 0 && !disabled;
 
   return (
     <div className="w-full max-w-[480px] rounded-[20px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-4 shadow-[0_4px_24px_rgba(20,20,20,0.06)] select-text mb-6">
@@ -1164,23 +1147,9 @@ function EmptyStateHybridCard({
         </span>
       </div>
       <p className="text-[12px] text-[var(--text-secondary)] mb-3 leading-relaxed">
-        출발·귀경지를 입력하고 아래 칩에서 항목을 골라 주세요. 하단 입력 영역과{" "}
-        <strong className="font-semibold text-[var(--text-strong)]">같은 조건</strong>이 실시간으로 맞춰집니다.
+        <strong className="font-semibold text-[var(--text-strong)]">지역 안 로컬 동선</strong>을 위해 칩을 골라 주세요. 하단 하이브리드 입력과{" "}
+        <strong className="font-semibold text-[var(--text-strong)]">같은 조건</strong>이 맞춰집니다.
       </p>
-
-      <label className="block mb-3">
-        <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-          출발·귀경지 <span className="text-[var(--error)]">*</span>
-        </span>
-        <input
-          type="text"
-          value={departure}
-          onChange={(e) => syncDeparture(e.target.value)}
-          placeholder="예: 서울역, 강남구 논현동 집, 대전역"
-          className="w-full rounded-xl border border-[var(--border-default)] bg-[var(--bg-page)] px-3.5 py-2.5 text-base md:text-[14px] text-[var(--text-strong)] placeholder:text-[var(--text-muted)] outline-none transition-shadow focus:border-[var(--brand-trust-blue)] focus:ring-2 focus:ring-[var(--brand-trust-blue)]/20"
-          autoComplete="street-address"
-        />
-      </label>
 
       <div className="v5-prompt-chips-strip overflow-x-auto -mx-1 px-1 pb-1 mb-2 touch-pan-x">
         <div className="flex flex-wrap gap-2 w-full">
@@ -1278,9 +1247,9 @@ function EmptyStateHybridCard({
       >
         이 정보로 동선 짜기
       </button>
-      {(!depEffective || !draft.region.trim() || !draft.schedule.trim()) && (
+      {(!draft.region.trim() || !draft.schedule.trim()) && (
         <p className="mt-2 text-center text-[11px] text-[var(--text-muted)]">
-          출발·귀경지·여행지·일정을 채우면 보낼 수 있어요.
+          여행지(지역)·일정을 채우면 보낼 수 있어요. 구역·탐색 스타일은 선택이에요.
         </p>
       )}
     </div>
@@ -1315,10 +1284,10 @@ function EmptyState({
         strokeWidth={2.4}
       />
       <h1 className="text-[22px] font-bold text-[var(--text-strong)] text-center mb-2 tracking-tight">
-        어디로 여행을 떠나시나요?
+        어느 지역을 깊게 둘러볼까요?
       </h1>
       <p className="text-[14px] text-[var(--text-secondary)] text-center max-w-md leading-relaxed mb-4">
-        먼저 <strong className="font-semibold text-[var(--text-strong)]">카드에서 칩으로 고르거나</strong>, 하단{" "}
+        <strong className="font-semibold text-[var(--text-strong)]">도시·동네 안 로컬 동선</strong>에 맞춰 두었어요. 카드에서 고르거나 하단{" "}
         <strong className="font-semibold text-[var(--text-strong)]">8가지 칩</strong>으로 이어서 조합할 수 있어요.
       </p>
 
@@ -2055,7 +2024,7 @@ export function V5ChatShell() {
           id: `tmp-ai-quick-${Date.now()}`,
           role: "assistant",
           content:
-            "지역과 일정(기간)이 함께 있어야 AI 조회로 조건을 정리할 수 있어요. 아래 칩을 확인·수정하고 출발·귀경지를 입력한 뒤 「이 정보로 동선 짜기」를 눌러 주세요. 두 가지가 모두 입력된 문장이면 다음부터는 바로 조회로 넘어가요.",
+            "지역과 일정(기간)이 함께 있어야 AI 조회로 조건을 정리할 수 있어요. 아래 칩을 확인·수정한 뒤 「이 정보로 동선 짜기」를 눌러 주세요. (로컬 동선만 — 출발·귀경지는 사용하지 않아요.)",
           timestamp: new Date(),
           preferenceChips: quickChips,
           canGenerateRoute: false,
@@ -2142,7 +2111,8 @@ export function V5ChatShell() {
 
   const handleConfirmRoute = useCallback(
     async (chipSourceMessageId: string, slots: PreferenceChip[]) => {
-      if (!slots.length || isTyping || routeGeneratingMessageId || !activeConvId) return;
+      const slotsFiltered = slots.filter((s) => !isDeparturePreferenceChip(s));
+      if (!slotsFiltered.length || isTyping || routeGeneratingMessageId || !activeConvId) return;
 
       const priorMsgs = conversations.find((c) => c.id === activeConvId)?.messages ?? [];
       const userContent = "확정한 조건으로 여행 동선을 짜줘.";
@@ -2191,12 +2161,12 @@ export function V5ChatShell() {
         const res = await fetch("/api/v5/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: apiMessages, confirmRoute: { slots } }),
+          body: JSON.stringify({ messages: apiMessages, confirmRoute: { slots: slotsFiltered } }),
         });
         if (!res.ok) throw new Error(`chat ${res.status}`);
         data = (await res.json()) as ApiV5;
       } catch {
-        const synthetic = slots.map((s) => s.value).join(" ");
+        const synthetic = slotsFiltered.map((s) => s.value).join(" ");
         const { content: aiContent, plan } = getMockResponse(synthetic);
         data = { content: aiContent, travelPlan: plan ?? null };
       }
@@ -2745,7 +2715,7 @@ export function V5ChatShell() {
                     }}
                     onBlur={() => setComposerFocused(false)}
                     enterKeyHint="send"
-                    placeholder="출발지·지역·일정·인원·교통 등을 알려주세요 (예: 서울역 출발 경주 2박 3일 맛집·도보)"
+                    placeholder="지역·구역·일정·인원·교통 등을 알려주세요 (예: 전주 한옥마을 당일 도보 맛집·카페)"
                     rows={1}
                     className="flex-1 bg-transparent resize-none outline-none text-base lg:text-[15px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] leading-relaxed py-1 min-h-[22px] touch-manipulation"
                   />

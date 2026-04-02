@@ -7,7 +7,7 @@ import { Compass } from "lucide-react";
 const LINE_INTERVAL_MS = 2600;
 
 export const TRAVEL_AI_ANALYSIS_LINES = [
-  "✓ 사용자 여행 성향 및 출발지 분석 완료...",
+  "✓ 여행 지역·일정 맥락 분석 완료...",
   "✓ 설정된 지역의 교통 데이터 및 최적 동선 계산 중...",
   "✓ 한국관광공사 API에서 핫플레이스 및 이미지 매칭 중...",
   "✓ 로컬 가이드의 숨은 꿀팁 조합하는 중...",

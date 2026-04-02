@@ -65,7 +65,7 @@ function HomePanelBody({
               size="sm"
               className="h-9 rounded-full border-0 bg-card px-3.5 text-xs font-medium shadow-none ring-1 ring-[var(--border-default)] hover:bg-[var(--brand-primary-soft)] sm:text-sm"
             >
-              <Link href={`/planner?mood=${k}`}>{t(`mood.${k}`)}</Link>
+              <Link href={`/chat?mood=${k}`}>{t(`mood.${k}`)}</Link>
             </Button>
           ))}
         </div>
@@ -108,7 +108,7 @@ export function HomeMapPrimaryClient({ featuredRoutes }: { featuredRoutes: { slu
       stickyAction: (
         <div className="flex flex-wrap gap-2">
           <Button asChild className="h-11 flex-1 rounded-[14px] px-4 text-sm font-semibold">
-            <Link href="/planner">{t("ctaPlanner")}</Link>
+            <Link href="/chat">{t("ctaPlanner")}</Link>
           </Button>
           <Button asChild variant="outline" className="h-11 flex-1 rounded-[14px] border-[var(--border-strong)] bg-transparent">
             <Link href="/explore/routes">{t("ctaExplore")}</Link>
