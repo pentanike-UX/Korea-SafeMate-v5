@@ -1743,12 +1743,12 @@ export function V5ChatShell() {
     return () => { document.body.style.overflow = ""; };
   }, [mobileSidebarOpen]);
 
-  /** 태블릿(md~lg): 최초 진입 시 좌측 대화 목록 접힌 상태(아이콘 레일만). 데스크톱은 펼침 유지. */
+  /** 태블릿(md~1368px): 최초 진입 시 좌측 대화·로고 패널 접힘(아이콘 레일만). 넓은 데스크톱(1369px+)은 펼침 유지. */
   useLayoutEffect(() => {
     if (sidebarTabletInitRef.current) return;
     sidebarTabletInitRef.current = true;
     if (typeof window === "undefined") return;
-    const tabletChat = window.matchMedia("(min-width: 768px) and (max-width: 1023.98px)");
+    const tabletChat = window.matchMedia("(min-width: 768px) and (max-width: 1368px)");
     if (tabletChat.matches) setSidebarCollapsed(true);
   }, []);
 

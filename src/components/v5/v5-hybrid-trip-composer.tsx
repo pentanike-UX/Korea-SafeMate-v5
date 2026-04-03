@@ -151,6 +151,39 @@ export const HYBRID_SLOT_OPTIONS: Record<HybridTripKey, string[]> = {
   ],
 };
 
+/** 분위기·음식: 다중 선택 값 구분자 (프리셋 옵션에 쓰이지 않는 조합) */
+const HYBRID_MULTI_SEP = " · ";
+
+const HYBRID_MULTI_KEYS = new Set<HybridTripKey>(["vibe", "food"]);
+
+export function parseHybridMultiValues(raw: string): string[] {
+  return raw
+    .split(HYBRID_MULTI_SEP)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function joinHybridMultiValues(parts: string[]): string {
+  return parts.join(HYBRID_MULTI_SEP);
+}
+
+function toggleHybridMultiValue(current: string, opt: string): string {
+  const parts = parseHybridMultiValues(current);
+  const i = parts.indexOf(opt);
+  if (i >= 0) parts.splice(i, 1);
+  else parts.push(opt);
+  return joinHybridMultiValues(parts);
+}
+
+function appendHybridMultiValue(current: string, add: string): string {
+  const t = add.trim();
+  if (!t) return current;
+  const parts = parseHybridMultiValues(current);
+  if (parts.includes(t)) return current;
+  parts.push(t);
+  return joinHybridMultiValues(parts);
+}
+
 /** 자연어 한 줄로 조합 → handleSend / gather 파이프라인에 전달 */
 export function buildHybridPrompt(d: Record<HybridTripKey, string>): string {
   const parts: string[] = [];
@@ -168,8 +201,22 @@ export function buildHybridPrompt(d: Record<HybridTripKey, string>): string {
   if (sc) parts.push(`일정은 ${sc}`);
   if (pe) parts.push(`인원은 ${pe}`);
   if (tr) parts.push(`이동은 ${tr} 위주`);
-  if (vi) parts.push(`분위기는 ${vi}`);
-  if (fo) parts.push(`음식·취향은 ${fo}`);
+  if (vi) {
+    const bits = parseHybridMultiValues(vi);
+    parts.push(
+      bits.length > 1
+        ? `분위기는 ${bits.join(", ")} 등 복합적으로`
+        : `분위기는 ${vi}`,
+    );
+  }
+  if (fo) {
+    const bits = parseHybridMultiValues(fo);
+    parts.push(
+      bits.length > 1
+        ? `음식·취향은 ${bits.join(", ")} 등`
+        : `음식·취향은 ${fo}`,
+    );
+  }
   if (parts.length === 0) return "";
   return `${parts.join(". ")}. 위 지역·권역 안에서만 현지 로컬 동선으로 짜 줘. 다른 도시로 이동하거나 집·역으로 돌아가는 왕복 구간은 넣지 마.`;
 }
@@ -285,7 +332,8 @@ export function HybridTripComposer({
         로컬 동선 입력 · 8가지 칩
       </p>
       <p className="text-[11px] font-medium text-[var(--text-muted)] tracking-tight px-0.5 -mt-1">
-        선택한 도시·지역 안에서만 코스를 짭니다 · 지역·일정 필수 후 보내기
+        선택한 도시·지역 안에서만 코스를 짭니다 · 지역·일정 필수 후 보내기 ·{" "}
+        <span className="text-[var(--brand-trust-blue)]">분위기·음식은 칩 여러 개 선택 가능</span>
       </p>
 
       {openKey === "region" && lgUp && (
@@ -300,6 +348,8 @@ export function HybridTripComposer({
         {SLOT_META.map(({ key, label, short, icon: Icon }) => {
           const v = draft[key].trim();
           const filled = Boolean(v);
+          const multi = HYBRID_MULTI_KEYS.has(key);
+          const multiCount = multi ? parseHybridMultiValues(v).length : 0;
           return (
             <button
               key={key}
@@ -315,10 +365,24 @@ export function HybridTripComposer({
               <span className="min-w-0 text-left">
                 <span className="block text-[11px] font-semibold uppercase tracking-wide opacity-70">
                   {short}
+                  {multi ? (
+                    <span className="ml-1 font-normal normal-case text-[var(--brand-trust-blue)]">
+                      (복수)
+                    </span>
+                  ) : null}
                 </span>
-                <span className="block text-[12px] font-medium truncate max-w-[9.5rem] sm:max-w-[11rem]">
+                <span
+                  className={`block text-[12px] font-medium max-w-[9.5rem] sm:max-w-[11rem] ${
+                    multi ? "line-clamp-2 whitespace-normal break-words" : "truncate"
+                  }`}
+                >
                   {v || `${label} 선택`}
                 </span>
+                {multi && multiCount > 1 ? (
+                  <span className="mt-0.5 block text-[10px] font-medium text-[var(--brand-trust-blue)]">
+                    {multiCount}개 선택됨
+                  </span>
+                ) : null}
               </span>
               <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-50" aria-hidden />
             </button>
@@ -380,6 +444,11 @@ export function HybridTripComposer({
                     {draft.region.trim()} 기준 제안이 위에 붙습니다
                   </p>
                 ) : null}
+                {openKey && HYBRID_MULTI_KEYS.has(openKey) ? (
+                  <p className="text-[11px] font-medium text-[var(--brand-trust-blue)] mt-1">
+                    여러 개 골라도 돼요 · 항목을 누를 때마다 선택/해제(칩 스타일)
+                  </p>
+                ) : null}
               </div>
               <button
                 type="button"
@@ -430,21 +499,58 @@ export function HybridTripComposer({
                   </p>
                 </div>
               )}
-              {sheetOptions.map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => applyValue(opt)}
-                  className="v5-hybrid-wheel-item w-full snap-start min-h-[48px] rounded-xl border border-transparent px-4 py-3 text-left text-[14px] font-medium text-[var(--text-strong)] hover:bg-[var(--brand-trust-blue-soft)] hover:border-[var(--brand-trust-blue)]/20 active:scale-[0.99] transition-all"
-                >
-                  {opt}
-                </button>
-              ))}
+              {sheetOptions.map((opt) => {
+                const isMulti = openKey && HYBRID_MULTI_KEYS.has(openKey);
+                const selected =
+                  isMulti && openKey
+                    ? parseHybridMultiValues(draft[openKey]).includes(opt)
+                    : false;
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => {
+                      if (!openKey) return;
+                      if (HYBRID_MULTI_KEYS.has(openKey)) {
+                        onDraftChange({
+                          ...draft,
+                          [openKey]: toggleHybridMultiValue(draft[openKey], opt),
+                        });
+                        return;
+                      }
+                      applyValue(opt);
+                    }}
+                    className={`v5-hybrid-wheel-item w-full snap-start min-h-[48px] rounded-xl border px-4 py-3 text-left text-[14px] font-medium transition-all active:scale-[0.99] ${
+                      selected
+                        ? "border-[var(--brand-trust-blue)]/45 bg-[var(--brand-trust-blue-soft)] text-[var(--text-strong)] ring-1 ring-[var(--brand-trust-blue)]/15"
+                        : "border-transparent text-[var(--text-strong)] hover:bg-[var(--brand-trust-blue-soft)] hover:border-[var(--brand-trust-blue)]/20"
+                    }`}
+                  >
+                    <span className="flex items-center justify-between gap-2">
+                      <span>{opt}</span>
+                      {selected ? (
+                        <span className="shrink-0 rounded-full bg-[var(--brand-trust-blue)] px-2 py-0.5 text-[10px] font-bold text-white">
+                          선택됨
+                        </span>
+                      ) : (
+                        <span className="shrink-0 text-[10px] font-semibold text-[var(--text-muted)]">
+                          + 추가
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="border-t border-[var(--border-default)] px-3 py-3 space-y-2 shrink-0 bg-[var(--bg-page)] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)] px-1">
                 직접 입력
+                {openKey && HYBRID_MULTI_KEYS.has(openKey) ? (
+                  <span className="ml-1 font-normal normal-case text-[var(--brand-trust-blue)]">
+                    · 목록에 합쳐져요 (중복 제외)
+                  </span>
+                ) : null}
               </p>
               <div className="flex gap-2">
                 <input
@@ -456,11 +562,22 @@ export function HybridTripComposer({
                 />
                 <button
                   type="button"
-                  onClick={() => customLine.trim() && applyValue(customLine)}
+                  onClick={() => {
+                    if (!customLine.trim() || !openKey) return;
+                    if (HYBRID_MULTI_KEYS.has(openKey)) {
+                      onDraftChange({
+                        ...draft,
+                        [openKey]: appendHybridMultiValue(draft[openKey], customLine),
+                      });
+                      setCustomLine("");
+                      return;
+                    }
+                    applyValue(customLine);
+                  }}
                   disabled={!customLine.trim()}
                   className="shrink-0 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-[13px] font-semibold text-[var(--text-on-brand)] disabled:opacity-40"
                 >
-                  적용
+                  {openKey && HYBRID_MULTI_KEYS.has(openKey) ? "추가" : "적용"}
                 </button>
               </div>
             </div>
