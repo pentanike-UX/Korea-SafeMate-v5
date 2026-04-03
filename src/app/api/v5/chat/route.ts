@@ -54,14 +54,15 @@ function formatHistory(messages: ChatMessage[]): string {
 }
 
 /**
- * V5 structured 전용: 429/503(·할당량)일 때만 다음 모델로 진행.
- * gemini-2.5-flash-preview → 2.0-flash → 2.0-flash-lite → 1.5-flash → Groq.
+ * V5 structured 전용: 429/503/404 등일 때만 다음 모델로 진행.
+ * gemini-2.5-flash-preview-04-17 → 2.0-flash → 2.0-flash-lite → 1.5-flash → 1.5-flash-8b → Groq.
  */
 const V5_GEMINI_MODEL_CHAIN = [
-  "gemini-2.5-flash-preview",
+  "gemini-2.5-flash-preview-04-17",
   "gemini-2.0-flash",
   "gemini-2.0-flash-lite",
   "gemini-1.5-flash",
+  "gemini-1.5-flash-8b",
 ] as const;
 
 /**
@@ -77,7 +78,7 @@ function groqChatModel() {
 type V5LlmProvider = "gemini" | "groq";
 
 /**
- * Gemini 체인(429/503 시에만 다음 모델) → 실패/비재시도 오류 후 Groq.
+ * Gemini 체인(429/503/404 시에만 다음 모델) → 실패/비재시도 오류 후 Groq.
  * Google 키 없고 Groq만 있으면 Groq 단독.
  */
 async function generateObjectWithLlmFallback<S extends z.ZodType>(args: {
@@ -111,7 +112,7 @@ async function generateObjectWithLlmFallback<S extends z.ZodType>(args: {
           i < V5_GEMINI_MODEL_CHAIN.length - 1;
         if (advance) {
           console.warn(
-            `[v5/chat] Gemini ${modelId} capacity/unavailable (429/503 등), trying ${V5_GEMINI_MODEL_CHAIN[i + 1]}`,
+            `[v5/chat] Gemini ${modelId} capacity/unavailable/model (429/503/404 등), trying ${V5_GEMINI_MODEL_CHAIN[i + 1]}`,
             geminiErr,
           );
           continue;

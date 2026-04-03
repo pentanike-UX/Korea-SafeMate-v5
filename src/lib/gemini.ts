@@ -76,19 +76,20 @@ function getErrorHttpStatus(error: unknown): number | undefined {
 
 /**
  * V5 등에서 Gemini **모델 체인**의 다음 단계로 넘길지 판별합니다.
- * 정책: HTTP **429·503** 및 동등한 할당량/일시 불가 신호만 다음 Gemini로 이어갑니다.
+ * 정책: HTTP **429·503·404** 및 동등한 할당량·일시 불가·모델 미존재 신호만 다음 Gemini로 이어갑니다.
  * (그 외 오류는 체인을 건너뛰고 Groq 등 후단으로 넘깁니다.)
  */
 export function shouldAdvanceV5GeminiModelChain(error: unknown): boolean {
   if (isChatProviderAbortError(error)) return false;
 
   const status = getErrorHttpStatus(error);
-  if (status === 429 || status === 503) return true;
+  if (status === 429 || status === 503 || status === 404) return true;
 
   const msg = error instanceof Error ? error.message : String(error);
   const lower = msg.toLowerCase();
   if (/\b429\b/.test(lower)) return true;
   if (/\b503\b/.test(lower)) return true;
+  if (/\b404\b/.test(lower)) return true;
   if (lower.includes("resource_exhausted")) return true;
   return false;
 }
