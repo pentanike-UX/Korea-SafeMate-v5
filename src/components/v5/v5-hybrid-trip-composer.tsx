@@ -582,16 +582,14 @@ export function HybridTripComposer({
                     </span>
                   ) : null}
                 </span>
-                <span
-                  className={`block text-[12px] font-medium max-w-[9.5rem] sm:max-w-[11rem] ${
-                    multi ? "line-clamp-2 whitespace-normal break-words" : "truncate"
-                  }`}
-                >
-                  {v || `${label} 선택`}
+                <span className="block truncate text-[12px] font-medium max-w-[9.5rem] sm:max-w-[11rem]">
+                  {multi && multiCount > 1
+                    ? parseHybridMultiValues(v)[0]
+                    : v || `${label} 선택`}
                 </span>
                 {multi && multiCount > 1 ? (
-                  <span className="mt-0.5 block text-[10px] font-medium text-[var(--brand-trust-blue)]">
-                    {multiCount}개 선택됨
+                  <span className="mt-0.5 block text-[10px] font-semibold text-[var(--brand-trust-blue)]">
+                    +{multiCount - 1}개
                   </span>
                 ) : null}
               </span>
