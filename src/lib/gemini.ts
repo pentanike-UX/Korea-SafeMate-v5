@@ -20,7 +20,7 @@ function readApiKey(): string | undefined {
  * - **서버 전용**: `server-only`로 클라이언트 번들 포함을 막습니다.
  * - **Node 전용 엔트리**: `@google/genai/node`로 fs·Vertex 등 Node 런타임 구현을 사용합니다.
  * - 환경 변수 `GOOGLE_GENERATIVE_AI_API_KEY`가 없으면 `null`을 반환합니다.
- * - 백업 LLM: `GROQ_API_KEY` / `OPENAI_API_KEY` — 라우트에서 Gemini 실패 시 순차 폴백.
+ * - 백업 LLM: `GROQ_API_KEY` 등 — 일부 라우트에서 Gemini 실패 시 Groq 폴백.
  *
  * Route Handler / Server Action / 서버 컴포넌트에서만 import 하세요.
  */
@@ -61,6 +61,36 @@ export function isChatProviderAbortError(error: unknown): boolean {
     lower.includes("the user aborted") ||
     lower.includes("request was aborted")
   );
+}
+
+function getErrorHttpStatus(error: unknown): number | undefined {
+  if (!error || typeof error !== "object") return undefined;
+  const e = error as Record<string, unknown>;
+  if (typeof e.status === "number") return e.status;
+  const res = e.response as { status?: number } | undefined;
+  if (typeof res?.status === "number") return res.status;
+  const cause = e.cause as { status?: number } | undefined;
+  if (cause && typeof cause.status === "number") return cause.status;
+  return undefined;
+}
+
+/**
+ * V5 등에서 Gemini **모델 체인**의 다음 단계로 넘길지 판별합니다.
+ * 정책: HTTP **429·503** 및 동등한 할당량/일시 불가 신호만 다음 Gemini로 이어갑니다.
+ * (그 외 오류는 체인을 건너뛰고 Groq 등 후단으로 넘깁니다.)
+ */
+export function shouldAdvanceV5GeminiModelChain(error: unknown): boolean {
+  if (isChatProviderAbortError(error)) return false;
+
+  const status = getErrorHttpStatus(error);
+  if (status === 429 || status === 503) return true;
+
+  const msg = error instanceof Error ? error.message : String(error);
+  const lower = msg.toLowerCase();
+  if (/\b429\b/.test(lower)) return true;
+  if (/\b503\b/.test(lower)) return true;
+  if (lower.includes("resource_exhausted")) return true;
+  return false;
 }
 
 /**

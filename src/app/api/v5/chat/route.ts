@@ -1,11 +1,11 @@
 import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
 import { groq } from "@ai-sdk/groq";
-import { openai } from "@ai-sdk/openai";
 import type { z } from "zod";
 import {
   canAttemptGroqStructuredFallback,
   isChatProviderAbortError,
+  shouldAdvanceV5GeminiModelChain,
 } from "@/lib/gemini";
 import {
   gatherResponseSchema,
@@ -53,64 +53,80 @@ function formatHistory(messages: ChatMessage[]): string {
     .join("\n\n");
 }
 
-/** `GEMINI_MODEL` → 없으면 `GEMINI_CHAT_MODEL` → 기본 `gemini-2.0-flash`(일반 제공 모델) */
-function model() {
-  const id =
-    process.env.GEMINI_MODEL?.trim() ||
-    process.env.GEMINI_CHAT_MODEL?.trim() ||
-    "gemini-2.0-flash";
-  return google(id);
-}
+/**
+ * V5 structured 전용: 429/503(·할당량)일 때만 다음 모델로 진행.
+ * gemini-2.5-flash-preview → 2.0-flash → 2.0-flash-lite → 1.5-flash → Groq.
+ */
+const V5_GEMINI_MODEL_CHAIN = [
+  "gemini-2.5-flash-preview",
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite",
+  "gemini-1.5-flash",
+] as const;
 
 /**
- * Groq 백업 — `generateObject`는 `response_format: json_schema`를 씁니다.
- * llama-3.3-70b-versatile 등은 미지원 → HTTP 400. 지원 목록:
- * https://console.groq.com/docs/structured-outputs#supported-models
- * 기본: `openai/gpt-oss-20b` (Structured Outputs + 일반 채팅 스트리밍 모두 사용 가능)
+ * Groq 최후 수단 — `generateObject`는 `response_format: json_schema`를 씁니다.
+ * 기본: `openai/gpt-oss-20b` (Structured Outputs 지원)
+ * @see https://console.groq.com/docs/structured-outputs#supported-models
  */
 function groqChatModel() {
   const id = process.env.GROQ_CHAT_MODEL?.trim() || "openai/gpt-oss-20b";
   return groq(id);
 }
 
-/** OpenAI 백업 — `OPENAI_CHAT_MODEL`로 재정의 (기본 gpt-4o-mini, structured 출력에 적합) */
-function openaiChatModel() {
-  const id = process.env.OPENAI_CHAT_MODEL?.trim() || "gpt-4o-mini";
-  return openai(id);
-}
+type V5LlmProvider = "gemini" | "groq";
 
-type V5LlmProvider = "gemini" | "openai" | "groq";
-
-async function generateObjectOpenAiThenGroq<S extends z.ZodType>(args: {
+/**
+ * Gemini 체인(429/503 시에만 다음 모델) → 실패/비재시도 오류 후 Groq.
+ * Google 키 없고 Groq만 있으면 Groq 단독.
+ */
+async function generateObjectWithLlmFallback<S extends z.ZodType>(args: {
   schema: S;
   system: string;
   prompt: string;
   temperature: number;
-  priorErr: unknown;
 }): Promise<{ object: z.infer<S>; provider: V5LlmProvider }> {
-  let lastErr: unknown = args.priorErr;
+  const hasGoogle = Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim());
+  const hasGroq = Boolean(process.env.GROQ_API_KEY?.trim());
 
-  if (process.env.OPENAI_API_KEY?.trim()) {
-    try {
-      console.warn("[v5/chat] Trying OpenAI generateObject (Gemini skipped or failed)");
-      const r = await generateObject({
-        model: openaiChatModel(),
-        schema: args.schema,
-        system: args.system,
-        prompt: args.prompt,
-        temperature: args.temperature,
-      });
-      return { object: r.object as z.infer<S>, provider: "openai" };
-    } catch (openaiErr) {
-      if (isChatProviderAbortError(openaiErr)) throw openaiErr;
-      lastErr = openaiErr;
-      console.warn("[v5/chat] OpenAI generateObject failed:", openaiErr);
+  let lastErr: unknown = new Error("V5 LLM: no attempt");
+
+  if (hasGoogle) {
+    for (let i = 0; i < V5_GEMINI_MODEL_CHAIN.length; i++) {
+      const modelId = V5_GEMINI_MODEL_CHAIN[i]!;
+      try {
+        const r = await generateObject({
+          model: google(modelId),
+          schema: args.schema,
+          system: args.system,
+          prompt: args.prompt,
+          temperature: args.temperature,
+        });
+        return { object: r.object as z.infer<S>, provider: "gemini" };
+      } catch (geminiErr) {
+        if (isChatProviderAbortError(geminiErr)) throw geminiErr;
+        lastErr = geminiErr;
+        const advance =
+          shouldAdvanceV5GeminiModelChain(geminiErr) &&
+          i < V5_GEMINI_MODEL_CHAIN.length - 1;
+        if (advance) {
+          console.warn(
+            `[v5/chat] Gemini ${modelId} capacity/unavailable (429/503 등), trying ${V5_GEMINI_MODEL_CHAIN[i + 1]}`,
+            geminiErr,
+          );
+          continue;
+        }
+        console.warn(`[v5/chat] Gemini ${modelId} generateObject failed:`, geminiErr);
+        break;
+      }
     }
+  } else {
+    lastErr = new Error("GOOGLE_GENERATIVE_AI_API_KEY not set");
   }
 
-  if (canAttemptGroqStructuredFallback(lastErr)) {
+  if (hasGroq && canAttemptGroqStructuredFallback(lastErr)) {
     try {
-      console.warn("[v5/chat] Falling back to Groq generateObject:", lastErr);
+      console.warn("[v5/chat] Falling back to Groq generateObject after Gemini chain:", lastErr);
       const r = await generateObject({
         model: groqChatModel(),
         schema: args.schema,
@@ -121,47 +137,12 @@ async function generateObjectOpenAiThenGroq<S extends z.ZodType>(args: {
       return { object: r.object as z.infer<S>, provider: "groq" };
     } catch (groqErr) {
       if (isChatProviderAbortError(groqErr)) throw groqErr;
-      lastErr = groqErr;
       console.warn("[v5/chat] Groq generateObject failed:", groqErr);
+      throw groqErr;
     }
   }
 
   throw lastErr;
-}
-
-/** Google 키 있으면 Gemini → (실패 시) OpenAI → Groq. 없으면 OpenAI → Groq만. */
-async function generateObjectWithLlmFallback<S extends z.ZodType>(args: {
-  schema: S;
-  system: string;
-  prompt: string;
-  temperature: number;
-}): Promise<{ object: z.infer<S>; provider: V5LlmProvider }> {
-  const hasGoogle = Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim());
-
-  if (hasGoogle) {
-    try {
-      const r = await generateObject({
-        model: model(),
-        schema: args.schema,
-        system: args.system,
-        prompt: args.prompt,
-        temperature: args.temperature,
-      });
-      return { object: r.object as z.infer<S>, provider: "gemini" };
-    } catch (geminiErr) {
-      if (isChatProviderAbortError(geminiErr)) throw geminiErr;
-      console.warn("[v5/chat] Gemini generateObject failed:", geminiErr);
-      return generateObjectOpenAiThenGroq({
-        ...args,
-        priorErr: geminiErr,
-      });
-    }
-  }
-
-  return generateObjectOpenAiThenGroq({
-    ...args,
-    priorErr: new Error("GOOGLE_GENERATIVE_AI_API_KEY not set"),
-  });
 }
 
 function classifyV5ChatFailure(err: unknown): { code: string; userMessage: string } {
@@ -212,14 +193,14 @@ function classifyV5ChatFailure(err: unknown): { code: string; userMessage: strin
     return {
       code: "AUTH_CONFIG",
       userMessage:
-        "API 키가 없거나 올바르지 않을 수 있어요. 서버 환경 변수(GOOGLE_GENERATIVE_AI_API_KEY·OPENAI_API_KEY·GROQ_API_KEY)를 확인해 주세요.",
+        "API 키가 없거나 올바르지 않을 수 있어요. 서버 환경 변수(GOOGLE_GENERATIVE_AI_API_KEY·GROQ_API_KEY)를 확인해 주세요.",
     };
   }
 
   return {
     code: "LLM_FAILED",
     userMessage:
-      "일시적으로 동선을 만들지 못했어요. 잠시 후 다시 시도해 주세요. 문제가 계속되면 사용 중인 모델 ID(GEMINI_MODEL·OPENAI_CHAT_MODEL·GROQ_CHAT_MODEL)를 확인해 주세요.",
+      "일시적으로 동선을 만들지 못했어요. 잠시 후 다시 시도해 주세요. 문제가 계속되면 GROQ_CHAT_MODEL·Gemini 모델 가용성을 확인해 주세요.",
   };
 }
 
@@ -262,10 +243,9 @@ export async function POST(req: Request) {
     }).confirmRoute;
 
     const hasGoogle = Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim());
-    const hasOpenAI = Boolean(process.env.OPENAI_API_KEY?.trim());
     const hasGroq = Boolean(process.env.GROQ_API_KEY?.trim());
 
-    if (!hasGoogle && !hasOpenAI && !hasGroq) {
+    if (!hasGoogle && !hasGroq) {
       return jsonOk(fallbackNoKey(messages, confirmRoute));
     }
 
@@ -362,7 +342,7 @@ function fallbackNoKey(
     if (lower.includes("경주")) {
       return {
         content:
-          "경주 2박 3일 여행 동선 예시입니다. (실시간 생성은 GOOGLE_GENERATIVE_AI_API_KEY 또는 OPENAI_API_KEY·GROQ_API_KEY 중 하나 이상이 필요해요.)",
+          "경주 2박 3일 여행 동선 예시입니다. (실시간 생성은 GOOGLE_GENERATIVE_AI_API_KEY 또는 GROQ_API_KEY가 필요해요.)",
         preferenceChips: null,
         readyToGenerateRoute: false,
         travelPlan: mockGyeongju(),
@@ -390,7 +370,7 @@ function fallbackNoKey(
     }
     return {
       content:
-        "LLM API 키가 없어 예시 동선을 만들 수 없어요. GOOGLE_GENERATIVE_AI_API_KEY 또는 OPENAI_API_KEY·GROQ_API_KEY를 환경에 설정해 주세요.",
+        "LLM API 키가 없어 예시 동선을 만들 수 없어요. GOOGLE_GENERATIVE_AI_API_KEY 또는 GROQ_API_KEY를 환경에 설정해 주세요.",
       preferenceChips: null,
       readyToGenerateRoute: false,
       travelPlan: null,
@@ -413,7 +393,7 @@ function fallbackNoKey(
 
   return {
     content:
-      "안녕하세요! 한국 여행 동선을 함께 짜 드릴게요. 지역·일정·인원·교통·분위기·음식 취향을 알려주시면 칩으로 정리해 드리고, 확인 후 동선을 만들어요. (실시간 AI는 Gemini·OpenAI·Groq 키 중 하나 이상이 있으면 동작합니다.)",
+      "안녕하세요! 한국 여행 동선을 함께 짜 드릴게요. 지역·일정·인원·교통·분위기·음식 취향을 알려주시면 칩으로 정리해 드리고, 확인 후 동선을 만들어요. (실시간 AI는 GOOGLE_GENERATIVE_AI_API_KEY 또는 GROQ_API_KEY가 있으면 동작합니다.)",
     preferenceChips: chips,
     readyToGenerateRoute: chips.length >= 2,
     travelPlan: null,
