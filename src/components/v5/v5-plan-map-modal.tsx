@@ -316,6 +316,8 @@ function PlanMap({
   );
 
   const [mapReady, setMapReady] = useState(false);
+  const spotsWithCoordsRef = useRef(spotsWithCoords);
+  spotsWithCoordsRef.current = spotsWithCoords;
 
   const syncMarkers = useCallback(
     (map: maplibregl.Map) => {
@@ -388,12 +390,13 @@ function PlanMap({
     map.on("load", () => {
       setMapReady(true);
       setRouteGeoJSON(map, []);
-      if (spotsWithCoords.length >= 2) {
-        const b = boundsFromLngLats(straightLineFromSpots(spotsWithCoords));
+      const swc = spotsWithCoordsRef.current;
+      if (swc.length >= 2) {
+        const b = boundsFromLngLats(straightLineFromSpots(swc));
         if (b) map.fitBounds(b, { padding: 72, maxZoom: 14, duration: 0 });
-      } else if (spotsWithCoords.length === 1) {
+      } else if (swc.length === 1) {
         map.jumpTo({
-          center: [spotsWithCoords[0]!.lng!, spotsWithCoords[0]!.lat!],
+          center: [swc[0]!.lng!, swc[0]!.lat!],
           zoom: 13,
         });
       }
@@ -422,6 +425,39 @@ function PlanMap({
       setRouteGeoJSON(map, []);
     }
   }, [mapReady, routeCoordinates, spotsWithCoords]);
+
+  /** 모달·패널 레이아웃 직후 컨테이너 크기가 0이면 첫 fitBounds가 어긋남 → resize 후 한 번 더 맞춤 */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map?.isStyleLoaded()) return;
+    let cancelled = false;
+    const run = () => {
+      if (cancelled) return;
+      map.resize();
+      const coords =
+        routeCoordinates && routeCoordinates.length >= 2
+          ? routeCoordinates
+          : straightLineFromSpots(spotsWithCoords);
+      if (coords.length >= 2) {
+        const b = boundsFromLngLats(coords);
+        if (b) map.fitBounds(b, { padding: 72, maxZoom: 14, duration: 0 });
+      } else if (spotsWithCoords.length === 1) {
+        map.jumpTo({
+          center: [spotsWithCoords[0]!.lng!, spotsWithCoords[0]!.lat!],
+          zoom: 13,
+        });
+      }
+    };
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(run);
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [mapReady, spotsFingerprint, routeCoordinates, spotsWithCoords]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -477,6 +513,7 @@ function PlanMap({
         ? routeCoordinates
         : straightLineFromSpots(spotsWithCoords);
     if (coords.length < 2) return;
+    map.resize();
     const b = boundsFromLngLats(coords);
     if (b) map.fitBounds(b, { padding: 80, maxZoom: 14, duration: 520 });
   }, [mapReady, routeLoading, routeCoordinates, spotsWithCoords]);
@@ -1353,9 +1390,18 @@ export function V5PlanMapModal({
       ? "md:flex-1 md:min-w-0 md:max-w-none md:w-auto min-w-[min(100%,380px)] w-[min(100%,380px)]"
       : "min-w-[min(100%,380px)] w-[min(100%,380px)] max-w-[min(100%,380px)]";
 
+  const isDesktopShell = planLayout === "desktop";
+  const shellBaseNonFs = isDesktopShell
+    ? detailSpotId
+      ? "h-[92dvh] md:h-[85vh] rounded-t-3xl md:rounded-3xl md:max-w-[min(98vw,1180px)]"
+      : "h-[92dvh] md:h-[85vh] rounded-t-3xl md:rounded-3xl md:max-w-[920px]"
+    : "h-[100dvh] max-h-[100dvh] rounded-none w-full max-w-none";
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4"
+      className={`fixed inset-0 z-50 flex justify-center ${
+        isDesktopShell ? "items-end md:items-center p-0 md:p-4" : "items-stretch p-0"
+      }`}
       style={{ background: "rgba(10,10,10,0.55)", backdropFilter: "blur(4px)" }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -1363,12 +1409,12 @@ export function V5PlanMapModal({
     >
       <div
         ref={shellRef}
-        className={`relative w-full md:mx-auto flex flex-col bg-[var(--bg-elevated)] overflow-hidden ${
+        className={`relative flex w-full flex-col overflow-hidden bg-[var(--bg-elevated)] ${
+          isDesktopShell ? "md:mx-auto" : ""
+        } ${
           isFs
             ? "h-screen max-h-none rounded-none md:max-w-none"
-            : detailSpotId
-              ? "h-[92dvh] md:h-[85vh] rounded-t-3xl md:rounded-3xl md:max-w-[min(98vw,1180px)]"
-              : "h-[92dvh] md:h-[85vh] rounded-t-3xl md:rounded-3xl md:max-w-[920px]"
+            : shellBaseNonFs
         }`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -1386,15 +1432,17 @@ export function V5PlanMapModal({
             </p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => void toggleFullscreen()}
-              className="w-9 h-9 rounded-full flex items-center justify-center bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] hover:text-[var(--text-strong)] hover:bg-[var(--brand-primary-soft)] transition-all"
-              title={isFs ? "전체 화면 종료" : "전체 화면"}
-              aria-label={isFs ? "전체 화면 종료" : "전체 화면"}
-            >
-              {isFs ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-            </button>
+            {isDesktopShell ? (
+              <button
+                type="button"
+                onClick={() => void toggleFullscreen()}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] transition-all hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)]"
+                title={isFs ? "전체 화면 종료" : "전체 화면"}
+                aria-label={isFs ? "전체 화면 종료" : "전체 화면"}
+              >
+                {isFs ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={onClose}
