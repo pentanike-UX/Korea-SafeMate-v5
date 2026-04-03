@@ -31,6 +31,7 @@ import {
   ChevronRight,
   BookOpen,
   Landmark,
+  LayoutList,
 } from "lucide-react";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -769,6 +770,8 @@ function PlanSpotListBody({
   wikiBySpotId,
   tourBySpotId,
   headerCollapseChevron = true,
+  /** 모바일 풀시트 등: 상단 접기 헤더 없이 목록만 */
+  sheetMode = false,
 }: {
   plan: TravelPlan;
   listExpanded: boolean;
@@ -782,37 +785,9 @@ function PlanSpotListBody({
   tourBySpotId: Record<string, SpotTourEnrichment | "err" | undefined>;
   /** false면 헤더에 접기 화살표 숨김(태블릿 가로 드로어 등) */
   headerCollapseChevron?: boolean;
+  sheetMode?: boolean;
 }) {
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setListExpanded((v) => !v)}
-        className={`flex flex-col items-stretch gap-0.5 px-4 pt-4 pb-2 text-left md:px-5 md:pt-5 md:pb-3 flex-shrink-0 ${headerCollapseChevron ? "md:cursor-default" : ""}`}
-      >
-        <span className="flex items-center justify-between gap-2">
-          <span className="flex items-center gap-2 min-w-0">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--bg-surface-subtle)] text-[var(--brand-trust-blue)]">
-              <MapIcon className="w-4 h-4" strokeWidth={2.25} />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[15px] font-semibold text-[var(--text-strong)] tracking-tight">
-                일정 스팟
-              </span>
-              <span className="block text-[12px] text-[var(--text-muted)] font-normal mt-0.5">
-                {plan.spots.length}곳 · 탭하면 지도로 이동
-              </span>
-            </span>
-          </span>
-          {headerCollapseChevron && (
-            <span className="md:hidden text-[var(--text-muted)] shrink-0">
-              {listExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
-            </span>
-          )}
-        </span>
-      </button>
-
-      {listExpanded && (
+  const listSection = (
         <div className="overflow-y-auto flex-1 px-3 pb-5 md:px-4 space-y-3 md:space-y-3.5 scroll-smooth min-h-0">
           {plan.spots.map((spot, idx) => {
             const st = spotTimes[idx];
@@ -962,7 +937,43 @@ function PlanSpotListBody({
             )}
           </div>
         </div>
-      )}
+  );
+
+  if (sheetMode) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{listSection}</div>
+    );
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setListExpanded((v) => !v)}
+        className={`flex flex-col items-stretch gap-0.5 px-4 pt-4 pb-2 text-left md:px-5 md:pt-5 md:pb-3 flex-shrink-0 ${headerCollapseChevron ? "md:cursor-default" : ""}`}
+      >
+        <span className="flex items-center justify-between gap-2">
+          <span className="flex items-center gap-2 min-w-0">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--bg-surface-subtle)] text-[var(--brand-trust-blue)]">
+              <MapIcon className="w-4 h-4" strokeWidth={2.25} />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[15px] font-semibold text-[var(--text-strong)] tracking-tight">
+                일정 스팟
+              </span>
+              <span className="block text-[12px] text-[var(--text-muted)] font-normal mt-0.5">
+                {plan.spots.length}곳 · 탭하면 지도로 이동
+              </span>
+            </span>
+          </span>
+          {headerCollapseChevron && (
+            <span className="md:hidden text-[var(--text-muted)] shrink-0">
+              {listExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
+            </span>
+          )}
+        </span>
+      </button>
+      {listExpanded && listSection}
     </>
   );
 }
@@ -1033,10 +1044,16 @@ export function V5PlanMapModal({
   const reduceMotion = usePrefersReducedMotion();
   const [detailAnimOpen, setDetailAnimOpen] = useState(false);
   const [listDrawerOpen, setListDrawerOpen] = useState(true);
+  /** 모바일: 지도 우선, 목록은 풀시트 토글 */
+  const [mobileScheduleOpen, setMobileScheduleOpen] = useState(false);
   const closeDetailTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tDur = reduceMotion ? "duration-100" : "duration-300";
   const tEase = reduceMotion ? "ease-linear" : "ease-[cubic-bezier(0.32,0.72,0,1)]";
   const stackedDetailSheet = planLayout === "phone" || planLayout === "tabletPortrait";
+
+  useEffect(() => {
+    if (planLayout !== "phone") setMobileScheduleOpen(false);
+  }, [planLayout]);
 
   const spotsWithCoords = useMemo(
     () =>
@@ -1310,7 +1327,8 @@ export function V5PlanMapModal({
   const selectSpotFromList = useCallback((id: string) => {
     setSelectedSpotId(id);
     setEaseToRevision((k) => k + 1);
-  }, []);
+    if (planLayout === "phone") setMobileScheduleOpen(false);
+  }, [planLayout]);
 
   const listBodyProps = {
     plan,
@@ -1385,22 +1403,20 @@ export function V5PlanMapModal({
     </div>
   );
 
-  const detailAsideWide =
-    isFs && detailSpotId
-      ? "md:flex-1 md:min-w-0 md:max-w-none md:w-auto min-w-[min(100%,380px)] w-[min(100%,380px)]"
-      : "min-w-[min(100%,380px)] w-[min(100%,380px)] max-w-[min(100%,380px)]";
-
   const isDesktopShell = planLayout === "desktop";
+  /** 상세 열릴 때 지도 폭 유지: 레이어 가로만 일정 스팟(392)+상세(392)만큼 확장 */
   const shellBaseNonFs = isDesktopShell
     ? detailSpotId
-      ? "h-[92dvh] md:h-[85vh] rounded-t-3xl md:rounded-3xl md:max-w-[min(98vw,1180px)]"
+      ? "h-[92dvh] md:h-[85vh] rounded-t-3xl md:rounded-3xl md:max-w-[min(98vw,1312px)]"
       : "h-[92dvh] md:h-[85vh] rounded-t-3xl md:rounded-3xl md:max-w-[920px]"
     : "h-[100dvh] max-h-[100dvh] rounded-none w-full max-w-none";
 
   return (
     <div
       className={`fixed inset-0 z-50 flex justify-center ${
-        isDesktopShell ? "items-end md:items-center p-0 md:p-4" : "items-stretch p-0"
+        isDesktopShell
+          ? "items-end md:items-center p-0 md:p-4"
+          : "items-start justify-stretch p-0"
       }`}
       style={{ background: "rgba(10,10,10,0.55)", backdropFilter: "blur(4px)" }}
       onClick={(e) => {
@@ -1414,7 +1430,7 @@ export function V5PlanMapModal({
         } ${
           isFs
             ? "h-screen max-h-none rounded-none md:max-w-none"
-            : shellBaseNonFs
+            : `${shellBaseNonFs} ${isDesktopShell && !isFs ? `transition-[max-width] ${tDur} ${tEase}` : ""}`
         }`}
         onClick={(e) => e.stopPropagation()}
       >
@@ -1470,6 +1486,7 @@ export function V5PlanMapModal({
           </p>
         </div>
 
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         {planLayout === "tabletLandscape" ? (
           <div className="flex-1 relative min-h-0 min-w-0">
             <div
@@ -1516,7 +1533,7 @@ export function V5PlanMapModal({
                   }`}
                 />
                 <aside
-                  className={`absolute right-0 top-0 bottom-0 z-[56] flex w-[min(100%,400px)] flex-col rounded-none border-l border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-none transition-transform will-change-transform ${tDur} ${tEase} ${
+                  className={`absolute right-0 top-0 bottom-0 z-[56] flex w-[min(100%,392px)] max-w-[392px] flex-col rounded-none border-l border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-none transition-transform will-change-transform ${tDur} ${tEase} ${
                     detailAnimOpen ? "translate-x-0" : "translate-x-full"
                   }`}
                 >
@@ -1534,71 +1551,104 @@ export function V5PlanMapModal({
               </>
             )}
           </div>
+        ) : planLayout === "phone" ? (
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            {renderMapArea("relative min-h-0 w-full flex-1")}
+            {!mobileScheduleOpen && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileScheduleOpen(true);
+                  setListExpanded(true);
+                }}
+                className="absolute bottom-[max(1rem,env(safe-area-inset-bottom,0px))] right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[var(--brand-trust-blue)] shadow-lg ring-1 ring-black/[0.04] transition-transform hover:bg-[var(--brand-trust-blue-soft)] active:scale-95 dark:ring-white/[0.06]"
+                aria-label="일정 스팟 목록 열기"
+              >
+                <LayoutList className="h-5 w-5" strokeWidth={2.25} />
+              </button>
+            )}
+            {mobileScheduleOpen && (
+              <div
+                className="absolute inset-0 z-[30] flex min-h-0 flex-col bg-[var(--bg-elevated)]"
+                role="dialog"
+                aria-modal="true"
+                aria-label="일정 스팟"
+              >
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-3">
+                  <span className="text-[15px] font-semibold text-[var(--text-strong)]">일정 스팟</span>
+                  <button
+                    type="button"
+                    onClick={() => setMobileScheduleOpen(false)}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--bg-surface-subtle)] text-[var(--brand-trust-blue)] transition-colors hover:bg-[var(--brand-trust-blue-soft)]"
+                    aria-label="지도 보기"
+                  >
+                    <MapIcon className="h-5 w-5" strokeWidth={2.25} />
+                  </button>
+                </div>
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                  <PlanSpotListBody
+                    {...listBodyProps}
+                    headerCollapseChevron={false}
+                    sheetMode
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
           <div
-            className={`flex-1 flex min-h-0 ${
-              planLayout === "desktop"
-                ? "flex-row"
-                : planLayout === "tabletPortrait"
-                  ? "relative flex-col"
-                  : "flex-col"
+            className={`flex min-h-0 flex-1 ${
+              planLayout === "desktop" ? "flex-row" : "relative flex-col"
             }`}
           >
             {renderMapArea(
               planLayout === "tabletPortrait"
-                ? "relative flex-1 min-h-0 min-w-0 min-h-[36dvh]"
-                : "relative flex-1 min-h-0 min-w-0 min-h-[42dvh] md:min-h-0",
+                ? "relative min-h-0 min-w-0 flex-1"
+                : "relative min-h-0 min-w-0 flex-1",
             )}
-            <div
-              className={
-                planLayout === "tabletPortrait"
-                  ? "absolute bottom-0 left-0 right-0 z-[14] flex w-full max-h-[min(52vh,560px)] min-h-0 flex-col overflow-hidden rounded-none border-t border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-none"
-                  : planLayout === "desktop"
-                    ? `relative flex flex-shrink-0 flex-col border-t border-[var(--border-default)] md:flex-row md:border-t-0 md:border-l md:min-h-0 min-h-0 overflow-visible md:overflow-hidden max-h-[48vh] md:max-h-none ${
-                        isFs && detailSpotId
-                          ? "md:flex-1 md:min-w-0 md:max-w-none"
-                          : detailSpotId
-                            ? "md:w-auto md:max-w-[min(100%,820px)] md:shrink-0"
-                            : "md:w-[min(100%,392px)] md:shrink-0"
-                      }`
-                    : "relative flex flex-shrink-0 flex-col border-t border-[var(--border-default)] max-h-[48vh] min-h-0 overflow-visible"
-              }
-            >
+            {planLayout === "desktop" ? (
               <div
-                className={
-                  planLayout === "desktop"
-                    ? `flex min-h-0 min-w-0 flex-col md:border-r md:border-[var(--border-default)]/60 ${
-                        isFs && detailSpotId
-                          ? "md:w-[min(100%,380px)] md:max-w-[380px] md:shrink-0"
-                          : "md:w-[min(100%,392px)] md:max-w-[392px] md:shrink-0"
-                      }`
-                    : "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-                }
+                className={`relative flex max-h-[48vh] shrink-0 flex-col overflow-hidden border-t border-[var(--border-default)] transition-[width] will-change-[width] md:h-full md:max-h-none md:flex-row md:border-t-0 md:border-l ${tDur} ${tEase} ${
+                  detailSpotId ? "md:w-[784px]" : "md:w-[392px]"
+                }`}
               >
-                <PlanSpotListBody {...listBodyProps} />
-              </div>
-
-              {planLayout === "desktop" && detailSpotId && detailSpot && (
-                <aside
-                  className={`flex min-h-0 flex-shrink-0 flex-col overflow-hidden bg-[var(--bg-elevated)] transition-[min-width,width,max-width,opacity,transform,border-color] will-change-[width,opacity,transform] ${tDur} ${tEase} md:border-l border-[var(--border-default)] md:border-t-0 border-t ${
-                    detailAnimOpen
-                      ? `${detailAsideWide} translate-x-0 opacity-100`
-                      : "min-w-0 w-0 max-w-0 translate-x-3 border-transparent opacity-0 pointer-events-none"
-                  } ${isFs && detailSpotId ? "md:flex-1" : ""}`}
+                <div
+                  className={`flex h-full min-h-0 flex-row overflow-hidden md:min-h-0 ${
+                    detailSpotId && detailSpot ? "w-[784px] max-w-[784px]" : "w-[392px] max-w-[392px]"
+                  }`}
                 >
-                  <SpotDetailHeader title={detailSpot.name} isFs={isFs} onClose={closeDetailSpot} />
-                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-                    <SpotDetailPanelContent
-                      plan={plan}
-                      detailSpot={detailSpot}
-                      detailWiki={detailWiki}
-                      detailTour={detailTour}
-                      isFs={isFs}
-                    />
+                  <div className="flex h-full min-h-0 w-[392px] max-w-[392px] shrink-0 flex-col overflow-hidden border-t border-[var(--border-default)] bg-[var(--bg-elevated)] md:border-t-0 md:border-r md:border-[var(--border-default)]/60">
+                    <PlanSpotListBody {...listBodyProps} />
                   </div>
-                </aside>
-              )}
-            </div>
+                  {detailSpotId && detailSpot && (
+                    <aside
+                      className={`flex h-full min-h-0 w-[392px] max-w-[392px] shrink-0 flex-col overflow-hidden border-[var(--border-default)] bg-[var(--bg-elevated)] transition-transform will-change-transform md:border-l md:border-t-0 border-t ${tDur} ${tEase} ${
+                        detailAnimOpen
+                          ? "translate-x-0"
+                          : "translate-x-full pointer-events-none"
+                      }`}
+                    >
+                      <SpotDetailHeader title={detailSpot.name} isFs={isFs} onClose={closeDetailSpot} />
+                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                        <SpotDetailPanelContent
+                          plan={plan}
+                          detailSpot={detailSpot}
+                          detailWiki={detailWiki}
+                          detailTour={detailTour}
+                          isFs={isFs}
+                        />
+                      </div>
+                    </aside>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="absolute bottom-0 left-0 right-0 z-[14] flex max-h-[min(46vh,520px)] min-h-0 w-full flex-col overflow-hidden rounded-none border-t border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-none">
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                  <PlanSpotListBody {...listBodyProps} />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1613,14 +1663,17 @@ export function V5PlanMapModal({
               }`}
             />
             <div
-              className={`absolute left-0 right-0 bottom-0 z-[64] flex w-full max-h-[min(92dvh,720px)] flex-col rounded-none border-t border-[var(--border-default)] bg-[var(--bg-elevated)] shadow-none transition-transform will-change-transform ${tDur} ${tEase} ${
+              className={`absolute inset-0 z-[64] flex min-h-0 w-full flex-col bg-[var(--bg-elevated)] shadow-none transition-transform will-change-transform ${tDur} ${tEase} ${
                 detailAnimOpen ? "translate-y-0" : "translate-y-full"
               }`}
               role="dialog"
               aria-modal="true"
               aria-labelledby="v5-spot-detail-sheet-title"
             >
-              <div className="mx-auto mt-2 h-1 w-11 shrink-0 rounded-full bg-[var(--border-strong)]/70 md:hidden" aria-hidden />
+              <div
+                className="mx-auto mt-2 h-1 w-11 shrink-0 rounded-full bg-[var(--border-strong)]/70 md:hidden"
+                aria-hidden
+              />
               <div id="v5-spot-detail-sheet-title" className="sr-only">
                 {detailSpot.name} 상세 정보
               </div>
@@ -1637,6 +1690,7 @@ export function V5PlanMapModal({
             </div>
           </>
         )}
+        </div>
       </div>
     </div>
   );
