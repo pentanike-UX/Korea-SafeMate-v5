@@ -7,7 +7,7 @@ import type { V5PlanRouteLegSummary } from "@/lib/v5/fetch-v5-plan-route.server"
 import "maplibre-gl/dist/maplibre-gl.css";
 import Image from "next/image";
 import type { SpotTourEnrichment } from "@/lib/tour-api/tour-spot-client";
-import { tourImageUnoptimized, tourSearchQuery } from "@/lib/tour-api/tour-spot-client";
+import { tourImageUnoptimized, tourSpotApiUrl } from "@/lib/tour-api/tour-spot-client";
 import { V5TravelAiAnalysisLoadingOverlay } from "./v5-travel-ai-analysis-loading";
 import {
   X,
@@ -1086,9 +1086,8 @@ export function V5PlanMapModal({
     const ac = new AbortController();
     plan.spots.forEach((spot) => {
       void (async () => {
-        const q = tourSearchQuery(spot, plan.region);
         try {
-          const r = await fetch(`/api/tour/spot?q=${encodeURIComponent(q)}`, {
+          const r = await fetch(tourSpotApiUrl(spot, plan.region), {
             signal: ac.signal,
           });
           const j = (await r.json()) as

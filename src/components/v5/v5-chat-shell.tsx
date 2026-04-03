@@ -32,7 +32,7 @@ import {
 } from "./v5-hybrid-trip-composer";
 import { V5TravelAiAnalysisLoadingOverlay } from "./v5-travel-ai-analysis-loading";
 import type { SpotTourEnrichment } from "@/lib/tour-api/tour-spot-client";
-import { tourImageUnoptimized, tourSearchQuery } from "@/lib/tour-api/tour-spot-client";
+import { tourImageUnoptimized, tourSpotApiUrl } from "@/lib/tour-api/tour-spot-client";
 
 // ─── Composer: 여행 프롬프트 체크리스트 (실시간 키워드 감지) ───────────────────
 
@@ -462,9 +462,8 @@ function TravelRouteCard({
     const ac = new AbortController();
     plan.spots.forEach((spot) => {
       void (async () => {
-        const q = tourSearchQuery(spot, plan.region);
         try {
-          const r = await fetch(`/api/tour/spot?q=${encodeURIComponent(q)}`, {
+          const r = await fetch(tourSpotApiUrl(spot, plan.region), {
             signal: ac.signal,
           });
           const j = (await r.json()) as
