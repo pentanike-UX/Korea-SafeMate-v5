@@ -57,13 +57,14 @@ export async function GET(req: NextRequest) {
   });
 
   if (!result.ok) {
+    /** NOT_FOUND는 클라이언트가 스팟마다 반복 호출하므로 404 대신 200으로 두어 콘솔·네트워크 탭 노이즈 감소 */
     const status =
-      result.code === "NO_API_KEY"
-        ? 503
-        : result.code === "BAD_QUERY"
-          ? 400
-          : result.code === "NOT_FOUND"
-            ? 404
+      result.code === "NOT_FOUND"
+        ? 200
+        : result.code === "NO_API_KEY"
+          ? 503
+          : result.code === "BAD_QUERY"
+            ? 400
             : 502;
     return NextResponse.json(
       { ok: false, code: result.code, message: result.message },
@@ -71,19 +72,27 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const displayImageUrl = result.imageUrl ?? TOUR_SPOT_PLACEHOLDER_IMAGE;
+  /** 플랜 스팟명과 검색 제목이 맞지 않으면 이미지·소개·좌표를 내리지 않음(엉뚱한 POI 노출 방지) */
+  const stripMisaligned =
+    matchName.length > 0 && !result.alignsWithPlanName;
+  const imageUrl = stripMisaligned ? null : result.imageUrl;
+  const overview = stripMisaligned ? null : result.overview;
+  const matchedLat = stripMisaligned ? null : result.matchedLat;
+  const matchedLng = stripMisaligned ? null : result.matchedLng;
+  const displayImageUrl = imageUrl ?? TOUR_SPOT_PLACEHOLDER_IMAGE;
 
   return NextResponse.json({
     ok: true,
     query: result.query,
     contentId: result.contentId,
     contentTypeId: result.contentTypeId,
-    title: result.title,
-    imageUrl: result.imageUrl,
+    title: stripMisaligned ? "" : result.title,
+    imageUrl,
     displayImageUrl,
-    overview: result.overview,
-    matchedLat: result.matchedLat,
-    matchedLng: result.matchedLng,
-    alignsWithPlanName: result.alignsWithPlanName,
+    overview,
+    matchedLat,
+    matchedLng,
+    /** 보강을 숨긴 경우 UI는 타입 아이콘만 쓰도록 일치로 표시 */
+    alignsWithPlanName: stripMisaligned ? true : result.alignsWithPlanName,
   });
 }

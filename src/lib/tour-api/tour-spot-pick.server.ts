@@ -120,7 +120,7 @@ export function pickBestTourSearchItem(
   return best;
 }
 
-/** 제목 일치가 충분히 높으면 UI에서 별도 안내 생략 */
+/** 제목 일치가 충분히 높으면 UI에서 별도 안내 생략·Tour 미디어 노출 허용 */
 export function tourMatchLooksAligned(matchName: string, pickedTitle: string): boolean {
-  return scoreTourTitleMatch(matchName, pickedTitle) >= 450;
+  return scoreTourTitleMatch(matchName, pickedTitle) >= 520;
 }

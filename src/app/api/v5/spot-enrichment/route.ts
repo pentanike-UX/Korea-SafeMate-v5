@@ -77,7 +77,8 @@ export async function GET(req: NextRequest): Promise<NextResponse<SpotEnrichment
         if (summary) return NextResponse.json(summary);
       }
     }
-    return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+    /** 위키 미검색은 흔함 — 404는 DevTools에서 오류처럼 보이므로 200 + ok:false */
+    return NextResponse.json({ ok: false, error: "not_found" }, { status: 200 });
   } catch {
     return NextResponse.json({ ok: false, error: "upstream" }, { status: 502 });
   }

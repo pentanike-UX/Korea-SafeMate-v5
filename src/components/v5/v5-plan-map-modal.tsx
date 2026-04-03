@@ -206,7 +206,32 @@ function boundsFromLngLats(coords: [number, number][]): maplibregl.LngLatBoundsL
   ];
 }
 
+function sanitizeLineCoords(coords: [number, number][]): [number, number][] {
+  return coords.filter(
+    (c) =>
+      Array.isArray(c) &&
+      c.length === 2 &&
+      Number.isFinite(c[0]) &&
+      Number.isFinite(c[1]),
+  ) as [number, number][];
+}
+
+/** OpenFreeMap Liberty 등 벡터 스타일이 POI icon-image를 참조할 때 스프라이트에 없으면 경고가 반복됨 */
+function attachStyleImageMissingStub(map: maplibregl.Map) {
+  map.on("styleimagemissing", (e) => {
+    const id = e.id;
+    if (!id || map.hasImage(id)) return;
+    try {
+      const data = new Uint8Array(4);
+      map.addImage(id, { width: 1, height: 1, data }, { pixelRatio: 1 });
+    } catch {
+      /* 이미 등록됨 등 */
+    }
+  });
+}
+
 function setRouteGeoJSON(map: maplibregl.Map, coordinates: [number, number][]) {
+  const coords = sanitizeLineCoords(coordinates);
   const empty = {
     type: "Feature" as const,
     properties: {},
@@ -215,9 +240,9 @@ function setRouteGeoJSON(map: maplibregl.Map, coordinates: [number, number][]) {
   const feature = {
     type: "Feature" as const,
     properties: {},
-    geometry: { type: "LineString" as const, coordinates },
+    geometry: { type: "LineString" as const, coordinates: coords },
   };
-  const data = coordinates.length >= 2 ? feature : empty;
+  const data = coords.length >= 2 ? feature : empty;
 
   const existing = map.getSource("route-src");
   if (existing?.type === "geojson") {
@@ -243,7 +268,7 @@ function setAirRouteGeoJSON(map: maplibregl.Map, lineSegments: [number, number][
   const features = lineSegments.map((coordinates) => ({
     type: "Feature" as const,
     properties: {},
-    geometry: { type: "LineString" as const, coordinates },
+    geometry: { type: "LineString" as const, coordinates: sanitizeLineCoords(coordinates) },
   }));
   const data = {
     type: "FeatureCollection" as const,
@@ -386,6 +411,7 @@ function PlanMap({
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     mapRef.current = map;
+    attachStyleImageMissingStub(map);
 
     const ro = new ResizeObserver(() => {
       map.resize();
@@ -1232,7 +1258,7 @@ export function V5PlanMapModal({
       if (cancelled) return;
       setRouteLoading(false);
       if (res.ok && res.coordinates.length >= 2) {
-        setRouteCoordinates(res.coordinates);
+        setRouteCoordinates(sanitizeLineCoords(res.coordinates));
         setRouteLegs(res.legs ?? []);
         setRouteKind(res.kind);
       } else {
