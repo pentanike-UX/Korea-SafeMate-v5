@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   MapPin,
   MapPinned,
@@ -14,6 +15,7 @@ import {
   ChevronRight,
   Send,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { CascaderDesktop, RegionPickerOverlay, getZoneSuggestionsForRegion, useMdUp } from "./region-selector";
 
 /** 로컬 동선 탐색용 8슬롯 — 출발·귀경지 없음 */
@@ -222,18 +224,43 @@ export function useLgUp(): boolean {
   return lg;
 }
 
+/** `globals.css` 의 V5 태블릿 가로 분할(채팅 | 미리보기)과 동일 조건 */
+export function useV5TabletSplitLayout(): boolean {
+  const [match, setMatch] = useState(false);
+  useLayoutEffect(() => {
+    const q =
+      "(min-width: 1024px) and (max-width: 1368px) and (orientation: landscape) and (min-height: 520px)";
+    const mq = window.matchMedia(q);
+    const sync = () => setMatch(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    window.addEventListener("orientationchange", sync);
+    return () => {
+      mq.removeEventListener("change", sync);
+      window.removeEventListener("orientationchange", sync);
+    };
+  }, []);
+  return match;
+}
+
 export function HybridTripComposer({
   draft,
   onDraftChange,
   onSubmit,
   disabled,
   showSendButton = true,
+  sheetPortalElement,
+  dockSheetInTabletSplit = false,
 }: {
   draft: Record<HybridTripKey, string>;
   onDraftChange: (next: Record<HybridTripKey, string>) => void;
   onSubmit: () => void;
   disabled: boolean;
   showSendButton?: boolean;
+  /** 태블릿 분할 시 우측 패널 내부 컨테이너(ref 콜백으로 전달된 요소) */
+  sheetPortalElement?: HTMLDivElement | null;
+  /** true면 칩 시트를 전체 화면 바텀/모달 대신 우측 패널 위에 슬라이드 */
+  dockSheetInTabletSplit?: boolean;
 }) {
   const lgUp = useLgUp();
   const mdUp = useMdUp();
@@ -317,6 +344,198 @@ export function HybridTripComposer({
       : openKey
         ? HYBRID_SLOT_OPTIONS[openKey]
         : [];
+
+  const useTabletPortal = Boolean(dockSheetInTabletSplit && sheetPortalElement);
+
+  const [sheetSlideIn, setSheetSlideIn] = useState(false);
+  useEffect(() => {
+    if (!openKey || openKey === "region" || !useTabletPortal) {
+      setSheetSlideIn(false);
+      return;
+    }
+    setSheetSlideIn(false);
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setSheetSlideIn(true));
+    });
+    return () => cancelAnimationFrame(id);
+  }, [openKey, useTabletPortal]);
+
+  const slotPickSheetInner = openKey && openKey !== "region" && activeMeta && (
+    <>
+      <div className="flex items-center justify-between gap-2 border-b border-[var(--border-default)] px-4 py-3 shrink-0">
+        <div className="min-w-0">
+          <h2 id="v5-hybrid-sheet-title" className="text-[15px] font-semibold text-[var(--text-strong)]">
+            {activeMeta.label} 선택
+          </h2>
+          {openKey === "zone" && draft.region.trim() ? (
+            <p className="text-[11px] font-normal text-[var(--text-muted)] mt-0.5">
+              {draft.region.trim()} 기준 제안이 위에 붙습니다
+            </p>
+          ) : null}
+          {openKey && HYBRID_MULTI_KEYS.has(openKey) ? (
+            <p className="text-[11px] font-medium text-[var(--brand-trust-blue)] mt-1">
+              여러 개 고른 뒤 하단 <strong className="font-semibold">적용</strong>을 누르면 반영돼요
+            </p>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          onClick={closeSheet}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)]"
+          aria-label="닫기"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="v5-hybrid-wheel flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3 space-y-1.5">
+        {openKey === "schedule" && (
+          <div className="mb-3 rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/50 px-3 py-3 space-y-2">
+            <p className="text-[11px] font-semibold text-[var(--text-muted)]">캘린더로 기간 넣기(선택)</p>
+            <div className="flex flex-wrap gap-2 items-center">
+              <label className="text-[12px] text-[var(--text-secondary)] shrink-0">시작</label>
+              <input
+                type="date"
+                value={rangeStart}
+                onChange={(e) => setRangeStart(e.target.value)}
+                className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-2 py-1.5 text-base text-[var(--text-strong)]"
+              />
+              <label className="text-[12px] text-[var(--text-secondary)] shrink-0">종료</label>
+              <input
+                type="date"
+                value={rangeEnd}
+                onChange={(e) => setRangeEnd(e.target.value)}
+                className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-2 py-1.5 text-base text-[var(--text-strong)]"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (rangeStart && rangeEnd) {
+                    applyValue(`${rangeStart} ~ ${rangeEnd}`);
+                  } else if (rangeStart) {
+                    applyValue(`${rangeStart}부터`);
+                  }
+                }}
+                disabled={!rangeStart}
+                className="rounded-lg bg-[var(--brand-trust-blue-soft)] px-3 py-2 text-[12px] font-semibold text-[var(--brand-trust-blue)] disabled:opacity-40"
+              >
+                날짜 반영
+              </button>
+            </div>
+            <p className="text-[10px] text-[var(--text-muted)]">
+              아래 프리셋(당일·N박)을 써도 됩니다.
+            </p>
+          </div>
+        )}
+        {sheetOptions.map((opt) => {
+          const isMulti = openKey && HYBRID_MULTI_KEYS.has(openKey);
+          const selected =
+            isMulti && openKey ? multiSheetSelection.includes(opt) : false;
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => {
+                if (!openKey) return;
+                if (HYBRID_MULTI_KEYS.has(openKey)) {
+                  setMultiSheetSelection((prev) => {
+                    const i = prev.indexOf(opt);
+                    if (i >= 0) return prev.filter((_, j) => j !== i);
+                    return [...prev, opt];
+                  });
+                  return;
+                }
+                applyValue(opt);
+              }}
+              className={`v5-hybrid-wheel-item w-full snap-start min-h-[48px] rounded-xl border px-4 py-3 text-left text-[14px] font-medium transition-all active:scale-[0.99] ${
+                selected
+                  ? "border-[var(--brand-trust-blue)]/45 bg-[var(--brand-trust-blue-soft)] text-[var(--text-strong)] ring-1 ring-[var(--brand-trust-blue)]/15"
+                  : "border-transparent text-[var(--text-strong)] hover:bg-[var(--brand-trust-blue-soft)] hover:border-[var(--brand-trust-blue)]/20"
+              }`}
+            >
+              <span className="flex items-center justify-between gap-2">
+                <span>{opt}</span>
+                {selected ? (
+                  <span className="shrink-0 rounded-full bg-[var(--brand-trust-blue)] px-2 py-0.5 text-[10px] font-bold text-white">
+                    선택됨
+                  </span>
+                ) : (
+                  <span className="shrink-0 text-[10px] font-semibold text-[var(--text-muted)]">
+                    + 추가
+                  </span>
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="border-t border-[var(--border-default)] px-3 py-3 space-y-2 shrink-0 bg-[var(--bg-page)] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)] px-1">
+          직접 입력
+          {openKey && HYBRID_MULTI_KEYS.has(openKey) ? (
+            <span className="ml-1 font-normal normal-case text-[var(--brand-trust-blue)]">
+              · 목록에 합쳐져요 (중복 제외)
+            </span>
+          ) : null}
+        </p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={customLine}
+            onChange={(e) => setCustomLine(e.target.value)}
+            placeholder={`${activeMeta.label}을(를) 짧게 입력`}
+            className="flex-1 min-w-0 rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-2.5 text-base text-[var(--text-strong)] placeholder:text-[var(--text-muted)]"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              if (!customLine.trim() || !openKey) return;
+              if (HYBRID_MULTI_KEYS.has(openKey)) {
+                const t = customLine.trim();
+                setMultiSheetSelection((prev) =>
+                  prev.includes(t) ? prev : [...prev, t],
+                );
+                setCustomLine("");
+                return;
+              }
+              applyValue(customLine);
+            }}
+            disabled={!customLine.trim()}
+            className="shrink-0 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-[13px] font-semibold text-[var(--text-on-brand)] disabled:opacity-40"
+          >
+            {openKey && HYBRID_MULTI_KEYS.has(openKey) ? "목록에 추가" : "적용"}
+          </button>
+        </div>
+      </div>
+
+      {openKey && HYBRID_MULTI_KEYS.has(openKey) ? (
+        <div className="flex gap-2 border-t border-[var(--border-default)] px-3 py-3 shrink-0 bg-[var(--bg-page)] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <button
+            type="button"
+            onClick={closeSheet}
+            className="flex-1 min-h-[48px] rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[14px] font-semibold text-[var(--text-strong)] active:scale-[0.99] transition-transform"
+          >
+            취소
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (!openKey) return;
+              onDraftChange({
+                ...draft,
+                [openKey]: joinHybridMultiValues(multiSheetSelection),
+              });
+              closeSheet();
+            }}
+            className="flex-1 min-h-[48px] rounded-2xl bg-[var(--brand-primary)] text-[14px] font-semibold text-[var(--text-on-brand)] shadow-sm hover:bg-[var(--brand-primary-hover)] active:scale-[0.99] transition-all"
+          >
+            적용
+          </button>
+        </div>
+      ) : null}
+    </>
+  );
 
   return (
     <div className="v5-composer-liquid-panel space-y-3 rounded-2xl px-3 py-3 md:px-4 md:py-4">
@@ -408,7 +627,33 @@ export function HybridTripComposer({
         />
       )}
 
-      {openKey && openKey !== "region" && activeMeta && (
+      {useTabletPortal && sheetPortalElement && slotPickSheetInner
+        ? createPortal(
+            <div className="pointer-events-auto absolute inset-0 z-[90] overflow-hidden">
+              <button
+                type="button"
+                className="absolute inset-0 z-0 bg-[rgba(10,10,10,0.38)] backdrop-blur-[2px]"
+                aria-label="닫기"
+                onClick={closeSheet}
+              />
+              <div
+                className={cn(
+                  "absolute inset-0 z-[1] flex min-h-0 min-w-0 flex-col bg-[var(--bg-elevated)] shadow-[0_0_48px_rgba(0,0,0,0.18)]",
+                  "transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] will-change-transform",
+                  sheetSlideIn ? "translate-x-0" : "translate-x-full",
+                )}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="v5-hybrid-sheet-title"
+              >
+                {slotPickSheetInner}
+              </div>
+            </div>,
+            sheetPortalElement,
+          )
+        : null}
+
+      {!useTabletPortal && openKey && openKey !== "region" && activeMeta && slotPickSheetInner && (
         <div
           className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-4"
           style={{ background: "rgba(10,10,10,0.45)" }}
@@ -423,181 +668,10 @@ export function HybridTripComposer({
             onClick={closeSheet}
           />
           <div
-            className={`relative z-[81] flex w-full max-w-lg flex-col bg-[var(--bg-elevated)] shadow-2xl border border-[var(--border-default)] max-h-[min(88dvh,560px)] sm:max-h-[min(70vh,520px)] sm:rounded-2xl rounded-t-2xl overflow-hidden`}
+            className="relative z-[81] flex w-full max-w-lg flex-col bg-[var(--bg-elevated)] shadow-2xl border border-[var(--border-default)] max-h-[min(88dvh,560px)] sm:max-h-[min(70vh,520px)] sm:rounded-2xl rounded-t-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between gap-2 border-b border-[var(--border-default)] px-4 py-3 shrink-0">
-              <div className="min-w-0">
-                <h2 id="v5-hybrid-sheet-title" className="text-[15px] font-semibold text-[var(--text-strong)]">
-                  {activeMeta.label} 선택
-                </h2>
-                {openKey === "zone" && draft.region.trim() ? (
-                  <p className="text-[11px] font-normal text-[var(--text-muted)] mt-0.5">
-                    {draft.region.trim()} 기준 제안이 위에 붙습니다
-                  </p>
-                ) : null}
-                {openKey && HYBRID_MULTI_KEYS.has(openKey) ? (
-                  <p className="text-[11px] font-medium text-[var(--brand-trust-blue)] mt-1">
-                    여러 개 고른 뒤 하단 <strong className="font-semibold">적용</strong>을 누르면 반영돼요
-                  </p>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                onClick={closeSheet}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)]"
-                aria-label="닫기"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="v5-hybrid-wheel flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3 space-y-1.5">
-              {openKey === "schedule" && (
-                <div className="mb-3 rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/50 px-3 py-3 space-y-2">
-                  <p className="text-[11px] font-semibold text-[var(--text-muted)]">캘린더로 기간 넣기(선택)</p>
-                  <div className="flex flex-wrap gap-2 items-center">
-                    <label className="text-[12px] text-[var(--text-secondary)] shrink-0">시작</label>
-                    <input
-                      type="date"
-                      value={rangeStart}
-                      onChange={(e) => setRangeStart(e.target.value)}
-                      className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-2 py-1.5 text-base text-[var(--text-strong)]"
-                    />
-                    <label className="text-[12px] text-[var(--text-secondary)] shrink-0">종료</label>
-                    <input
-                      type="date"
-                      value={rangeEnd}
-                      onChange={(e) => setRangeEnd(e.target.value)}
-                      className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-2 py-1.5 text-base text-[var(--text-strong)]"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (rangeStart && rangeEnd) {
-                          applyValue(`${rangeStart} ~ ${rangeEnd}`);
-                        } else if (rangeStart) {
-                          applyValue(`${rangeStart}부터`);
-                        }
-                      }}
-                      disabled={!rangeStart}
-                      className="rounded-lg bg-[var(--brand-trust-blue-soft)] px-3 py-2 text-[12px] font-semibold text-[var(--brand-trust-blue)] disabled:opacity-40"
-                    >
-                      날짜 반영
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-[var(--text-muted)]">
-                    아래 프리셋(당일·N박)을 써도 됩니다.
-                  </p>
-                </div>
-              )}
-              {sheetOptions.map((opt) => {
-                const isMulti = openKey && HYBRID_MULTI_KEYS.has(openKey);
-                const selected =
-                  isMulti && openKey ? multiSheetSelection.includes(opt) : false;
-                return (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => {
-                      if (!openKey) return;
-                      if (HYBRID_MULTI_KEYS.has(openKey)) {
-                        setMultiSheetSelection((prev) => {
-                          const i = prev.indexOf(opt);
-                          if (i >= 0) return prev.filter((_, j) => j !== i);
-                          return [...prev, opt];
-                        });
-                        return;
-                      }
-                      applyValue(opt);
-                    }}
-                    className={`v5-hybrid-wheel-item w-full snap-start min-h-[48px] rounded-xl border px-4 py-3 text-left text-[14px] font-medium transition-all active:scale-[0.99] ${
-                      selected
-                        ? "border-[var(--brand-trust-blue)]/45 bg-[var(--brand-trust-blue-soft)] text-[var(--text-strong)] ring-1 ring-[var(--brand-trust-blue)]/15"
-                        : "border-transparent text-[var(--text-strong)] hover:bg-[var(--brand-trust-blue-soft)] hover:border-[var(--brand-trust-blue)]/20"
-                    }`}
-                  >
-                    <span className="flex items-center justify-between gap-2">
-                      <span>{opt}</span>
-                      {selected ? (
-                        <span className="shrink-0 rounded-full bg-[var(--brand-trust-blue)] px-2 py-0.5 text-[10px] font-bold text-white">
-                          선택됨
-                        </span>
-                      ) : (
-                        <span className="shrink-0 text-[10px] font-semibold text-[var(--text-muted)]">
-                          + 추가
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="border-t border-[var(--border-default)] px-3 py-3 space-y-2 shrink-0 bg-[var(--bg-page)] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)] px-1">
-                직접 입력
-                {openKey && HYBRID_MULTI_KEYS.has(openKey) ? (
-                  <span className="ml-1 font-normal normal-case text-[var(--brand-trust-blue)]">
-                    · 목록에 합쳐져요 (중복 제외)
-                  </span>
-                ) : null}
-              </p>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={customLine}
-                  onChange={(e) => setCustomLine(e.target.value)}
-                  placeholder={`${activeMeta.label}을(를) 짧게 입력`}
-                  className="flex-1 min-w-0 rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-2.5 text-base text-[var(--text-strong)] placeholder:text-[var(--text-muted)]"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!customLine.trim() || !openKey) return;
-                    if (HYBRID_MULTI_KEYS.has(openKey)) {
-                      const t = customLine.trim();
-                      setMultiSheetSelection((prev) =>
-                        prev.includes(t) ? prev : [...prev, t],
-                      );
-                      setCustomLine("");
-                      return;
-                    }
-                    applyValue(customLine);
-                  }}
-                  disabled={!customLine.trim()}
-                  className="shrink-0 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-[13px] font-semibold text-[var(--text-on-brand)] disabled:opacity-40"
-                >
-                  {openKey && HYBRID_MULTI_KEYS.has(openKey) ? "목록에 추가" : "적용"}
-                </button>
-              </div>
-            </div>
-
-            {openKey && HYBRID_MULTI_KEYS.has(openKey) ? (
-              <div className="flex gap-2 border-t border-[var(--border-default)] px-3 py-3 shrink-0 bg-[var(--bg-page)] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                <button
-                  type="button"
-                  onClick={closeSheet}
-                  className="flex-1 min-h-[48px] rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[14px] font-semibold text-[var(--text-strong)] active:scale-[0.99] transition-transform"
-                >
-                  취소
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!openKey) return;
-                    onDraftChange({
-                      ...draft,
-                      [openKey]: joinHybridMultiValues(multiSheetSelection),
-                    });
-                    closeSheet();
-                  }}
-                  className="flex-1 min-h-[48px] rounded-2xl bg-[var(--brand-primary)] text-[14px] font-semibold text-[var(--text-on-brand)] shadow-sm hover:bg-[var(--brand-primary-hover)] active:scale-[0.99] transition-all"
-                >
-                  적용
-                </button>
-              </div>
-            ) : null}
+            {slotPickSheetInner}
           </div>
         </div>
       )}

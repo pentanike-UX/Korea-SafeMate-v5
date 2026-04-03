@@ -28,6 +28,7 @@ import {
 import { V5PlanMapModal } from "./v5-plan-map-modal";
 import { consumeTravelChatSse } from "@/lib/travel-chat/consume-chat-sse";
 import { BRAND } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import { Link } from "@/i18n/navigation";
 import { AppleThemeToggle } from "@/components/theme/apple-theme-toggle";
 import { useTheme } from "@/components/theme/theme-provider";
@@ -42,6 +43,7 @@ import {
   hybridHasMinimumForSend,
   parseHybridMultiValues,
   useLgUp,
+  useV5TabletSplitLayout,
   type HybridTripKey,
 } from "./v5-hybrid-trip-composer";
 import { V5TravelAiAnalysisLoadingOverlay } from "./v5-travel-ai-analysis-loading";
@@ -877,18 +879,25 @@ function TabletPlanPreviewPane({
   isSaved,
   onSave,
   onViewMap,
+  hybridSheetHostCallback,
 }: {
   plan: TravelPlan | null;
   isSaved: boolean;
   onSave: (p: TravelPlan) => void;
   onViewMap: (p: TravelPlan) => void;
+  /** 하이브리드 칩 시트를 이 영역 위에 포털로 올릴 컨테이너 */
+  hybridSheetHostCallback?: (el: HTMLDivElement | null) => void;
 }) {
   if (!plan) {
     return (
       <aside
-        className="v5-chat-split-preview border-l border-[var(--border-default)] bg-[var(--bg-surface)]"
+        className="v5-chat-split-preview border-l border-[var(--border-default)] bg-[var(--bg-surface)] flex flex-col min-h-0"
         aria-label="동선 미리보기"
       >
+        <div
+          ref={(el) => hybridSheetHostCallback?.(el)}
+          className="relative flex flex-1 flex-col min-h-0 min-w-0 overflow-hidden"
+        >
         <div className="flex flex-1 flex-col items-center justify-center gap-2 px-5 py-8 text-center">
           <Map className="h-8 w-8 text-[var(--text-muted)]/40" aria-hidden />
           <p className="text-[13px] font-medium text-[var(--text-secondary)] leading-snug">
@@ -901,6 +910,7 @@ function TabletPlanPreviewPane({
             좁은 화면에서는 채팅 상단 <strong className="text-[var(--text-strong)]">내 플랜</strong>으로 전체 화면을 열 수 있어요.
           </p>
         </div>
+        </div>
       </aside>
     );
   }
@@ -910,12 +920,17 @@ function TabletPlanPreviewPane({
       className="v5-chat-split-preview border-l border-[var(--border-default)] bg-[var(--bg-surface)] flex flex-col min-h-0 min-w-0"
       aria-label="지도 및 타임라인"
     >
-      <PlanPreviewTimelineBody
-        plan={plan}
-        isSaved={isSaved}
-        onSave={onSave}
-        onViewMap={onViewMap}
-      />
+      <div
+        ref={(el) => hybridSheetHostCallback?.(el)}
+        className="relative flex flex-1 flex-col min-h-0 min-w-0 overflow-hidden"
+      >
+        <PlanPreviewTimelineBody
+          plan={plan}
+          isSaved={isSaved}
+          onSave={onSave}
+          onViewMap={onViewMap}
+        />
+      </div>
     </aside>
   );
 }
@@ -1832,6 +1847,8 @@ export function V5ChatShell() {
   const [keyboardOverlapPx, setKeyboardOverlapPx] = useState(0);
   const [isNarrowViewport, setIsNarrowViewport] = useState(false);
   const isLg = useLgUp();
+  const v5TabletSplitLayout = useV5TabletSplitLayout();
+  const [hybridSheetHostEl, setHybridSheetHostEl] = useState<HTMLDivElement | null>(null);
   const [hybridDraft, setHybridDraft] = useState(HYBRID_TRIP_EMPTY);
   const [mobileFreeInput, setMobileFreeInput] = useState(false);
   /** 입력 독(하이브리드·자유입력) 접기/펼치기 — 모바일·태블릿·데스크톱 공통 */
@@ -2865,26 +2882,41 @@ export function V5ChatShell() {
 
               {composerDockExpanded && (
                 <>
-              <div className="hidden lg:flex items-center justify-between gap-3 px-0.5">
-                <span className="text-[11px] font-medium text-[var(--text-muted)] tracking-tight shrink-0">
-                  입력 방식
-                </span>
-                <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-                  <div
-                    className="v5-composer-liquid-panel inline-flex shrink-0 rounded-xl p-1"
-                    role="tablist"
-                    aria-label="입력 방식 전환"
-                  >
+              <div className="hidden lg:flex w-full items-center justify-between gap-3 px-0.5">
+                <div
+                  className={cn(
+                    "relative inline-flex h-[30px] w-[12.5rem] shrink-0 rounded-full p-[3px]",
+                    "bg-black/[0.06] ring-1 ring-inset ring-black/[0.06]",
+                    "dark:bg-white/[0.1] dark:ring-white/[0.08]",
+                  )}
+                  role="tablist"
+                  aria-label="입력 전환"
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "pointer-events-none absolute left-[3px] top-[3px] bottom-[3px] w-[calc(50%-4.5px)] rounded-full",
+                      "bg-[var(--bg-surface)] shadow-[0_1px_2px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.06)]",
+                      "ring-1 ring-black/[0.04]",
+                      "dark:bg-zinc-600 dark:shadow-[0_1px_3px_rgba(0,0,0,0.45)] dark:ring-white/[0.12]",
+                      "transition-transform duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]",
+                      composerDesktopMode === "free"
+                        ? "translate-x-[calc(100%+3px)]"
+                        : "translate-x-0",
+                    )}
+                  />
+                  <div className="relative z-10 grid h-full w-full grid-cols-2">
                     <button
                       type="button"
                       role="tab"
                       aria-selected={composerDesktopMode === "picker"}
                       onClick={() => setDesktopComposerMode("picker")}
-                      className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                      className={cn(
+                        "rounded-full text-[11px] font-semibold tracking-tight transition-colors duration-150",
                         composerDesktopMode === "picker"
-                          ? "bg-[var(--bg-elevated)] text-[var(--text-strong)] shadow-sm"
-                          : "text-[var(--text-muted)] hover:text-[var(--text-strong)]"
-                      }`}
+                          ? "text-[var(--text-strong)]"
+                          : "text-[var(--text-muted)]",
+                      )}
                     >
                       간편 선택
                     </button>
@@ -2893,48 +2925,102 @@ export function V5ChatShell() {
                       role="tab"
                       aria-selected={composerDesktopMode === "free"}
                       onClick={() => setDesktopComposerMode("free")}
-                      className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                      className={cn(
+                        "rounded-full text-[11px] font-semibold tracking-tight transition-colors duration-150",
                         composerDesktopMode === "free"
-                          ? "bg-[var(--bg-elevated)] text-[var(--text-strong)] shadow-sm"
-                          : "text-[var(--text-muted)] hover:text-[var(--text-strong)]"
-                      }`}
+                          ? "text-[var(--text-strong)]"
+                          : "text-[var(--text-muted)]",
+                      )}
                     >
                       자유 입력
                     </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setComposerDockExpanded(false)}
-                    className="v5-composer-liquid-panel flex shrink-0 items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-muted)] hover:text-[var(--text-strong)] transition-colors"
-                    aria-expanded={composerDockExpanded}
-                    title="입력 영역 접기"
-                  >
-                    <ChevronDown className="h-4 w-4 opacity-80" aria-hidden />
-                    접기
-                  </button>
                 </div>
-              </div>
-
-              <div className="flex lg:hidden items-center justify-between gap-2 px-0.5">
                 <button
                   type="button"
                   onClick={() => setComposerDockExpanded(false)}
-                  className="flex shrink-0 items-center gap-1 rounded-xl border border-transparent px-2 py-1.5 text-[11px] font-semibold text-[var(--text-muted)] hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--text-strong)] touch-manipulation"
+                  className={cn(
+                    "inline-flex h-[30px] shrink-0 items-center gap-1 rounded-full px-3.5",
+                    "bg-black/[0.06] ring-1 ring-inset ring-black/[0.06]",
+                    "dark:bg-white/[0.1] dark:ring-white/[0.08]",
+                    "text-[11px] font-semibold transition-colors duration-150",
+                    "text-[var(--text-muted)] hover:text-[var(--text-strong)]",
+                  )}
                   aria-expanded={composerDockExpanded}
                   title="입력 영역 접기"
                 >
-                  <ChevronDown className="h-4 w-4 opacity-80" aria-hidden />
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
                   접기
                 </button>
-                <span className="min-w-0 flex-1 text-center text-[11px] font-medium text-[var(--text-muted)] truncate">
-                  선택 입력 기본
-                </span>
+              </div>
+
+              <div className="flex lg:hidden w-full items-center justify-between gap-2 px-0.5">
+                <div
+                  className={cn(
+                    "relative inline-flex h-[30px] w-[12.5rem] shrink-0 rounded-full p-[3px]",
+                    "bg-black/[0.06] ring-1 ring-inset ring-black/[0.06]",
+                    "dark:bg-white/[0.1] dark:ring-white/[0.08]",
+                  )}
+                  role="tablist"
+                  aria-label="입력 전환"
+                >
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "pointer-events-none absolute left-[3px] top-[3px] bottom-[3px] w-[calc(50%-4.5px)] rounded-full",
+                      "bg-[var(--bg-surface)] shadow-[0_1px_2px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.06)]",
+                      "ring-1 ring-black/[0.04]",
+                      "dark:bg-zinc-600 dark:shadow-[0_1px_3px_rgba(0,0,0,0.45)] dark:ring-white/[0.12]",
+                      "transition-transform duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]",
+                      mobileFreeInput ? "translate-x-[calc(100%+3px)]" : "translate-x-0",
+                    )}
+                  />
+                  <div className="relative z-10 grid h-full w-full grid-cols-2">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={!mobileFreeInput}
+                      onClick={() => setMobileFreeInput(false)}
+                      className={cn(
+                        "rounded-full text-[11px] font-semibold tracking-tight transition-colors duration-150 touch-manipulation",
+                        !mobileFreeInput
+                          ? "text-[var(--text-strong)]"
+                          : "text-[var(--text-muted)]",
+                      )}
+                    >
+                      간편 선택
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={mobileFreeInput}
+                      onClick={() => setMobileFreeInput(true)}
+                      className={cn(
+                        "rounded-full text-[11px] font-semibold tracking-tight transition-colors duration-150 touch-manipulation",
+                        mobileFreeInput
+                          ? "text-[var(--text-strong)]"
+                          : "text-[var(--text-muted)]",
+                      )}
+                    >
+                      자유 입력
+                    </button>
+                  </div>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setMobileFreeInput((v) => !v)}
-                  className="shrink-0 max-w-[48%] text-right text-[12px] font-semibold text-[var(--brand-trust-blue)] touch-manipulation"
+                  onClick={() => setComposerDockExpanded(false)}
+                  className={cn(
+                    "inline-flex h-[30px] shrink-0 items-center gap-1 rounded-full px-3",
+                    "bg-black/[0.06] ring-1 ring-inset ring-black/[0.06]",
+                    "dark:bg-white/[0.1] dark:ring-white/[0.08]",
+                    "text-[11px] font-semibold transition-colors duration-150 touch-manipulation",
+                    "text-[var(--text-muted)] hover:text-[var(--text-strong)]",
+                  )}
+                  aria-expanded={composerDockExpanded}
+                  title="입력 영역 접기"
                 >
-                  {mobileFreeInput ? "선택 모드" : "키보드 입력"}
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                  접기
                 </button>
               </div>
 
@@ -2999,6 +3085,8 @@ export function V5ChatShell() {
                   onSubmit={submitHybrid}
                   disabled={composerBusy}
                   showSendButton
+                  sheetPortalElement={hybridSheetHostEl}
+                  dockSheetInTabletSplit={v5TabletSplitLayout && showHybridComposer}
                 />
               )}
 
@@ -3085,6 +3173,7 @@ export function V5ChatShell() {
             }
             onSave={handleSavePlan}
             onViewMap={setMapModalPlan}
+            hybridSheetHostCallback={setHybridSheetHostEl}
           />
         </div>
       </div>
