@@ -11,6 +11,7 @@ import {
   mergePlanWithTourCoords,
   tourImageUnoptimized,
   tourSpotApiUrl,
+  tourSpotIsPlaceholderDisplayUrl,
 } from "@/lib/tour-api/tour-spot-client";
 import { V5TravelAiAnalysisLoadingOverlay } from "./v5-travel-ai-analysis-loading";
 import {
@@ -523,9 +524,15 @@ function PlanMap({
     prevEaseRef.current = easeToRevision;
     if (!selectedSpotId) return;
     const s = spotsWithCoords.find((x) => x.id === selectedSpotId);
-    if (s) {
+    if (
+      s &&
+      s.lng != null &&
+      s.lat != null &&
+      Number.isFinite(s.lng) &&
+      Number.isFinite(s.lat)
+    ) {
       map.easeTo({
-        center: [s.lng!, s.lat!],
+        center: [s.lng, s.lat],
         zoom: Math.max(map.getZoom(), 13),
         duration: 380,
       });
@@ -656,7 +663,9 @@ function SpotDetailPanelContent({
               ? detailWiki.thumbnail
               : null;
           const fallbackHero =
-            detailTour && detailTour !== "err" ? detailTour.displayImageUrl : null;
+            detailTour && detailTour !== "err" && !tourSpotIsPlaceholderDisplayUrl(detailTour.displayImageUrl)
+              ? detailTour.displayImageUrl
+              : null;
           const src = tourHero ?? wikiHero ?? fallbackHero;
           if (!src) {
             return (

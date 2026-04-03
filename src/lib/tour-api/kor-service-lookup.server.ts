@@ -23,9 +23,7 @@ const KOR_SERVICE_BASE = "https://apis.data.go.kr/B551011/KorService2";
 
 export type { TourKeywordSearchOptions } from "./tour-keyword-options";
 
-/** 대표 이미지가 없을 때 쓰는 플레이스홀더(필요 시 클라이언트에서도 동일 URL 사용 가능) */
-export const TOUR_SPOT_PLACEHOLDER_IMAGE =
-  "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80&auto=format&fit=crop";
+export { TOUR_SPOT_PLACEHOLDER_IMAGE } from "./tour-spot-client";
 
 export type TourSpotLookupOk = {
   ok: true;

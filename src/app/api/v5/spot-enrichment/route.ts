@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { wikiArticleRelevantToSpot } from "@/lib/v5/wiki-spot-relevance";
 
 /** Wikimedia 권장 User-Agent */
 const WIKI_UA = "Korea-SafeMate/1.0 (travel-planning; +https://github.com/pentanike-UX/Korea-SafeMate-v5)";
@@ -19,7 +20,7 @@ async function wikiSearchTitles(query: string): Promise<string[]> {
   url.searchParams.set("action", "query");
   url.searchParams.set("list", "search");
   url.searchParams.set("srsearch", query);
-  url.searchParams.set("srlimit", "4");
+  url.searchParams.set("srlimit", "10");
   url.searchParams.set("format", "json");
 
   const res = await fetch(url.toString(), {
@@ -74,7 +75,12 @@ export async function GET(req: NextRequest): Promise<NextResponse<SpotEnrichment
       const titles = await wikiSearchTitles(q);
       for (const title of titles) {
         const summary = await wikiSummary(title);
-        if (summary) return NextResponse.json(summary);
+        if (
+          summary &&
+          wikiArticleRelevantToSpot(name, region, summary.title, summary.extract)
+        ) {
+          return NextResponse.json(summary);
+        }
       }
     }
     /** 위키 미검색은 흔함 — 404는 DevTools에서 오류처럼 보이므로 200 + ok:false */

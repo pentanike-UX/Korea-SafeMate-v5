@@ -133,3 +133,15 @@ export function tourImageUnoptimized(url: string): boolean {
     url.includes("knto.or.kr")
   );
 }
+
+/** KorService2에 이미지가 없을 때 쓰는 Unsplash — 모든 스팟 히어로 폴백으로 쓰면 동일 사진이 반복됨 */
+export const TOUR_SPOT_PLACEHOLDER_IMAGE =
+  "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80&auto=format&fit=crop";
+
+const PLACEHOLDER_PHOTO_ID = "photo-1488646953014";
+
+/** displayImageUrl이 위 플레이스홀더(쿼리만 다른 변형 포함)인지 */
+export function tourSpotIsPlaceholderDisplayUrl(url: string | null | undefined): boolean {
+  if (url == null || url === "") return false;
+  return url.includes(PLACEHOLDER_PHOTO_ID);
+}
