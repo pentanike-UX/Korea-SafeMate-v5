@@ -2705,7 +2705,6 @@ export function V5ChatShell() {
                   onSubmit={submitHybrid}
                   disabled={composerBusy}
                   showSendButton
-                  onSlotSheetOpen={() => setComposerDockExpanded(false)}
                 />
               )}
 

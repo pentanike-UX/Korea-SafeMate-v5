@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Send,
 } from "lucide-react";
+import { CascaderDesktop, RegionPickerOverlay, getZoneSuggestionsForRegion, useMdUp } from "./region-selector";
 
 /** 로컬 동선 탐색용 8슬롯 — 출발·귀경지 없음 */
 export type HybridTripKey =
@@ -196,16 +197,15 @@ export function HybridTripComposer({
   onSubmit,
   disabled,
   showSendButton = true,
-  onSlotSheetOpen,
 }: {
   draft: Record<HybridTripKey, string>;
   onDraftChange: (next: Record<HybridTripKey, string>) => void;
   onSubmit: () => void;
   disabled: boolean;
   showSendButton?: boolean;
-  /** 8칩 중 하나를 눌러 선택 시트를 열 때 — 상위에서 입력 독 접기 등 */
-  onSlotSheetOpen?: () => void;
 }) {
+  const lgUp = useLgUp();
+  const mdUp = useMdUp();
   const [openKey, setOpenKey] = useState<HybridTripKey | null>(null);
   const [customLine, setCustomLine] = useState("");
   const [rangeStart, setRangeStart] = useState("");
@@ -216,9 +216,33 @@ export function HybridTripComposer({
     [openKey],
   );
 
+  const zoneOptionList = useMemo(() => {
+    const rec = getZoneSuggestionsForRegion(draft.region);
+    const base = HYBRID_SLOT_OPTIONS.zone;
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const x of rec) {
+      if (!seen.has(x)) {
+        seen.add(x);
+        out.push(x);
+      }
+    }
+    for (const x of base) {
+      if (!seen.has(x)) {
+        seen.add(x);
+        out.push(x);
+      }
+    }
+    return out;
+  }, [draft.region]);
+
+  const closeSheet = useCallback(() => {
+    setOpenKey(null);
+    setCustomLine("");
+  }, []);
+
   const openSheet = useCallback(
     (key: HybridTripKey) => {
-      onSlotSheetOpen?.();
       setOpenKey(key);
       setCustomLine(draft[key] ?? "");
       if (key === "schedule") {
@@ -226,20 +250,34 @@ export function HybridTripComposer({
         setRangeEnd("");
       }
     },
-    [draft, onSlotSheetOpen],
+    [draft],
   );
 
   const applyValue = useCallback(
     (value: string) => {
       if (!openKey) return;
       onDraftChange({ ...draft, [openKey]: value.trim() });
-      setOpenKey(null);
-      setCustomLine("");
+      closeSheet();
     },
-    [openKey, draft, onDraftChange],
+    [openKey, draft, onDraftChange, closeSheet],
+  );
+
+  const applyRegionFromPicker = useCallback(
+    (display: string) => {
+      onDraftChange({ ...draft, region: display.trim() });
+      closeSheet();
+    },
+    [draft, onDraftChange, closeSheet],
   );
 
   const canSend = hybridHasMinimumForSend(draft) && !disabled;
+
+  const sheetOptions =
+    openKey === "zone"
+      ? zoneOptionList
+      : openKey
+        ? HYBRID_SLOT_OPTIONS[openKey]
+        : [];
 
   return (
     <div className="v5-composer-liquid-panel space-y-3 rounded-2xl px-3 py-3 md:px-4 md:py-4">
@@ -249,32 +287,55 @@ export function HybridTripComposer({
       <p className="text-[11px] font-medium text-[var(--text-muted)] tracking-tight px-0.5 -mt-1">
         선택한 도시·지역 안에서만 코스를 짭니다 · 지역·일정 필수 후 보내기
       </p>
+
+      {openKey === "region" && lgUp && (
+        <CascaderDesktop
+          initialValue={draft.region}
+          onApply={applyRegionFromPicker}
+          onClose={closeSheet}
+        />
+      )}
+
       <div className="v5-hybrid-chip-strip flex flex-wrap gap-2">
         {SLOT_META.map(({ key, label, short, icon: Icon }) => {
           const v = draft[key].trim();
           const filled = Boolean(v);
           return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => openSheet(key)}
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 min-h-[44px] max-w-full transition-colors touch-manipulation ${
-                filled
-                  ? "border-[var(--brand-trust-blue)]/40 bg-[var(--brand-trust-blue-soft)] text-[var(--text-strong)]"
-                  : "border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/80 text-[var(--text-muted)]"
-              }`}
-            >
-              <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-              <span className="min-w-0 text-left">
-                <span className="block text-[11px] font-semibold uppercase tracking-wide opacity-70">
-                  {short}
+            <div key={key} className="inline-flex items-stretch gap-1 max-w-full">
+              <button
+                type="button"
+                onClick={() => openSheet(key)}
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 min-h-[44px] max-w-full transition-colors touch-manipulation ${
+                  filled
+                    ? "border-[var(--brand-trust-blue)]/40 bg-[var(--brand-trust-blue-soft)] text-[var(--text-strong)]"
+                    : "border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/80 text-[var(--text-muted)]"
+                }`}
+              >
+                <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                <span className="min-w-0 text-left">
+                  <span className="block text-[11px] font-semibold uppercase tracking-wide opacity-70">
+                    {short}
+                  </span>
+                  <span className="block text-[12px] font-medium truncate max-w-[9.5rem] sm:max-w-[11rem]">
+                    {v || `${label} 선택`}
+                  </span>
                 </span>
-                <span className="block text-[12px] font-medium truncate max-w-[9.5rem] sm:max-w-[11rem]">
-                  {v || `${label} 선택`}
-                </span>
-              </span>
-              <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-50" aria-hidden />
-            </button>
+                <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-50" aria-hidden />
+              </button>
+              {filled && (
+                <button
+                  type="button"
+                  aria-label={`${label} 선택 지우기`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDraftChange({ ...draft, [key]: "" });
+                  }}
+                  className="flex w-9 shrink-0 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] touch-manipulation"
+                >
+                  <X className="h-4 w-4" aria-hidden />
+                </button>
+              )}
+            </div>
           );
         })}
       </div>
@@ -296,7 +357,16 @@ export function HybridTripComposer({
         </button>
       )}
 
-      {openKey && activeMeta && (
+      {openKey === "region" && !lgUp && (
+        <RegionPickerOverlay
+          mdUp={mdUp}
+          initialValue={draft.region}
+          onApply={applyRegionFromPicker}
+          onClose={closeSheet}
+        />
+      )}
+
+      {openKey && openKey !== "region" && activeMeta && (
         <div
           className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-4"
           style={{ background: "rgba(10,10,10,0.45)" }}
@@ -308,19 +378,26 @@ export function HybridTripComposer({
             type="button"
             className="absolute inset-0 cursor-default"
             aria-label="닫기"
-            onClick={() => setOpenKey(null)}
+            onClick={closeSheet}
           />
           <div
             className={`relative z-[81] flex w-full max-w-lg flex-col bg-[var(--bg-elevated)] shadow-2xl border border-[var(--border-default)] max-h-[min(88dvh,560px)] sm:max-h-[min(70vh,520px)] sm:rounded-2xl rounded-t-2xl overflow-hidden`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between gap-2 border-b border-[var(--border-default)] px-4 py-3 shrink-0">
-              <h2 id="v5-hybrid-sheet-title" className="text-[15px] font-semibold text-[var(--text-strong)]">
-                {activeMeta.label} 선택
-              </h2>
+              <div className="min-w-0">
+                <h2 id="v5-hybrid-sheet-title" className="text-[15px] font-semibold text-[var(--text-strong)]">
+                  {activeMeta.label} 선택
+                </h2>
+                {openKey === "zone" && draft.region.trim() ? (
+                  <p className="text-[11px] font-normal text-[var(--text-muted)] mt-0.5">
+                    {draft.region.trim()} 기준 제안이 위에 붙습니다
+                  </p>
+                ) : null}
+              </div>
               <button
                 type="button"
-                onClick={() => setOpenKey(null)}
+                onClick={closeSheet}
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)]"
                 aria-label="닫기"
               >
@@ -367,7 +444,7 @@ export function HybridTripComposer({
                   </p>
                 </div>
               )}
-              {HYBRID_SLOT_OPTIONS[openKey].map((opt) => (
+              {sheetOptions.map((opt) => (
                 <button
                   key={opt}
                   type="button"
