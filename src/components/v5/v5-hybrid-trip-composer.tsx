@@ -546,6 +546,11 @@ export function HybridTripComposer({
         선택한 도시·지역 안에서만 코스를 짭니다 · 지역·일정 필수 후 보내기 ·{" "}
         <span className="text-[var(--brand-trust-blue)]">분위기·음식은 칩 여러 개 선택 가능</span>
       </p>
+      <p className="text-[10px] leading-snug text-[var(--text-muted)] px-0.5">
+        이 버튼은 조건을 AI에게 넘겨 대화 칩을 정리하는 단계예요.{" "}
+        <span className="font-semibold text-[var(--text-secondary)]">동선 확정</span>은 대화에 나온 카드에서{" "}
+        <span className="font-semibold text-[var(--text-strong)]">「이 정보로 동선 짜기」</span>를 눌러 주세요.
+      </p>
 
       {openKey === "region" && lgUp && (
         <CascaderDesktop

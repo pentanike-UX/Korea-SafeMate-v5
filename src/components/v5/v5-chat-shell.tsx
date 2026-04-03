@@ -260,6 +260,40 @@ interface PreferenceChip {
   category?: string;
 }
 
+function getRegionChipValue(chips: PreferenceChip[]): string | undefined {
+  const c =
+    chips.find((x) => x.id === "trip_region") ??
+    chips.find((x) => /\b지역\b/.test(x.label) && x.id !== "trip_local_zone");
+  return c?.value?.trim();
+}
+
+function getScheduleChipValue(chips: PreferenceChip[]): string | undefined {
+  const c =
+    chips.find((x) => x.id === "trip_schedule") ??
+    chips.find((x) => /\b일정\b/.test(x.label));
+  return c?.value?.trim();
+}
+
+/** 플레이스홀더·안내 문구만 있으면 동선 확정 불가 */
+function isPlaceholderRouteChipValue(value: string | undefined): boolean {
+  if (value == null) return true;
+  const v = value.trim();
+  if (v.length < 2) return true;
+  if (/^\(예[:：]/.test(v)) return true;
+  if (/^지역명을/.test(v)) return true;
+  if (/^박·일이나/.test(v)) return true;
+  if (/^구역·동네를 칩에서/.test(v)) return true;
+  if (v === "미정") return true;
+  return false;
+}
+
+function routeChipCoreSlotsActionable(chips: PreferenceChip[]): boolean {
+  return (
+    !isPlaceholderRouteChipValue(getRegionChipValue(chips)) &&
+    !isPlaceholderRouteChipValue(getScheduleChipValue(chips))
+  );
+}
+
 /** 하이브리드에 남아 있는 지역·동선을 확정 슬롯에 반영(LLM이 광역만 남기거나 엉뚱한 시로 줄 때 보정) */
 function enrichConfirmSlotsWithHybrid(
   slots: PreferenceChip[],
@@ -463,71 +497,6 @@ const makeGuestConv = (): Conversation => ({
   messages: [makeWelcomeMsg()],
   messagesLoaded: true,
 });
-
-// ─── Mock AI 응답 ─────────────────────────────────────────────────────────────
-
-const MOCK_RESPONSES: Record<string, { content: string; plan?: TravelPlan }> = {
-  default: {
-    content: "여행 정보를 분석 중이에요. 조금 더 구체적으로 알려주시면 정확한 동선을 제안드릴 수 있어요. 어느 지역, 몇 박 일정인지, 혼자인지 동행이 있는지, 관심사(맛집/역사/자연/K-콘텐츠)도 함께 알려주세요.",
-  },
-  gyeongju: {
-    content: "경주 2박 3일 혼자 여행 동선을 분석했어요. 역사 + 맛집 중심으로, 이동 피로가 적고 맥락이 연결되는 순서로 구성했습니다. 오전 일찍 시작하면 3일차 오후에 여유 시간이 생겨요.",
-    plan: {
-      id: "plan-gyeongju-01", title: "경주 역사·맛집 핵심 동선", region: "경주", days: 2,
-      summary: "불국사 → 첨성대 → 황리단길 순서로 이동 거리를 최소화했어요. 1일차는 남산·불국사 권역, 2일차는 도심 유적, 3일차는 감포 여유 루트.",
-      spots: [
-        { id: "s1", name: "불국사", type: "attraction", duration: "약 2시간", note: "개장 직후(09:00) 입장 시 한적해요. 석굴암은 별도 입장권 필요.", transitToNext: "택시 약 25분", lat: 35.7900, lng: 129.3316 },
-        { id: "s2", name: "황리단길 점심", type: "food", duration: "약 1시간 30분", note: "경주빵+교리김밥 필수. 오후 1시 넘으면 줄이 길어져요.", transitToNext: "도보 15분", lat: 35.8326, lng: 129.2134 },
-        { id: "s3", name: "첨성대 · 계림", type: "attraction", duration: "약 1시간", note: "해질 무렵이 가장 아름다워요. 야간 조명도 운영.", transitToNext: "도보 10분", lat: 35.8353, lng: 129.2195 },
-        { id: "s4", name: "동궁과 월지(안압지)", type: "attraction", duration: "약 1시간 30분", note: "야간 입장 추천. 조명 반영이 인생샷 포인트.", transitToNext: "택시 약 10분", lat: 35.8340, lng: 129.2263 },
-        { id: "s5", name: "경주 시내 숙소", type: "hotel", duration: "1박", note: "황리단길 인근 숙소가 이동에 유리해요.", lat: 35.8430, lng: 129.2130 },
-      ],
-      weatherNote: "4월 경주 낮 기온 18-22°C, 일교차 10°C. 저녁 야외 관람 시 가벼운 겉옷 필수.",
-      totalTime: "약 1시간 30분",
-      alternativeNote: "비 예보 시: 국립경주박물관(실내)으로 오전 일정 대체 가능.",
-    },
-  },
-  busan: {
-    content: "부산 당일치기는 동선 압축이 핵심이에요. 해운대 권역과 남포동·감천 권역은 이동이 30분 이상이니 하루에 둘 다 욕심내면 이동만 하다 끝나요. 남포동 중심으로 짠 동선을 제안해 드릴게요.",
-    plan: {
-      id: "plan-busan-01", title: "부산 당일 맛집 집중 코스", region: "부산", days: 1,
-      summary: "남포동·자갈치 중심으로 이동 최소화. 오전 시장 → 점심 회 → 오후 감천 뷰 → 저녁 광안리 순서.",
-      spots: [
-        { id: "b1", name: "자갈치시장", type: "food", duration: "약 1시간", note: "아침 7시부터 운영. 신선한 어물과 즉석 회가 저렴해요.", transitToNext: "도보 5분", lat: 35.0971, lng: 129.0304 },
-        { id: "b2", name: "국제시장·BIFF광장", type: "attraction", duration: "약 1시간 30분", note: "씨앗호떡은 줄이 길어도 먹을 가치 있어요.", transitToNext: "버스 15분", lat: 35.0989, lng: 129.0258 },
-        { id: "b3", name: "감천문화마을", type: "attraction", duration: "약 1시간 30분", note: "오전 10시 전 방문하면 한적해요. 오후엔 관광객 많음.", transitToNext: "버스+지하철 40분", lat: 35.0980, lng: 129.0097 },
-        { id: "b4", name: "광안리해수욕장", type: "attraction", duration: "저녁 이후", note: "광안대교 야경 + 해산물 포장마차. 일몰 맞추면 최고.", lat: 35.1531, lng: 129.1185 },
-      ],
-      weatherNote: "부산 해안가는 바람이 강해요. 자외선 차단 및 바람막이 권장.",
-      totalTime: "이동 합산 약 2시간",
-      alternativeNote: "해운대 권역 선택 시: 해운대→미포→청사포 해안 산책로 코스로 전환 가능.",
-    },
-  },
-  jeju: {
-    content: "제주 4박 5일 렌터카 여행이면 서쪽과 동쪽을 나눠서 탐색하는 게 효율적이에요. 렌터카 픽업 위치(공항)를 기준으로 첫날 방향을 서쪽·동쪽 중 고르면 동선이 꼬이지 않아요.",
-    plan: {
-      id: "plan-jeju-01", title: "제주 서쪽 해안 1일 코스", region: "제주", days: 1,
-      summary: "협재해수욕장 → 한림공원 → 오설록 → 용머리해안 순으로 서쪽 해안 핵심만 압축. 일몰은 용머리해안에서.",
-      spots: [
-        { id: "j1", name: "협재해수욕장", type: "attraction", duration: "약 1시간", note: "에메랄드빛 물색이 제주에서 가장 아름다운 해변 중 하나.", transitToNext: "차로 10분", lat: 33.3938, lng: 126.2397 },
-        { id: "j2", name: "한림공원", type: "attraction", duration: "약 1시간 30분", note: "협재굴·쌍용굴 포함. 용암동굴 내부는 연중 서늘해요.", transitToNext: "차로 25분", lat: 33.4138, lng: 126.2630 },
-        { id: "j3", name: "오설록 티뮤지엄", type: "cafe", duration: "약 1시간", note: "녹차 아이스크림+티 세트 필수. 주변 이니스프리 숍도 인기.", transitToNext: "차로 20분", lat: 33.3064, lng: 126.2881 },
-        { id: "j4", name: "용머리해안", type: "attraction", duration: "약 1시간 30분", note: "물때 확인 필수(물 차면 입장 불가). 일몰 포인트 최고.", lat: 33.2393, lng: 126.3175 },
-      ],
-      weatherNote: "제주 바람은 예측 불가. 기상청 기준 초속 7m 이상이면 야외 활동 시 주의.",
-      totalTime: "이동 합산 약 1시간 15분",
-      alternativeNote: "비 예보 시: 오설록 → 제주 민속자연사박물관 → 넥슨컴퓨터박물관 실내 대체 루트.",
-    },
-  },
-};
-
-function getMockResponse(input: string) {
-  const lower = input.toLowerCase();
-  if (lower.includes("경주")) return MOCK_RESPONSES.gyeongju;
-  if (lower.includes("부산")) return MOCK_RESPONSES.busan;
-  if (lower.includes("제주")) return MOCK_RESPONSES.jeju;
-  return MOCK_RESPONSES.default;
-}
 
 // ─── 작은 UI 컴포넌트들 ───────────────────────────────────────────────────────
 
@@ -984,7 +953,13 @@ function PreferenceChipsCard({
     return regionOk && schedOk;
   }, [displayChips]);
 
-  const canSubmit = displayChips.length > 0 && hasCoreSlots && !isGenerating;
+  const coreValuesActionable = useMemo(
+    () => routeChipCoreSlotsActionable(displayChips),
+    [displayChips],
+  );
+
+  const canSubmit =
+    displayChips.length > 0 && hasCoreSlots && coreValuesActionable && !isGenerating;
 
   return (
     <div className="mt-3 w-full max-w-[480px] rounded-[20px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-4 shadow-[0_4px_24px_rgba(20,20,20,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.32)]">
@@ -998,7 +973,9 @@ function PreferenceChipsCard({
         )}
       </div>
       <p className="text-[12px] text-[var(--text-secondary)] mb-3 leading-relaxed">
-        <strong className="font-semibold text-[var(--text-strong)]">선택한 지역 안에서만</strong> 로컬 동선으로 짭니다. 칩을 다듬은 뒤 동선 만들기를 눌러 주세요.
+        <strong className="font-semibold text-[var(--text-strong)]">선택한 지역 안에서만</strong> 로컬 동선으로 짭니다. 아래 값이 예시 문구가 아니라{" "}
+        <strong className="font-semibold text-[var(--text-strong)]">실제 지역·일정</strong>인지 확인해 주세요. 하단{" "}
+        <strong className="font-semibold text-[var(--text-strong)]">8가지 칩</strong>에서 고르거나 채팅으로 구체적으로 적은 뒤, 다시 조회해 받은 칩으로 동선을 확정할 수 있어요.
       </p>
 
       <div className="v5-prompt-chips-strip overflow-x-auto -mx-1 px-1 pb-1 mb-4 touch-pan-x">
@@ -1033,6 +1010,11 @@ function PreferenceChipsCard({
       {displayChips.length > 0 && !hasCoreSlots && (
         <p className="mt-2 text-center text-[11px] text-[var(--text-muted)]">
           지역·일정 칩이 있어야 동선을 만들 수 있어요.
+        </p>
+      )}
+      {displayChips.length > 0 && hasCoreSlots && !coreValuesActionable && (
+        <p className="mt-2 text-center text-[11px] text-[var(--warning)]">
+          지역·일정이 &quot;(예: …)&quot; 같은 안내 문구로 남아 있어요. 하이브리드 입력에서 채우거나 채팅으로 알려 주세요.
         </p>
       )}
     </div>
@@ -2447,7 +2429,7 @@ export function V5ChatShell() {
           id: `tmp-ai-quick-${Date.now()}`,
           role: "assistant",
           content:
-            "지역과 일정(기간)이 함께 있어야 AI 조회로 조건을 정리할 수 있어요. 아래 칩을 확인·수정한 뒤 「이 정보로 동선 짜기」를 눌러 주세요. (로컬 동선만 — 출발·귀경지는 사용하지 않아요.)",
+            "지역과 일정(기간)이 함께 있어야 AI 조회로 조건을 정리할 수 있어요. 하단 **8가지 칩**에서 지역·일정을 고른 뒤 「선택 조건 보내기」를 쓰거나, 채팅으로 구체적으로 적어 주세요. 칩 값이 실제 조건이 되면 「이 정보로 동선 짜기」로 확정할 수 있어요. (로컬 동선만 — 출발·귀경지는 사용하지 않아요.)",
           timestamp: new Date(),
           preferenceChips: quickChips,
           canGenerateRoute: false,
@@ -2482,12 +2464,12 @@ export function V5ChatShell() {
         const parsed = (await res.json()) as ApiV5;
         data = normalizeV5ChatJson(res, parsed);
       } catch {
-        const { content: aiContent, plan } = getMockResponse(content);
         data = {
-          content: aiContent,
+          content:
+            "네트워크 오류로 응답을 받지 못했어요. 연결을 확인한 뒤 다시 보내 주세요.",
           preferenceChips: null,
           readyToGenerateRoute: false,
-          travelPlan: plan ?? null,
+          travelPlan: null,
         };
       }
 
@@ -2538,6 +2520,7 @@ export function V5ChatShell() {
       const slotsFiltered = slots.filter((s) => !isDeparturePreferenceChip(s));
       if (!slotsFiltered.length || isTyping || routeGeneratingMessageId || !activeConvId) return;
       const slotsForPlan = enrichConfirmSlotsWithHybrid(slotsFiltered, hybridDraft);
+      if (!routeChipCoreSlotsActionable(slotsForPlan)) return;
 
       setComposerDockExpanded(false);
 
@@ -2575,13 +2558,9 @@ export function V5ChatShell() {
       setRouteGeneratingMessageId(chipSourceMessageId);
       setIsTyping(true);
 
-      const priorPayload = messagesToApiPayload(
-        conversations.find((c) => c.id === activeConvId)?.messages ?? [],
-      );
-      const planRequestMessages = [
-        ...priorPayload,
-        { role: "user" as const, content: userContent },
-      ].slice(-24);
+      const convForPlan = conversations.find((c) => c.id === activeConvId);
+      const baseMsgs = convForPlan?.messages ?? [];
+      const planRequestMessages = messagesToApiPayload([...baseMsgs, userMsg]).slice(-24);
 
       type ApiV5 = {
         ok?: boolean;
@@ -2608,9 +2587,11 @@ export function V5ChatShell() {
         const parsed = (await res.json()) as ApiV5;
         data = normalizeV5ChatJson(res, parsed);
       } catch {
-        const synthetic = slotsForPlan.map((s) => s.value).join(" ");
-        const { content: aiContent, plan } = getMockResponse(synthetic);
-        data = { content: aiContent, travelPlan: plan ?? null };
+        data = {
+          content:
+            "네트워크 오류로 동선을 받지 못했어요. 연결을 확인한 뒤 다시 「이 정보로 동선 짜기」를 눌러 주세요.",
+          travelPlan: null,
+        };
       }
 
       const hasPlan = data.travelPlan && Array.isArray(data.travelPlan.spots);
