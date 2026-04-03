@@ -1524,6 +1524,7 @@ export function V5ChatShell() {
   const [routeGeneratingMessageId, setRouteGeneratingMessageId] = useState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const sidebarTabletInitRef = useRef(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mapModalPlan, setMapModalPlan] = useState<TravelPlan | null>(null);
   const [chatHeaderMenuOpen, setChatHeaderMenuOpen] = useState(false);
@@ -1741,6 +1742,15 @@ export function V5ChatShell() {
     document.body.style.overflow = mobileSidebarOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [mobileSidebarOpen]);
+
+  /** 태블릿(md~lg): 최초 진입 시 좌측 대화 목록 접힌 상태(아이콘 레일만). 데스크톱은 펼침 유지. */
+  useLayoutEffect(() => {
+    if (sidebarTabletInitRef.current) return;
+    sidebarTabletInitRef.current = true;
+    if (typeof window === "undefined") return;
+    const tabletChat = window.matchMedia("(min-width: 768px) and (max-width: 1023.98px)");
+    if (tabletChat.matches) setSidebarCollapsed(true);
+  }, []);
 
   // ── 모바일: visualViewport로 키보드 가림 보정 ─────────────────────────────
   useEffect(() => {
@@ -2295,7 +2305,7 @@ export function V5ChatShell() {
 
   return (
     <>
-      <div className="flex h-[100dvh] w-screen overflow-hidden bg-[var(--bg-page)]">
+      <div className="flex h-full min-h-0 w-full min-w-0 overflow-hidden bg-[var(--bg-page)]">
         {/* ── Desktop Sidebar ─────────────────────────────────── */}
         <div className={`hidden md:flex flex-col border-r border-[var(--border-default)] bg-[var(--bg-surface)] flex-shrink-0 transition-all duration-200 ${sidebarCollapsed ? "w-12" : "w-[260px]"}`}>
           {sidebarCollapsed ? (
