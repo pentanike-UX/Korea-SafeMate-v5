@@ -301,41 +301,27 @@ export function HybridTripComposer({
           const v = draft[key].trim();
           const filled = Boolean(v);
           return (
-            <div key={key} className="inline-flex items-stretch gap-1 max-w-full">
-              <button
-                type="button"
-                onClick={() => openSheet(key)}
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 min-h-[44px] max-w-full transition-colors touch-manipulation ${
-                  filled
-                    ? "border-[var(--brand-trust-blue)]/40 bg-[var(--brand-trust-blue-soft)] text-[var(--text-strong)]"
-                    : "border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/80 text-[var(--text-muted)]"
-                }`}
-              >
-                <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
-                <span className="min-w-0 text-left">
-                  <span className="block text-[11px] font-semibold uppercase tracking-wide opacity-70">
-                    {short}
-                  </span>
-                  <span className="block text-[12px] font-medium truncate max-w-[9.5rem] sm:max-w-[11rem]">
-                    {v || `${label} 선택`}
-                  </span>
+            <button
+              key={key}
+              type="button"
+              onClick={() => openSheet(key)}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 min-h-[44px] max-w-full transition-colors touch-manipulation ${
+                filled
+                  ? "border-[var(--brand-trust-blue)]/40 bg-[var(--brand-trust-blue-soft)] text-[var(--text-strong)]"
+                  : "border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/80 text-[var(--text-muted)]"
+              }`}
+            >
+              <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+              <span className="min-w-0 text-left">
+                <span className="block text-[11px] font-semibold uppercase tracking-wide opacity-70">
+                  {short}
                 </span>
-                <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-50" aria-hidden />
-              </button>
-              {filled && (
-                <button
-                  type="button"
-                  aria-label={`${label} 선택 지우기`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDraftChange({ ...draft, [key]: "" });
-                  }}
-                  className="flex w-9 shrink-0 items-center justify-center rounded-full border border-[var(--border-default)] bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] touch-manipulation"
-                >
-                  <X className="h-4 w-4" aria-hidden />
-                </button>
-              )}
-            </div>
+                <span className="block text-[12px] font-medium truncate max-w-[9.5rem] sm:max-w-[11rem]">
+                  {v || `${label} 선택`}
+                </span>
+              </span>
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-50" aria-hidden />
+            </button>
           );
         })}
       </div>

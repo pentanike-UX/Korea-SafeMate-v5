@@ -2481,6 +2481,7 @@ export function V5ChatShell() {
                       <V5TravelAiAnalysisLoadingOverlay
                         open
                         variant="chat-row"
+                        phase={routeGeneratingMessageId ? "plan" : "gather"}
                         className="max-w-[min(100%,85%)]"
                       />
                     </div>

@@ -1309,6 +1309,7 @@ export function V5PlanMapModal({
         <V5TravelAiAnalysisLoadingOverlay
           open
           variant="panel"
+          phase="plan"
           className="absolute inset-0 z-[18] justify-start overflow-y-auto pt-6 md:pt-10"
         />
       )}
