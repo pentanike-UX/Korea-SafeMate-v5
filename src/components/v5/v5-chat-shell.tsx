@@ -48,8 +48,12 @@ import {
   type HybridTripKey,
 } from "./v5-hybrid-trip-composer";
 import { V5TravelAiAnalysisLoadingOverlay } from "./v5-travel-ai-analysis-loading";
-import type { SpotTourEnrichment } from "@/lib/tour-api/tour-spot-client";
-import { tourImageUnoptimized, tourSpotApiUrl } from "@/lib/tour-api/tour-spot-client";
+import {
+  mergePlanWithTourCoords,
+  planHasAnyMapCoords,
+  tourImageUnoptimized,
+} from "@/lib/tour-api/tour-spot-client";
+import { usePlanTourEnrichment } from "./use-plan-tour-enrichment";
 
 // ─── Composer: 여행 프롬프트 체크리스트 (실시간 키워드 감지) ───────────────────
 
@@ -557,65 +561,8 @@ function TravelRouteCard({
   plan: TravelPlan; isSaved: boolean;
   onSave: (p: TravelPlan) => void; onViewMap: (p: TravelPlan) => void;
 }) {
-  const [tourBySpotId, setTourBySpotId] = useState<
-    Record<string, SpotTourEnrichment | "err" | undefined>
-  >({});
-
-  const spotsTourFetchKey = useMemo(
-    () => plan.spots.map((s) => `${s.id}:${s.name}`).join("|"),
-    [plan.spots],
-  );
-
-  useEffect(() => {
-    const ac = new AbortController();
-    plan.spots.forEach((spot) => {
-      void (async () => {
-        try {
-          const r = await fetch(tourSpotApiUrl(spot, plan.region), {
-            signal: ac.signal,
-          });
-          const j = (await r.json()) as
-            | {
-                ok: true;
-                contentId: string;
-                contentTypeId: string;
-                title: string;
-                imageUrl: string | null;
-                displayImageUrl: string;
-                overview: string | null;
-              }
-            | { ok: false };
-          if (ac.signal.aborted) return;
-          if (j.ok === true) {
-            setTourBySpotId((prev) => ({
-              ...prev,
-              [spot.id]: {
-                contentId: j.contentId,
-                contentTypeId: j.contentTypeId,
-                title: j.title,
-                imageUrl: j.imageUrl,
-                displayImageUrl: j.displayImageUrl,
-                overview: j.overview,
-              },
-            }));
-          } else {
-            setTourBySpotId((prev) => ({ ...prev, [spot.id]: "err" }));
-          }
-        } catch {
-          if (!ac.signal.aborted) setTourBySpotId((prev) => ({ ...prev, [spot.id]: "err" }));
-        }
-      })();
-    });
-    return () => ac.abort();
-  }, [plan.id, plan.region, spotsTourFetchKey]);
-
-  const hasMapCoords = plan.spots.some(
-    (s) =>
-      s.lat != null &&
-      s.lng != null &&
-      Number.isFinite(s.lat) &&
-      Number.isFinite(s.lng),
-  );
+  const tourBySpotId = usePlanTourEnrichment(plan);
+  const hasMapCoords = planHasAnyMapCoords(plan, tourBySpotId);
 
   return (
     <div className="mt-3 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] overflow-hidden shadow-[0_2px_12px_rgba(20,20,20,0.06)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.35)]">
@@ -684,6 +631,15 @@ function TravelRouteCard({
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                       소개 · 한국관광공사
                     </p>
+                    {!tour.alignsWithPlanName ? (
+                      <p className="mt-1 text-[10px] leading-snug text-[var(--warning)]">
+                        검색된 관광지명: <span className="font-medium">{tour.title}</span>
+                        <span className="text-[var(--text-muted)]">
+                          {" "}
+                          (플랜 이름과 다를 수 있어요)
+                        </span>
+                      </p>
+                    ) : null}
                     <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-secondary)] line-clamp-4 whitespace-pre-line">
                       {tour.overview}
                     </p>
@@ -731,7 +687,9 @@ function TravelRouteCard({
               ? "실제 도로를 따라 동선을 지도에서 봅니다."
               : "스팟에 좌표가 있어야 지도를 열 수 있어요."
           }
-          onClick={() => hasMapCoords && onViewMap(plan)}
+          onClick={() =>
+            hasMapCoords && onViewMap(mergePlanWithTourCoords(plan, tourBySpotId))
+          }
           className={`flex items-center justify-center gap-2 py-3 px-4 rounded-2xl text-[13px] font-semibold transition-all duration-200 border ${
             hasMapCoords
               ? "border-[var(--brand-trust-blue)]/35 bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] hover:bg-[color-mix(in_srgb,var(--brand-trust-blue)_18%,var(--bg-surface))] active:scale-[0.98]"
@@ -769,13 +727,8 @@ function PlanPreviewTimelineBody({
   onSave: (p: TravelPlan) => void;
   onViewMap: (p: TravelPlan) => void;
 }) {
-  const hasMapCoords = plan.spots.some(
-    (s) =>
-      s.lat != null &&
-      s.lng != null &&
-      Number.isFinite(s.lat) &&
-      Number.isFinite(s.lng),
-  );
+  const tourBySpotId = usePlanTourEnrichment(plan);
+  const hasMapCoords = planHasAnyMapCoords(plan, tourBySpotId);
 
   return (
     <>
@@ -838,7 +791,9 @@ function PlanPreviewTimelineBody({
               ? "동선을 지도에서 봅니다."
               : "스팟에 좌표가 있어야 지도를 열 수 있어요."
           }
-          onClick={() => hasMapCoords && onViewMap(plan)}
+          onClick={() =>
+            hasMapCoords && onViewMap(mergePlanWithTourCoords(plan, tourBySpotId))
+          }
           className={`flex w-full items-center justify-center gap-2 rounded-2xl py-3 px-4 text-[13px] font-semibold transition-all duration-200 border ${
             hasMapCoords
               ? "border-[var(--brand-trust-blue)]/35 bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] hover:bg-[color-mix(in_srgb,var(--brand-trust-blue)_18%,var(--bg-surface))] active:scale-[0.98]"

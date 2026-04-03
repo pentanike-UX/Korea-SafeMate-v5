@@ -7,7 +7,11 @@ import type { V5PlanRouteLegSummary } from "@/lib/v5/fetch-v5-plan-route.server"
 import "maplibre-gl/dist/maplibre-gl.css";
 import Image from "next/image";
 import type { SpotTourEnrichment } from "@/lib/tour-api/tour-spot-client";
-import { tourImageUnoptimized, tourSpotApiUrl } from "@/lib/tour-api/tour-spot-client";
+import {
+  mergePlanWithTourCoords,
+  tourImageUnoptimized,
+  tourSpotApiUrl,
+} from "@/lib/tour-api/tour-spot-client";
 import { V5TravelAiAnalysisLoadingOverlay } from "./v5-travel-ai-analysis-loading";
 import {
   X,
@@ -666,6 +670,15 @@ function SpotDetailPanelContent({
               <Landmark className="h-3.5 w-3.5" />
               소개 · 한국관광공사 TourAPI
             </div>
+            {!detailTour.alignsWithPlanName ? (
+              <p className="mb-2 text-[11px] leading-relaxed text-[var(--warning)]">
+                검색된 관광지명: <span className="font-semibold">{detailTour.title}</span>
+                <span className="text-[var(--text-muted)]">
+                  {" "}
+                  (플랜 스팟명과 다를 수 있습니다)
+                </span>
+              </p>
+            ) : null}
             <p className="text-[13px] leading-relaxed text-[var(--text-secondary)] whitespace-pre-line">
               {detailTour.overview}
             </p>
@@ -1055,16 +1068,21 @@ export function V5PlanMapModal({
     if (planLayout !== "phone") setMobileScheduleOpen(false);
   }, [planLayout]);
 
+  const displayPlan = useMemo(
+    () => mergePlanWithTourCoords(plan, tourBySpotId),
+    [plan, tourBySpotId],
+  );
+
   const spotsWithCoords = useMemo(
     () =>
-      plan.spots.filter(
+      displayPlan.spots.filter(
         (s) =>
           s.lat != null &&
           s.lng != null &&
           Number.isFinite(s.lat) &&
           Number.isFinite(s.lng),
       ),
-    [plan.spots],
+    [displayPlan],
   );
 
   const spotCoordsKey = useMemo(
@@ -1153,6 +1171,9 @@ export function V5PlanMapModal({
                 imageUrl: string | null;
                 displayImageUrl: string;
                 overview: string | null;
+                matchedLat?: number | null;
+                matchedLng?: number | null;
+                alignsWithPlanName?: boolean;
               }
             | { ok: false };
           if (ac.signal.aborted) return;
@@ -1166,6 +1187,9 @@ export function V5PlanMapModal({
                 imageUrl: j.imageUrl,
                 displayImageUrl: j.displayImageUrl,
                 overview: j.overview,
+                matchedLat: j.matchedLat ?? null,
+                matchedLng: j.matchedLng ?? null,
+                alignsWithPlanName: j.alignsWithPlanName ?? true,
               },
             }));
           } else {
@@ -1347,7 +1371,7 @@ export function V5PlanMapModal({
     <div className={mapWrapClass}>
       <PlanMap
         key={`${plan.id}-${spotCoordsKey}`}
-        plan={plan}
+        plan={displayPlan}
         selectedSpotId={selectedSpotId}
         easeToRevision={easeToRevision}
         onSpotSelectFromMap={(id) => {

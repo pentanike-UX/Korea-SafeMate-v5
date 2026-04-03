@@ -13,6 +13,11 @@
 import type { TourLclsFilter } from "./tour-classification";
 import type { TourKeywordSearchOptions } from "./tour-keyword-options";
 import type { TourLegalDongFilter } from "./tour-region-ldong";
+import {
+  latLngFromTourSearchItem,
+  pickBestTourSearchItem,
+  tourMatchLooksAligned,
+} from "./tour-spot-pick.server";
 
 const KOR_SERVICE_BASE = "https://apis.data.go.kr/B551011/KorService2";
 
@@ -32,6 +37,18 @@ export type TourSpotLookupOk = {
   imageUrl: string | null;
   /** detailCommon2 overview, 없으면 null */
   overview: string | null;
+  /** searchKeyword2 선택 행의 WGS84 (있을 때만). 지도 보정에 사용 */
+  matchedLat: number | null;
+  matchedLng: number | null;
+  /** matchName 대비 검색 행 제목 일치가 충분한지 */
+  alignsWithPlanName: boolean;
+};
+
+/** lookup 시 스팟명·LLM 좌표로 검색 결과 재순위 */
+export type TourSpotLookupContext = {
+  matchName?: string | null;
+  refLat?: number | null;
+  refLng?: number | null;
 };
 
 export type TourSpotLookupFail = {
@@ -167,6 +184,10 @@ type KeywordFirstOk = {
   contentTypeId: string;
   title: string;
   imageUrl: string | null;
+  searchRowTitle: string;
+  matchedLat: number | null;
+  matchedLng: number | null;
+  alignsWithPlanName: boolean;
 };
 type KeywordFirstFail = { ok: false; code: TourSpotLookupFail["code"]; message: string };
 
@@ -174,10 +195,10 @@ async function executeSearchKeyword2(
   keyword: string,
   init: RequestInit | undefined,
   extraParams: Record<string, string>,
-): Promise<KeywordFirstOk | KeywordFirstFail | { ok: "empty" }> {
+): Promise<KeywordFirstFail | { ok: "items"; items: Record<string, unknown>[] }> {
   const q = keyword.trim();
   const url = buildUrl("searchKeyword2", {
-    numOfRows: "10",
+    numOfRows: "30",
     pageNo: "1",
     MobileOS: "ETC",
     MobileApp: getMobileApp(),
@@ -223,31 +244,18 @@ async function executeSearchKeyword2(
   }
 
   const items = readItems(body);
-  if (items.length === 0) {
-    return { ok: "empty" };
-  }
-
-  const first = items[0]!;
-  const contentId = String(first.contentid ?? first.contentId ?? "");
-  const contentTypeId = String(first.contenttypeid ?? first.contentTypeId ?? "");
-  const title = String(first.title ?? "").trim();
-  const imageUrl = pickImageUrl(first);
-
-  if (!contentId || !contentTypeId) {
-    return { ok: "empty" };
-  }
-
-  return { ok: true, contentId, contentTypeId, title, imageUrl };
+  return { ok: "items", items };
 }
 
 /**
- * searchKeyword2 — 키워드로 관광지 검색, 첫 번째 결과의 식별자·이미지·제목 반환
+ * searchKeyword2 — 키워드로 관광지 검색 후 후보 중 스팟명·참조 좌표로 최적 행 선택
  * (분류·법정동 필터 및 완화 재시도)
  */
 export async function tourSearchKeywordFirst(
   keyword: string,
   init?: RequestInit,
   options?: TourKeywordSearchOptions,
+  ctx?: TourSpotLookupContext | null,
 ): Promise<KeywordFirstOk | KeywordFirstFail> {
   const q = keyword.trim();
   if (q.length < 1 || q.length > 200) {
@@ -257,14 +265,46 @@ export async function tourSearchKeywordFirst(
     return { ok: false, code: "NO_API_KEY", message: "TOUR_API_KEY가 설정되지 않았습니다." };
   }
 
+  const hint = ctx?.matchName?.trim() ?? "";
+  const ref =
+    ctx?.refLat != null &&
+    ctx?.refLng != null &&
+    Number.isFinite(ctx.refLat) &&
+    Number.isFinite(ctx.refLng)
+      ? { lat: ctx.refLat, lng: ctx.refLng }
+      : null;
+
   const lcls = lclsToParams(options?.classification ?? undefined);
   const dong = legalDongToParams(options?.legalDong ?? undefined);
   const attempts = keywordSearchParamAttempts(lcls, dong);
 
   for (const extra of attempts) {
     const r = await executeSearchKeyword2(q, init, extra);
-    if (r.ok === true) return r;
     if (r.ok === false) return r;
+    if (r.items.length === 0) continue;
+
+    const picked = pickBestTourSearchItem(r.items, hint, ref);
+    if (!picked) continue;
+
+    const contentId = String(picked.contentid ?? picked.contentId ?? "");
+    const contentTypeId = String(picked.contenttypeid ?? picked.contentTypeId ?? "");
+    const searchRowTitle = String(picked.title ?? "").trim();
+    const imageUrl = pickImageUrl(picked);
+    const ll = latLngFromTourSearchItem(picked);
+
+    if (!contentId || !contentTypeId) continue;
+
+    return {
+      ok: true,
+      contentId,
+      contentTypeId,
+      title: searchRowTitle,
+      imageUrl,
+      searchRowTitle,
+      matchedLat: ll?.lat ?? null,
+      matchedLng: ll?.lng ?? null,
+      alignsWithPlanName: hint.length > 0 ? tourMatchLooksAligned(hint, searchRowTitle) : true,
+    };
   }
 
   return { ok: false, code: "NOT_FOUND", message: "검색 결과가 없습니다." };
@@ -351,8 +391,9 @@ export async function lookupTourSpotByKeyword(
   keyword: string,
   init?: RequestInit,
   options?: TourKeywordSearchOptions,
+  ctx?: TourSpotLookupContext | null,
 ): Promise<TourSpotLookupResult> {
-  const search = await tourSearchKeywordFirst(keyword, init, options);
+  const search = await tourSearchKeywordFirst(keyword, init, options, ctx);
   if (!search.ok) {
     return { ok: false, code: search.code, message: search.message };
   }
@@ -367,6 +408,9 @@ export async function lookupTourSpotByKeyword(
       title: search.title,
       imageUrl: search.imageUrl,
       overview: null,
+      matchedLat: search.matchedLat,
+      matchedLng: search.matchedLng,
+      alignsWithPlanName: search.alignsWithPlanName,
     };
   }
 
@@ -378,5 +422,8 @@ export async function lookupTourSpotByKeyword(
     title: detail.title || search.title,
     imageUrl: search.imageUrl,
     overview: detail.overview,
+    matchedLat: search.matchedLat,
+    matchedLng: search.matchedLng,
+    alignsWithPlanName: search.alignsWithPlanName,
   };
 }
