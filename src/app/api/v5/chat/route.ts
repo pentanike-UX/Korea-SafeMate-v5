@@ -148,6 +148,7 @@ export async function POST(req: Request) {
       return jsonResponse(fallbackNoKey(messages, confirmRoute));
     }
 
+    // confirmRoute가 있으면 gather 스키마를 건너뛰고 plan 스키마만 호출합니다. messages는 선택(빈 배열 가능).
     if (confirmRoute?.slots?.length) {
       const slotText = confirmRoute.slots
         .map((s) => `- ${s.label}: ${s.value}${s.category ? ` (${s.category})` : ""}`)

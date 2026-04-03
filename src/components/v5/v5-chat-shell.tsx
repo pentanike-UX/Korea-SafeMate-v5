@@ -890,13 +890,11 @@ function isDeparturePreferenceChip(c: PreferenceChip): boolean {
 function PreferenceChipsCard({
   chips,
   readyToGenerateRoute,
-  onRemoveChip,
   onConfirm,
   isGenerating,
 }: {
   chips: PreferenceChip[];
   readyToGenerateRoute: boolean;
-  onRemoveChip: (chipId: string) => void;
   onConfirm: (slots: PreferenceChip[]) => void;
   isGenerating: boolean;
 }) {
@@ -936,18 +934,10 @@ function PreferenceChipsCard({
           displayChips.map((c) => (
             <span
               key={c.id}
-              className="v5-prompt-chip-item inline-flex shrink-0 items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full text-[12px] font-medium bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] border border-[color-mix(in_srgb,var(--brand-trust-blue)_24%,var(--border-default))]"
+              className="v5-prompt-chip-item inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] border border-[color-mix(in_srgb,var(--brand-trust-blue)_24%,var(--border-default))]"
             >
               <span className="text-[10px] opacity-80">{c.label}</span>
               <span className="text-[var(--text-strong)]">{c.value}</span>
-              <button
-                type="button"
-                onClick={() => onRemoveChip(c.id)}
-                className="ml-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--error)] transition-colors"
-                aria-label={`${c.label} 칩 제거`}
-              >
-                <X className="w-3 h-3" />
-              </button>
             </span>
           ))
         )}
@@ -979,7 +969,6 @@ function MessageBubble({
   savedPlanIds,
   onSavePlan,
   onViewMap,
-  onRemovePreferenceChip,
   onConfirmRoute,
   routeGeneratingMessageId,
 }: {
@@ -987,13 +976,12 @@ function MessageBubble({
   savedPlanIds: Set<string>;
   onSavePlan: (p: TravelPlan) => void;
   onViewMap: (p: TravelPlan) => void;
-  onRemovePreferenceChip?: (messageId: string, chipId: string) => void;
   onConfirmRoute?: (messageId: string, slots: PreferenceChip[]) => void;
   routeGeneratingMessageId: string | null;
 }) {
   const isUser = message.role === "user";
   const chips = message.preferenceChips ?? [];
-  const showChips = !isUser && chips.length > 0 && onRemovePreferenceChip && onConfirmRoute;
+  const showChips = !isUser && chips.length > 0 && onConfirmRoute;
 
   return (
     <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"} items-end`}>
@@ -1030,7 +1018,6 @@ function MessageBubble({
           <PreferenceChipsCard
             chips={chips}
             readyToGenerateRoute={Boolean(message.canGenerateRoute)}
-            onRemoveChip={(chipId) => onRemovePreferenceChip(message.id, chipId)}
             onConfirm={(slots) => onConfirmRoute(message.id, slots)}
             isGenerating={routeGeneratingMessageId === message.id}
           />
@@ -1810,29 +1797,6 @@ export function V5ChatShell() {
     );
   }, [keyboardOverlapPx]);
 
-  const handleRemovePreferenceChip = useCallback(
-    (messageId: string, chipId: string) => {
-      setConversations((prev) =>
-        prev.map((c) => {
-          if (c.id !== activeConvId) return c;
-          return {
-            ...c,
-            messages: c.messages.map((m) => {
-              if (m.id !== messageId || !m.preferenceChips?.length) return m;
-              const preferenceChips = m.preferenceChips.filter((ch) => ch.id !== chipId);
-              return {
-                ...m,
-                preferenceChips: preferenceChips.length ? preferenceChips : undefined,
-                canGenerateRoute: preferenceChips.length ? m.canGenerateRoute : false,
-              };
-            }),
-          };
-        })
-      );
-    },
-    [activeConvId]
-  );
-
   const persistAssistantMessage = useCallback(
     (aiMsg: Message, activeId: string) => {
       if (!userId) return;
@@ -2128,7 +2092,6 @@ export function V5ChatShell() {
 
       setComposerDockExpanded(false);
 
-      const priorMsgs = conversations.find((c) => c.id === activeConvId)?.messages ?? [];
       const userContent = "확정한 조건으로 여행 동선을 짜줘.";
       const userMsg: Message = {
         id: `tmp-${Date.now()}`,
@@ -2163,7 +2126,9 @@ export function V5ChatShell() {
       setRouteGeneratingMessageId(chipSourceMessageId);
       setIsTyping(true);
 
-      const apiMessages = messagesToApiPayload([...priorMsgs, userMsg]);
+      // gather(조건 정리)는 Step 1에서만 호출됨. 동선 생성은 confirmRoute 분기(plan 스키마)만 타며
+      // 대화 전체를 다시 넘기지 않아 이중 gather·불필요한 토큰을 피함.
+      const planRequestMessages: { role: "user" | "assistant"; content: string }[] = [];
 
       type ApiV5 = {
         content?: string;
@@ -2175,7 +2140,10 @@ export function V5ChatShell() {
         const res = await fetch("/api/v5/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: apiMessages, confirmRoute: { slots: slotsFiltered } }),
+          body: JSON.stringify({
+            messages: planRequestMessages,
+            confirmRoute: { slots: slotsFiltered },
+          }),
         });
         if (!res.ok) throw new Error(`chat ${res.status}`);
         data = (await res.json()) as ApiV5;
@@ -2204,14 +2172,7 @@ export function V5ChatShell() {
 
       persistAssistantMessage(aiMsg, activeConvId);
     },
-    [
-      activeConvId,
-      conversations,
-      isTyping,
-      routeGeneratingMessageId,
-      userId,
-      persistAssistantMessage,
-    ]
+    [activeConvId, isTyping, routeGeneratingMessageId, userId, persistAssistantMessage]
   );
 
   // ── handleNewChat ─────────────────────────────────────────────────────────
@@ -2511,7 +2472,6 @@ export function V5ChatShell() {
                       savedPlanIds={savedPlanIds}
                       onSavePlan={handleSavePlan}
                       onViewMap={setMapModalPlan}
-                      onRemovePreferenceChip={handleRemovePreferenceChip}
                       onConfirmRoute={handleConfirmRoute}
                       routeGeneratingMessageId={routeGeneratingMessageId}
                     />
