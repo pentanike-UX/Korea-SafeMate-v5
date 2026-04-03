@@ -4,8 +4,8 @@ import { groq } from "@ai-sdk/groq";
 import { openai } from "@ai-sdk/openai";
 import type { z } from "zod";
 import {
+  canAttemptGroqStructuredFallback,
   isChatProviderAbortError,
-  shouldFallbackFromGeminiToGroq,
 } from "@/lib/gemini";
 import {
   gatherResponseSchema,
@@ -31,13 +31,16 @@ const GATHER_SYSTEM = `당신은 한국 **로컬 동선**(특정 도시·권역 
 - assistantMessage: 한국어로 짧고 친근하게, 칩을 자연스럽게 언급하세요.
 - chips: id는 영문 snake_case, label은 짧은 한글, value는 한글 값.
 - **각 칩마다 category 필드는 반드시 포함** (짧은 한글 분류: 위치·일정·교통 등). 해당 없으면 빈 문자열 \`""\` — API 스키마상 생략 불가.
-- 사용자가 "동선 짜줘"만 말했을 때는 정보가 부족하면 칩을 최소화하고 질문 위주로 답하세요.`;
+- 사용자가 "동선 짜줘"만 말했을 때는 정보가 부족하면 칩을 최소화하고 질문 위주로 답하세요.
+- **지역 칩(trip_region 등)**: 사용자가 "경기도 · 파주"처럼 시·군·동네까지 말했으면 value에 **그 구체 표현을 그대로** 넣으세요. 광역(경기도)만 남기고 시·군을 버리지 마세요.`;
 
 const PLAN_SYSTEM = `당신은 한국 **로컬 동선** 설계 AI입니다. 사용자가 고른 도시·권역 **안에서만** 스팟을 이어 짭니다.
 
 규칙:
 - 반드시 한국어 assistantMessage로 요약과 팁을 제시합니다.
-- plan은 실제 관광 코스처럼 스팟을 3~12개 배치합니다. **다른 도시로 이동하거나 집·역으로 복귀하는 구간은 넣지 않습니다.**
+- **지역 일치(매우 중요)**: 대화 맥락·확정 칩에 "파주", "수원", "가평" 등 **구체 시·군·읍면**이 있으면 그 범위의 스팟만 사용하세요. 같은 광역(예: 경기도) 안의 **다른 대표 도시로 바꿔 끼우지 마세요**(예: 파주 요청에 수원 성곽 코스 금지). 칩의 지역 값이 광역만 있어도 직전 사용자 발화에 더 구체적 지명이 있으면 **그 지명**을 기준으로 합니다.
+- plan.region·plan.title·각 스팟 이름·좌표는 위에서 정한 **동일한 시·군 권역**과 일치해야 합니다.
+- plan은 실제 관광 코스처럼 스팟을 **가능하면 3~12개**, 최소 2개는 반드시 채웁니다. **다른 도시로 이동하거나 집·역으로 복귀하는 구간은 넣지 않습니다.**
 - spots[].transitToNext: 스팟 사이 이동(도보/버스/지하철/택시/차 등)과 대략 소요 시간. 마지막 스팟 등 없으면 \`""\`.
 - spots[].note: 팁·주의. 없으면 \`""\`.
 - spots[].transitMode: 다음 스팟까지 **항공**이면 \`flight\`, **페리**면 \`ferry\`, 그 외(도보·도로)는 \`surface\` (필수 enum, 생략 불가).
@@ -50,12 +53,12 @@ function formatHistory(messages: ChatMessage[]): string {
     .join("\n\n");
 }
 
-/** `GEMINI_MODEL` → 없으면 `GEMINI_CHAT_MODEL` → 기본은 스트리밍 `/api/chat`과 동일 */
+/** `GEMINI_MODEL` → 없으면 `GEMINI_CHAT_MODEL` → 기본 `gemini-2.0-flash`(일반 제공 모델) */
 function model() {
   const id =
     process.env.GEMINI_MODEL?.trim() ||
     process.env.GEMINI_CHAT_MODEL?.trim() ||
-    "gemini-3-flash-preview";
+    "gemini-2.0-flash";
   return google(id);
 }
 
@@ -76,79 +79,197 @@ function openaiChatModel() {
   return openai(id);
 }
 
-async function generateObjectGeminiGroqOrOpenai<S extends z.ZodType>(args: {
+type V5LlmProvider = "gemini" | "openai" | "groq";
+
+async function generateObjectOpenAiThenGroq<S extends z.ZodType>(args: {
   schema: S;
   system: string;
   prompt: string;
   temperature: number;
-}): Promise<{ object: z.infer<S> }> {
-  try {
-    return await generateObject({
-      model: model(),
-      schema: args.schema,
-      system: args.system,
-      prompt: args.prompt,
-      temperature: args.temperature,
-    });
-  } catch (geminiErr) {
-    if (isChatProviderAbortError(geminiErr)) throw geminiErr;
+  priorErr: unknown;
+}): Promise<{ object: z.infer<S>; provider: V5LlmProvider }> {
+  let lastErr: unknown = args.priorErr;
 
-    let lastErr: unknown = geminiErr;
-
-    // OpenAI를 Groq보다 먼저: Groq+structured(generateObject)가 HTTP 400을 자주 내어
-    // 이전 순서(Groq→OpenAI)면 OpenAI까지 도달하지 못하는 경우가 많음.
-    if (process.env.OPENAI_API_KEY?.trim()) {
-      try {
-        console.warn("[v5/chat] Gemini generateObject failed, falling back to OpenAI:", geminiErr);
-        return await generateObject({
-          model: openaiChatModel(),
-          schema: args.schema,
-          system: args.system,
-          prompt: args.prompt,
-          temperature: args.temperature,
-        });
-      } catch (openaiErr) {
-        if (isChatProviderAbortError(openaiErr)) throw openaiErr;
-        lastErr = openaiErr;
-        console.warn("[v5/chat] OpenAI generateObject failed:", openaiErr);
-      }
+  if (process.env.OPENAI_API_KEY?.trim()) {
+    try {
+      console.warn("[v5/chat] Trying OpenAI generateObject (Gemini skipped or failed)");
+      const r = await generateObject({
+        model: openaiChatModel(),
+        schema: args.schema,
+        system: args.system,
+        prompt: args.prompt,
+        temperature: args.temperature,
+      });
+      return { object: r.object as z.infer<S>, provider: "openai" };
+    } catch (openaiErr) {
+      if (isChatProviderAbortError(openaiErr)) throw openaiErr;
+      lastErr = openaiErr;
+      console.warn("[v5/chat] OpenAI generateObject failed:", openaiErr);
     }
-
-    if (shouldFallbackFromGeminiToGroq(geminiErr)) {
-      try {
-        console.warn("[v5/chat] Falling back to Groq:", lastErr);
-        return await generateObject({
-          model: groqChatModel(),
-          schema: args.schema,
-          system: args.system,
-          prompt: args.prompt,
-          temperature: args.temperature,
-        });
-      } catch (groqErr) {
-        if (isChatProviderAbortError(groqErr)) throw groqErr;
-        lastErr = groqErr;
-        console.warn("[v5/chat] Groq generateObject failed:", groqErr);
-      }
-    }
-
-    throw lastErr;
   }
+
+  if (canAttemptGroqStructuredFallback(lastErr)) {
+    try {
+      console.warn("[v5/chat] Falling back to Groq generateObject:", lastErr);
+      const r = await generateObject({
+        model: groqChatModel(),
+        schema: args.schema,
+        system: args.system,
+        prompt: args.prompt,
+        temperature: args.temperature,
+      });
+      return { object: r.object as z.infer<S>, provider: "groq" };
+    } catch (groqErr) {
+      if (isChatProviderAbortError(groqErr)) throw groqErr;
+      lastErr = groqErr;
+      console.warn("[v5/chat] Groq generateObject failed:", groqErr);
+    }
+  }
+
+  throw lastErr;
+}
+
+/** Google 키 있으면 Gemini → (실패 시) OpenAI → Groq. 없으면 OpenAI → Groq만. */
+async function generateObjectWithLlmFallback<S extends z.ZodType>(args: {
+  schema: S;
+  system: string;
+  prompt: string;
+  temperature: number;
+}): Promise<{ object: z.infer<S>; provider: V5LlmProvider }> {
+  const hasGoogle = Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim());
+
+  if (hasGoogle) {
+    try {
+      const r = await generateObject({
+        model: model(),
+        schema: args.schema,
+        system: args.system,
+        prompt: args.prompt,
+        temperature: args.temperature,
+      });
+      return { object: r.object as z.infer<S>, provider: "gemini" };
+    } catch (geminiErr) {
+      if (isChatProviderAbortError(geminiErr)) throw geminiErr;
+      console.warn("[v5/chat] Gemini generateObject failed:", geminiErr);
+      return generateObjectOpenAiThenGroq({
+        ...args,
+        priorErr: geminiErr,
+      });
+    }
+  }
+
+  return generateObjectOpenAiThenGroq({
+    ...args,
+    priorErr: new Error("GOOGLE_GENERATIVE_AI_API_KEY not set"),
+  });
+}
+
+function classifyV5ChatFailure(err: unknown): { code: string; userMessage: string } {
+  const msg = err instanceof Error ? err.message : String(err);
+  const lower = msg.toLowerCase();
+
+  if (lower.includes("timeout") || lower.includes("timed out") || lower.includes("etimedout")) {
+    return {
+      code: "TIMEOUT",
+      userMessage:
+        "응답 시간이 초과됐어요. 잠시 후 다시 「이 정보로 동선 짜기」를 눌러 주세요.",
+    };
+  }
+
+  if (
+    lower.includes("zod") ||
+    lower.includes("validation") ||
+    lower.includes("no object") ||
+    lower.includes("schema") ||
+    lower.includes("did not match")
+  ) {
+    return {
+      code: "SCHEMA_VALIDATION",
+      userMessage:
+        "AI 응답 형식이 맞지 않아 동선을 완성하지 못했어요. 조건을 조금 줄이거나 다시 시도해 주세요.",
+    };
+  }
+
+  if (
+    lower.includes("429") ||
+    lower.includes("rate limit") ||
+    lower.includes("quota") ||
+    lower.includes("resource_exhausted")
+  ) {
+    return {
+      code: "RATE_LIMIT",
+      userMessage:
+        "요청 한도에 걸렸을 수 있어요. 잠시 후 다시 시도하거나 다른 시간에 이용해 주세요.",
+    };
+  }
+
+  if (
+    lower.includes("401") ||
+    lower.includes("403") ||
+    lower.includes("invalid api key") ||
+    lower.includes("incorrect api key")
+  ) {
+    return {
+      code: "AUTH_CONFIG",
+      userMessage:
+        "API 키가 없거나 올바르지 않을 수 있어요. 서버 환경 변수(GOOGLE_GENERATIVE_AI_API_KEY·OPENAI_API_KEY·GROQ_API_KEY)를 확인해 주세요.",
+    };
+  }
+
+  return {
+    code: "LLM_FAILED",
+    userMessage:
+      "일시적으로 동선을 만들지 못했어요. 잠시 후 다시 시도해 주세요. 문제가 계속되면 사용 중인 모델 ID(GEMINI_MODEL·OPENAI_CHAT_MODEL·GROQ_CHAT_MODEL)를 확인해 주세요.",
+  };
+}
+
+function jsonOk(body: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify({ ok: true, ...body }), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+function jsonFail(status: number, body: Record<string, unknown>) {
+  return new Response(JSON.stringify({ ok: false, ...body }), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 export async function POST(req: Request) {
+  let body: unknown;
   try {
-    const body = await req.json();
-    const messages = (body.messages ?? []) as ChatMessage[];
-    const confirmRoute = body.confirmRoute as
-      | { slots: Array<{ id: string; label: string; value: string; category?: string }> }
-      | undefined;
+    body = await req.json();
+  } catch {
+    return jsonFail(400, {
+      code: "INVALID_JSON",
+      content: "요청 본문을 읽을 수 없어요. 페이지를 새로고침한 뒤 다시 시도해 주세요.",
+      error: "Invalid JSON body",
+      preferenceChips: [],
+      readyToGenerateRoute: false,
+      travelPlan: null,
+      usedMock: true,
+    });
+  }
 
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-    if (!apiKey) {
-      return jsonResponse(fallbackNoKey(messages, confirmRoute));
+  try {
+    const messages = ((body as { messages?: ChatMessage[] }).messages ?? []) as ChatMessage[];
+    const confirmRoute = (body as {
+      confirmRoute?: {
+        slots: Array<{ id: string; label: string; value: string; category?: string }>;
+      };
+    }).confirmRoute;
+
+    const hasGoogle = Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim());
+    const hasOpenAI = Boolean(process.env.OPENAI_API_KEY?.trim());
+    const hasGroq = Boolean(process.env.GROQ_API_KEY?.trim());
+
+    if (!hasGoogle && !hasOpenAI && !hasGroq) {
+      return jsonOk(fallbackNoKey(messages, confirmRoute));
     }
 
-    // confirmRoute가 있으면 gather 스키마를 건너뛰고 plan 스키마만 호출합니다. messages는 선택(빈 배열 가능).
+    // confirmRoute가 있으면 gather 스키마를 건너뛰고 plan 스키마만 호출합니다.
     if (confirmRoute?.slots?.length) {
       const slotText = confirmRoute.slots
         .map((s) => `- ${s.label}: ${s.value}${s.category ? ` (${s.category})` : ""}`)
@@ -156,10 +277,10 @@ export async function POST(req: Request) {
 
       const history = formatHistory(messages.slice(-24));
 
-      const { object } = await generateObjectGeminiGroqOrOpenai({
+      const { object, provider } = await generateObjectWithLlmFallback({
         schema: planResponseSchema,
         system: PLAN_SYSTEM,
-        prompt: `아래는 지금까지의 대화 맥락입니다.\n\n${history || "(이전 맥락 없음)"}\n\n---\n사용자가 다음 여행 조건을 확정했습니다. **같은 도시·권역 안에서만** 스팟을 이은 로컬 동선을 plan으로 구조화하세요. 다른 도시로 이동하거나 집·역으로 복귀하는 구간은 넣지 마세요.\n\n${slotText}`,
+        prompt: `아래는 지금까지의 대화 맥락입니다.\n\n${history || "(이전 맥락 없음)"}\n\n---\n사용자가 다음 여행 조건을 확정했습니다. **같은 도시·권역 안에서만** 스팟을 이은 로컬 동선을 plan으로 구조화하세요. 다른 도시로 이동하거나 집·역으로 복귀하는 구간은 넣지 마세요.\n\n**지역 주의**: 확정 칩의 "지역"이 넓게만 적혀 있어도, 대화 속 사용자 문장에 "파주·가평·수원" 등 더 구체적인 시·군이 있으면 **반드시 그 시·군**에 속한 스팟만 배치하세요. 광역 단위만 보고 대표 도시로 바꾸지 마세요.\n\n${slotText}`,
         temperature: 0.6,
       });
 
@@ -169,25 +290,26 @@ export async function POST(req: Request) {
         const promptLen =
           (history?.length ?? 0) + slotText.length + PLAN_SYSTEM.length + 400;
         recordWaylyUsageFireAndForget(sbPlan, {
-          geminiGenerations: 1,
+          geminiGenerations: provider === "gemini" ? 1 : 0,
           geminiEstInputTokens: Math.ceil(promptLen / 4),
           geminiEstOutputTokens: Math.ceil(JSON.stringify(object).length / 4),
         });
       }
 
-      return jsonResponse({
+      return jsonOk({
         content: object.assistantMessage,
         preferenceChips: null,
         readyToGenerateRoute: false,
         travelPlan: object.plan,
         usedMock: false,
+        llmProvider: provider,
       });
     }
 
     const history = formatHistory(messages.slice(-24));
     const lastUser = [...messages].reverse().find((m) => m.role === "user")?.content ?? "";
 
-    const { object } = await generateObjectGeminiGroqOrOpenai({
+    const { object, provider } = await generateObjectWithLlmFallback({
       schema: gatherResponseSchema,
       system: GATHER_SYSTEM,
       prompt: `대화 맥락:\n\n${history || "(첫 메시지)"}\n\n---\n마지막 사용자 발화:\n${lastUser}\n\n위를 반영해 assistantMessage, chips, readyToGenerateRoute를 생성하세요.`,
@@ -200,37 +322,33 @@ export async function POST(req: Request) {
       const promptLen =
         (history?.length ?? 0) + lastUser.length + GATHER_SYSTEM.length + 400;
       recordWaylyUsageFireAndForget(sbGather, {
-        geminiGenerations: 1,
+        geminiGenerations: provider === "gemini" ? 1 : 0,
         geminiEstInputTokens: Math.ceil(promptLen / 4),
         geminiEstOutputTokens: Math.ceil(JSON.stringify(object).length / 4),
       });
     }
 
-    return jsonResponse({
+    return jsonOk({
       content: object.assistantMessage,
       preferenceChips: object.chips,
       readyToGenerateRoute: object.readyToGenerateRoute,
       travelPlan: null,
       usedMock: false,
+      llmProvider: provider,
     });
   } catch (e) {
     console.error("[v5/chat]", e);
-    return jsonResponse({
-      content:
-        "일시적으로 응답을 만들지 못했어요. 잠시 후 다시 시도해 주세요. (Vercel 등 배포 환경에 OPENAI_API_KEY·GROQ_API_KEY·모델 ID를 확인해 주세요. 로컬에만 있으면 프로덕션에서는 OpenAI가 호출되지 않습니다.)",
+    const { code, userMessage } = classifyV5ChatFailure(e);
+    return jsonFail(502, {
+      code,
+      content: userMessage,
+      error: e instanceof Error ? e.message : String(e),
       preferenceChips: [],
       readyToGenerateRoute: false,
       travelPlan: null,
       usedMock: true,
-      error: e instanceof Error ? e.message : "unknown",
     });
   }
-}
-
-function jsonResponse(data: Record<string, unknown>) {
-  return new Response(JSON.stringify(data), {
-    headers: { "Content-Type": "application/json" },
-  });
 }
 
 /** API 키 없을 때 최소 동작(로컬·미설정) */
@@ -244,7 +362,7 @@ function fallbackNoKey(
     if (lower.includes("경주")) {
       return {
         content:
-          "경주 2박 3일 여행 동선 예시입니다. (GOOGLE_GENERATIVE_AI_API_KEY를 설정하면 Gemini가 실시간으로 맞춤 동선을 만듭니다.)",
+          "경주 2박 3일 여행 동선 예시입니다. (실시간 생성은 GOOGLE_GENERATIVE_AI_API_KEY 또는 OPENAI_API_KEY·GROQ_API_KEY 중 하나 이상이 필요해요.)",
         preferenceChips: null,
         readyToGenerateRoute: false,
         travelPlan: mockGyeongju(),
@@ -272,7 +390,7 @@ function fallbackNoKey(
     }
     return {
       content:
-        "여행 API 키가 없어 예시 동선만 제공해요. Vercel·로컬 환경에 GOOGLE_GENERATIVE_AI_API_KEY를 추가해 주세요.",
+        "LLM API 키가 없어 예시 동선을 만들 수 없어요. GOOGLE_GENERATIVE_AI_API_KEY 또는 OPENAI_API_KEY·GROQ_API_KEY를 환경에 설정해 주세요.",
       preferenceChips: null,
       readyToGenerateRoute: false,
       travelPlan: null,
@@ -295,7 +413,7 @@ function fallbackNoKey(
 
   return {
     content:
-      "안녕하세요! 한국 여행 동선을 함께 짜 드릴게요. 지역·일정·인원·교통·분위기·음식 취향을 알려주시면 칩으로 정리해 드리고, 확인 후 동선을 만들어요. (실시간 AI는 GOOGLE_GENERATIVE_AI_API_KEY 설정 시 Gemini로 동작합니다.)",
+      "안녕하세요! 한국 여행 동선을 함께 짜 드릴게요. 지역·일정·인원·교통·분위기·음식 취향을 알려주시면 칩으로 정리해 드리고, 확인 후 동선을 만들어요. (실시간 AI는 Gemini·OpenAI·Groq 키 중 하나 이상이 있으면 동작합니다.)",
     preferenceChips: chips,
     readyToGenerateRoute: chips.length >= 2,
     travelPlan: null,

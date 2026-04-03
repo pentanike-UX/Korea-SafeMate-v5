@@ -154,7 +154,8 @@ export const HYBRID_SLOT_OPTIONS: Record<HybridTripKey, string[]> = {
 /** 분위기·음식: 다중 선택 값 구분자 (프리셋 옵션에 쓰이지 않는 조합) */
 const HYBRID_MULTI_SEP = " · ";
 
-const HYBRID_MULTI_KEYS = new Set<HybridTripKey>(["vibe", "food"]);
+/** 분위기·음식 시트에서 다중 선택 후 「적용」으로 확정 */
+export const HYBRID_MULTI_KEYS = new Set<HybridTripKey>(["vibe", "food"]);
 
 export function parseHybridMultiValues(raw: string): string[] {
   return raw
@@ -163,25 +164,8 @@ export function parseHybridMultiValues(raw: string): string[] {
     .filter(Boolean);
 }
 
-function joinHybridMultiValues(parts: string[]): string {
+export function joinHybridMultiValues(parts: string[]): string {
   return parts.join(HYBRID_MULTI_SEP);
-}
-
-function toggleHybridMultiValue(current: string, opt: string): string {
-  const parts = parseHybridMultiValues(current);
-  const i = parts.indexOf(opt);
-  if (i >= 0) parts.splice(i, 1);
-  else parts.push(opt);
-  return joinHybridMultiValues(parts);
-}
-
-function appendHybridMultiValue(current: string, add: string): string {
-  const t = add.trim();
-  if (!t) return current;
-  const parts = parseHybridMultiValues(current);
-  if (parts.includes(t)) return current;
-  parts.push(t);
-  return joinHybridMultiValues(parts);
 }
 
 /** 자연어 한 줄로 조합 → handleSend / gather 파이프라인에 전달 */
@@ -218,7 +202,7 @@ export function buildHybridPrompt(d: Record<HybridTripKey, string>): string {
     );
   }
   if (parts.length === 0) return "";
-  return `${parts.join(". ")}. 위 지역·권역 안에서만 현지 로컬 동선으로 짜 줘. 다른 도시로 이동하거나 집·역으로 돌아가는 왕복 구간은 넣지 마.`;
+  return `${parts.join(". ")}. 위에 적은 지역·시·군·동네 범위를 **절대 바꾸지 말고** 그 안의 스팟만 이어 줘(같은 도(경기도) 안의 다른 시·군으로 치환 금지). 다른 도시로 이동하거나 집·역으로 돌아가는 왕복 구간은 넣지 마.`;
 }
 
 export function hybridHasMinimumForSend(d: Record<HybridTripKey, string>): boolean {
@@ -257,6 +241,8 @@ export function HybridTripComposer({
   const [customLine, setCustomLine] = useState("");
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
+  /** 분위기·음식: 시트 안에서만 토글, 「적용」 시 draft 반영 */
+  const [multiSheetSelection, setMultiSheetSelection] = useState<string[]>([]);
 
   const activeMeta = useMemo(
     () => SLOT_META.find((s) => s.key === openKey) ?? null,
@@ -286,12 +272,18 @@ export function HybridTripComposer({
   const closeSheet = useCallback(() => {
     setOpenKey(null);
     setCustomLine("");
+    setMultiSheetSelection([]);
   }, []);
 
   const openSheet = useCallback(
     (key: HybridTripKey) => {
       setOpenKey(key);
       setCustomLine(draft[key] ?? "");
+      if (HYBRID_MULTI_KEYS.has(key)) {
+        setMultiSheetSelection(parseHybridMultiValues(draft[key] ?? ""));
+      } else {
+        setMultiSheetSelection([]);
+      }
       if (key === "schedule") {
         setRangeStart("");
         setRangeEnd("");
@@ -446,7 +438,7 @@ export function HybridTripComposer({
                 ) : null}
                 {openKey && HYBRID_MULTI_KEYS.has(openKey) ? (
                   <p className="text-[11px] font-medium text-[var(--brand-trust-blue)] mt-1">
-                    여러 개 골라도 돼요 · 항목을 누를 때마다 선택/해제(칩 스타일)
+                    여러 개 고른 뒤 하단 <strong className="font-semibold">적용</strong>을 누르면 반영돼요
                   </p>
                 ) : null}
               </div>
@@ -502,9 +494,7 @@ export function HybridTripComposer({
               {sheetOptions.map((opt) => {
                 const isMulti = openKey && HYBRID_MULTI_KEYS.has(openKey);
                 const selected =
-                  isMulti && openKey
-                    ? parseHybridMultiValues(draft[openKey]).includes(opt)
-                    : false;
+                  isMulti && openKey ? multiSheetSelection.includes(opt) : false;
                 return (
                   <button
                     key={opt}
@@ -512,9 +502,10 @@ export function HybridTripComposer({
                     onClick={() => {
                       if (!openKey) return;
                       if (HYBRID_MULTI_KEYS.has(openKey)) {
-                        onDraftChange({
-                          ...draft,
-                          [openKey]: toggleHybridMultiValue(draft[openKey], opt),
+                        setMultiSheetSelection((prev) => {
+                          const i = prev.indexOf(opt);
+                          if (i >= 0) return prev.filter((_, j) => j !== i);
+                          return [...prev, opt];
                         });
                         return;
                       }
@@ -565,10 +556,10 @@ export function HybridTripComposer({
                   onClick={() => {
                     if (!customLine.trim() || !openKey) return;
                     if (HYBRID_MULTI_KEYS.has(openKey)) {
-                      onDraftChange({
-                        ...draft,
-                        [openKey]: appendHybridMultiValue(draft[openKey], customLine),
-                      });
+                      const t = customLine.trim();
+                      setMultiSheetSelection((prev) =>
+                        prev.includes(t) ? prev : [...prev, t],
+                      );
                       setCustomLine("");
                       return;
                     }
@@ -577,10 +568,36 @@ export function HybridTripComposer({
                   disabled={!customLine.trim()}
                   className="shrink-0 rounded-xl bg-[var(--brand-primary)] px-4 py-2.5 text-[13px] font-semibold text-[var(--text-on-brand)] disabled:opacity-40"
                 >
-                  {openKey && HYBRID_MULTI_KEYS.has(openKey) ? "추가" : "적용"}
+                  {openKey && HYBRID_MULTI_KEYS.has(openKey) ? "목록에 추가" : "적용"}
                 </button>
               </div>
             </div>
+
+            {openKey && HYBRID_MULTI_KEYS.has(openKey) ? (
+              <div className="flex gap-2 border-t border-[var(--border-default)] px-3 py-3 shrink-0 bg-[var(--bg-page)] pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <button
+                  type="button"
+                  onClick={closeSheet}
+                  className="flex-1 min-h-[48px] rounded-2xl border border-[var(--border-default)] bg-[var(--bg-elevated)] text-[14px] font-semibold text-[var(--text-strong)] active:scale-[0.99] transition-transform"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!openKey) return;
+                    onDraftChange({
+                      ...draft,
+                      [openKey]: joinHybridMultiValues(multiSheetSelection),
+                    });
+                    closeSheet();
+                  }}
+                  className="flex-1 min-h-[48px] rounded-2xl bg-[var(--brand-primary)] text-[14px] font-semibold text-[var(--text-on-brand)] shadow-sm hover:bg-[var(--brand-primary-hover)] active:scale-[0.99] transition-all"
+                >
+                  적용
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
       )}

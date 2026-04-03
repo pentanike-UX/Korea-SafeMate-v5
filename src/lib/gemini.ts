@@ -104,3 +104,17 @@ export function shouldFallbackFromGeminiToGroq(
 
   return true;
 }
+
+/**
+ * Gemini/OpenAI 등 1차 structured 호출이 실패한 뒤 Groq `generateObject`를 시도할지.
+ * (키 있음 + 취소 계열 아님). OpenAI 실패 직후에도 동일 조건으로 Groq를 이어갈 때 사용합니다.
+ */
+export function canAttemptGroqStructuredFallback(
+  error: unknown,
+  abortSignal?: AbortSignal,
+): boolean {
+  if (abortSignal?.aborted) return false;
+  if (!process.env.GROQ_API_KEY?.trim()) return false;
+  if (isChatProviderAbortError(error)) return false;
+  return true;
+}

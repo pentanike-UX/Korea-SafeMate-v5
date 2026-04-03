@@ -1,12 +1,22 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+  useMemo,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import {
   Plus, MapPin, Clock, CloudSun, Bookmark, BookmarkCheck,
   Send, Utensils, Coffee, Train, Camera, ChevronRight,
   Sparkles, MoreHorizontal, Trash2, PanelLeftClose, PanelLeft,
   Navigation, Hotel, Menu, X, Map, Compass, Check, ChevronDown, ChevronUp,
+  Sun, Moon, CircleUser,
 } from "lucide-react";
 import { useAuthUser } from "@/hooks/use-auth-user";
 import {
@@ -20,13 +30,17 @@ import { consumeTravelChatSse } from "@/lib/travel-chat/consume-chat-sse";
 import { BRAND } from "@/lib/constants";
 import { Link } from "@/i18n/navigation";
 import { AppleThemeToggle } from "@/components/theme/apple-theme-toggle";
+import { useTheme } from "@/components/theme/theme-provider";
 import { V5ChatPricingModal, type PricingModalFocus } from "./v5-chat-pricing-modal";
 import {
   HybridTripComposer,
+  HYBRID_MULTI_KEYS,
   HYBRID_SLOT_OPTIONS,
   HYBRID_TRIP_EMPTY,
+  SLOT_META,
   buildHybridPrompt,
   hybridHasMinimumForSend,
+  parseHybridMultiValues,
   useLgUp,
   type HybridTripKey,
 } from "./v5-hybrid-trip-composer";
@@ -239,6 +253,60 @@ interface PreferenceChip {
   category?: string;
 }
 
+/** 하이브리드에 남아 있는 지역·동선을 확정 슬롯에 반영(LLM이 광역만 남기거나 엉뚱한 시로 줄 때 보정) */
+function enrichConfirmSlotsWithHybrid(
+  slots: PreferenceChip[],
+  hybrid: Record<HybridTripKey, string>,
+): PreferenceChip[] {
+  const hr = hybrid.region.trim();
+  const hz = hybrid.zone.trim();
+  const next = slots.map((s) => ({ ...s }));
+
+  if (hr) {
+    const regionIdx = next.findIndex(
+      (c) => c.id === "trip_region" || /\b지역\b/.test(c.label),
+    );
+    const patch: PreferenceChip = {
+      id: "trip_region",
+      label: "여행 지역",
+      value: hr,
+      category: "위치",
+    };
+    if (regionIdx >= 0) {
+      next[regionIdx] = {
+        ...next[regionIdx]!,
+        ...patch,
+        label: next[regionIdx]!.label,
+      };
+    } else {
+      next.unshift(patch);
+    }
+  }
+
+  if (hz) {
+    const zi = next.findIndex(
+      (c) =>
+        /\b동선\b/.test(c.label) ||
+        /\b구역\b/.test(c.label) ||
+        /코스/.test(c.label) ||
+        c.id.includes("zone"),
+    );
+    const zoneChip: PreferenceChip = {
+      id: "trip_zone_center",
+      label: "동선 중심",
+      value: hz,
+      category: "위치",
+    };
+    if (zi >= 0) {
+      next[zi] = { ...next[zi]!, ...zoneChip, label: next[zi]!.label };
+    } else {
+      next.splice(hr ? 1 : 0, 0, zoneChip);
+    }
+  }
+
+  return next;
+}
+
 interface Message {
   id: string; role: "user" | "assistant"; content: string;
   timestamp: Date; travelPlan?: TravelPlan;
@@ -320,6 +388,43 @@ function messagesToApiPayload(messages: Message[]): { role: "user" | "assistant"
   return messages
     .filter((m) => m.role === "user" || m.role === "assistant")
     .map((m) => ({ role: m.role, content: m.content }));
+}
+
+/** /api/v5/chat: 실패 시 4xx/5xx 또는 본문 ok:false → 사용자 메시지로 정규화(목 응답으로 덮어쓰지 않음) */
+function normalizeV5ChatJson(
+  res: Response,
+  parsed: {
+    ok?: boolean;
+    content?: string;
+    error?: string;
+    preferenceChips?: PreferenceChip[] | null;
+    readyToGenerateRoute?: boolean;
+    travelPlan?: TravelPlan | null;
+  },
+): {
+  content?: string;
+  preferenceChips?: PreferenceChip[] | null;
+  readyToGenerateRoute?: boolean;
+  travelPlan?: TravelPlan | null;
+} {
+  if (!res.ok || parsed.ok === false) {
+    const hint =
+      parsed.content?.trim() ||
+      parsed.error?.trim() ||
+      `요청이 실패했어요${res.status ? ` (${res.status})` : ""}. 잠시 후 다시 시도해 주세요.`;
+    return {
+      content: hint,
+      preferenceChips: null,
+      readyToGenerateRoute: false,
+      travelPlan: null,
+    };
+  }
+  return {
+    content: parsed.content,
+    preferenceChips: parsed.preferenceChips ?? null,
+    readyToGenerateRoute: parsed.readyToGenerateRoute,
+    travelPlan: parsed.travelPlan ?? null,
+  };
 }
 
 function dbPlanToSaved(db: DBSavedPlan): SavedPlan {
@@ -1348,6 +1453,194 @@ function EmptyState({
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
+function WaylyChatUtilityMenu({
+  open,
+  onPick,
+  userId,
+  className,
+  onClose,
+}: {
+  open: boolean;
+  onPick: (focus: PricingModalFocus) => void;
+  userId: string | null;
+  className?: string;
+  onClose: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div
+      className={`rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] py-1 shadow-lg min-w-[220px] ${className ?? ""}`}
+      role="menu"
+    >
+      <button
+        type="button"
+        role="menuitem"
+        className="w-full text-left px-3 py-2.5 text-[13px] text-[var(--text-strong)] hover:bg-[var(--brand-primary-soft)]"
+        onClick={() => onPick("overview")}
+      >
+        요금제·이용 한도
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        className="w-full text-left px-3 py-2.5 text-[13px] text-[var(--text-strong)] hover:bg-[var(--brand-primary-soft)]"
+        onClick={() => onPick("api")}
+      >
+        외부 API·비용 안내
+      </button>
+      {!userId && (
+        <Link
+          href="/login?next=/chat"
+          className="block px-3 py-2.5 text-[13px] font-medium text-[var(--brand-trust-blue)] hover:bg-[var(--brand-trust-blue-soft)]"
+          role="menuitem"
+          onClick={() => onClose()}
+        >
+          로그인
+        </Link>
+      )}
+    </div>
+  );
+}
+
+function SidebarUtilityStrip({
+  variant,
+  userId,
+  isAuthLoading,
+  openPricing,
+  menuOpen,
+  setMenuOpen,
+  menuRef,
+}: {
+  variant: "expanded" | "rail";
+  userId: string | null;
+  isAuthLoading: boolean;
+  openPricing: (focus: PricingModalFocus) => void;
+  menuOpen: boolean;
+  setMenuOpen: Dispatch<SetStateAction<boolean>>;
+  menuRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const { resolved, toggleTheme, mounted } = useTheme();
+  const dark = resolved === "dark";
+
+  const onMenuPick = useCallback(
+    (focus: PricingModalFocus) => {
+      openPricing(focus);
+      setMenuOpen(false);
+    },
+    [openPricing, setMenuOpen],
+  );
+
+  if (variant === "rail") {
+    return (
+      <div ref={menuRef} className="flex flex-col items-center gap-2 pt-2 w-full border-t border-[var(--border-default)]/80">
+        <button
+          type="button"
+          onClick={() => toggleTheme()}
+          className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--bg-surface-subtle)] text-[var(--text-strong)] hover:bg-[var(--brand-primary-soft)] transition-colors"
+          aria-label={dark ? "라이트 모드로" : "다크 모드로"}
+        >
+          {!mounted ? (
+            <Sun className="h-4 w-4 opacity-35" aria-hidden />
+          ) : dark ? (
+            <Sun className="h-4 w-4" aria-hidden />
+          ) : (
+            <Moon className="h-4 w-4" aria-hidden />
+          )}
+        </button>
+        {!isAuthLoading && (
+          <button
+            type="button"
+            onClick={() => openPricing(userId ? "overview" : "guest")}
+            className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${
+              userId
+                ? "bg-[var(--success-soft)] text-[var(--success)]"
+                : "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] ring-1 ring-[var(--border-default)]"
+            }`}
+            title={userId ? "동기화 중 · 요금 안내" : "게스트 · 요금 안내"}
+            aria-label={userId ? "계정·요금" : "게스트 모드"}
+          >
+            <CircleUser className="h-4 w-4" aria-hidden />
+          </button>
+        )}
+        <div className="relative flex justify-center w-full">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)] transition-colors"
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+            aria-label="더보기"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+          {menuOpen ? (
+            <div className="absolute left-full top-0 ml-2 z-[60]">
+              <WaylyChatUtilityMenu
+                open
+                onPick={onMenuPick}
+                userId={userId}
+                onClose={() => setMenuOpen(false)}
+              />
+            </div>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={menuRef}
+      className="mx-3 mb-3 rounded-2xl border border-[var(--border-default)]/90 bg-[color-mix(in_srgb,var(--bg-surface-subtle)_88%,transparent)] px-3.5 py-3.5 space-y-3 shadow-[0_2px_20px_rgba(0,0,0,0.04)]"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+          화면
+        </span>
+        <AppleThemeToggle className="shadow-sm" />
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {!isAuthLoading && (
+          <button
+            type="button"
+            onClick={() => openPricing(userId ? "overview" : "guest")}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-opacity hover:opacity-90 ${
+              userId
+                ? "bg-[var(--success-soft)] text-[var(--success)]"
+                : "bg-[var(--bg-elevated)] text-[var(--text-muted)] ring-1 ring-[var(--border-default)]"
+            }`}
+          >
+            <CircleUser className="h-3.5 w-3.5 opacity-80" aria-hidden />
+            {userId ? "동기화 중" : "게스트"}
+          </button>
+        )}
+        <div className="relative ml-auto">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)] transition-colors ring-1 ring-[var(--border-default)]/80"
+            aria-expanded={menuOpen}
+            aria-haspopup="menu"
+            aria-label="더보기 메뉴"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+          {menuOpen ? (
+            <div className="absolute right-0 top-full mt-1.5 z-[60]">
+              <WaylyChatUtilityMenu
+                open
+                onPick={onMenuPick}
+                userId={userId}
+                onClose={() => setMenuOpen(false)}
+              />
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function groupByDate(conversations: Conversation[]) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -1374,6 +1667,7 @@ function SidebarContent({
   onSelectConv, onNewChat, onDeleteConv,
   onSelectPlan, onOpenMap, onClose,
   isLoadingHistory,
+  headerUtility,
 }: {
   conversations: Conversation[]; savedPlans: SavedPlan[];
   activeConvId: string | null;
@@ -1381,6 +1675,8 @@ function SidebarContent({
   onDeleteConv: (id: string) => void; onSelectPlan: (sp: SavedPlan) => void;
   onOpenMap: (p: TravelPlan) => void; onClose?: () => void;
   isLoadingHistory: boolean;
+  /** 테마·게스트·⋯ — 상단 헤더에서 이쪽으로 옮김 */
+  headerUtility?: React.ReactNode;
 }) {
   const [hoveredConv, setHoveredConv] = useState<string | null>(null);
   const [planExpanded, setPlanExpanded] = useState(true);
@@ -1412,6 +1708,8 @@ function SidebarContent({
           </button>
         )}
       </div>
+
+      {headerUtility}
 
       {/* New Chat */}
       <div className="px-3 pb-3 flex-shrink-0">
@@ -2026,21 +2324,23 @@ export function V5ChatShell() {
       const apiMessages = messagesToApiPayload([...priorMsgs, userMsg]);
 
       type ApiV5 = {
+        ok?: boolean;
         content?: string;
+        error?: string;
         preferenceChips?: PreferenceChip[] | null;
         readyToGenerateRoute?: boolean;
         travelPlan?: TravelPlan | null;
       };
 
-      let data: ApiV5;
+      let data: ReturnType<typeof normalizeV5ChatJson>;
       try {
         const res = await fetch("/api/v5/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ messages: apiMessages }),
         });
-        if (!res.ok) throw new Error(`chat ${res.status}`);
-        data = (await res.json()) as ApiV5;
+        const parsed = (await res.json()) as ApiV5;
+        data = normalizeV5ChatJson(res, parsed);
       } catch {
         const { content: aiContent, plan } = getMockResponse(content);
         data = {
@@ -2090,7 +2390,6 @@ export function V5ChatShell() {
   const submitHybrid = useCallback(() => {
     const text = buildHybridPrompt(hybridDraft);
     if (!text.trim() || !hybridHasMinimumForSend(hybridDraft)) return;
-    setHybridDraft({ ...HYBRID_TRIP_EMPTY });
     void handleSend(text);
   }, [hybridDraft, handleSend]);
 
@@ -2098,6 +2397,7 @@ export function V5ChatShell() {
     async (chipSourceMessageId: string, slots: PreferenceChip[]) => {
       const slotsFiltered = slots.filter((s) => !isDeparturePreferenceChip(s));
       if (!slotsFiltered.length || isTyping || routeGeneratingMessageId || !activeConvId) return;
+      const slotsForPlan = enrichConfirmSlotsWithHybrid(slotsFiltered, hybridDraft);
 
       setComposerDockExpanded(false);
 
@@ -2135,29 +2435,40 @@ export function V5ChatShell() {
       setRouteGeneratingMessageId(chipSourceMessageId);
       setIsTyping(true);
 
-      // gather(조건 정리)는 Step 1에서만 호출됨. 동선 생성은 confirmRoute 분기(plan 스키마)만 타며
-      // 대화 전체를 다시 넘기지 않아 이중 gather·불필요한 토큰을 피함.
-      const planRequestMessages: { role: "user" | "assistant"; content: string }[] = [];
+      const priorPayload = messagesToApiPayload(
+        conversations.find((c) => c.id === activeConvId)?.messages ?? [],
+      );
+      const planRequestMessages = [
+        ...priorPayload,
+        { role: "user" as const, content: userContent },
+      ].slice(-24);
 
       type ApiV5 = {
+        ok?: boolean;
         content?: string;
+        error?: string;
         travelPlan?: TravelPlan | null;
       };
 
-      let data: ApiV5;
+      let data: {
+        content?: string;
+        preferenceChips?: PreferenceChip[] | null;
+        readyToGenerateRoute?: boolean;
+        travelPlan?: TravelPlan | null;
+      };
       try {
         const res = await fetch("/api/v5/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             messages: planRequestMessages,
-            confirmRoute: { slots: slotsFiltered },
+            confirmRoute: { slots: slotsForPlan },
           }),
         });
-        if (!res.ok) throw new Error(`chat ${res.status}`);
-        data = (await res.json()) as ApiV5;
+        const parsed = (await res.json()) as ApiV5;
+        data = normalizeV5ChatJson(res, parsed);
       } catch {
-        const synthetic = slotsFiltered.map((s) => s.value).join(" ");
+        const synthetic = slotsForPlan.map((s) => s.value).join(" ");
         const { content: aiContent, plan } = getMockResponse(synthetic);
         data = { content: aiContent, travelPlan: plan ?? null };
       }
@@ -2181,11 +2492,20 @@ export function V5ChatShell() {
 
       persistAssistantMessage(aiMsg, activeConvId);
     },
-    [activeConvId, isTyping, routeGeneratingMessageId, userId, persistAssistantMessage]
+    [
+      activeConvId,
+      conversations,
+      hybridDraft,
+      isTyping,
+      routeGeneratingMessageId,
+      userId,
+      persistAssistantMessage,
+    ]
   );
 
   // ── handleNewChat ─────────────────────────────────────────────────────────
   const handleNewChat = useCallback(() => {
+    setHybridDraft({ ...HYBRID_TRIP_EMPTY });
     if (userId) {
       // DB에 대화 생성 후 UI 반영
       void createConversation(userId, "새 대화").then((created) => {
@@ -2309,16 +2629,39 @@ export function V5ChatShell() {
         {/* ── Desktop Sidebar ─────────────────────────────────── */}
         <div className={`hidden md:flex flex-col border-r border-[var(--border-default)] bg-[var(--bg-surface)] flex-shrink-0 transition-all duration-200 ${sidebarCollapsed ? "w-12" : "w-[260px]"}`}>
           {sidebarCollapsed ? (
-            <div className="flex flex-col items-center py-4 gap-3">
+            <div className="flex flex-col items-center py-4 gap-3 min-h-0 flex-1">
               <button onClick={() => setSidebarCollapsed(false)}
                 className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)] transition-all"
                 title="사이드바 열기"><PanelLeft className="w-4 h-4" /></button>
               <button onClick={handleNewChat}
                 className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)] transition-all"
                 title="새 대화"><Plus className="w-4 h-4" /></button>
+              <SidebarUtilityStrip
+                variant="rail"
+                userId={userId}
+                isAuthLoading={isAuthLoading}
+                openPricing={openPricing}
+                menuOpen={chatHeaderMenuOpen}
+                setMenuOpen={setChatHeaderMenuOpen}
+                menuRef={chatHeaderMenuRef}
+              />
             </div>
           ) : (
-            <SidebarContent {...sidebarProps} onClose={undefined} />
+            <SidebarContent
+              {...sidebarProps}
+              onClose={undefined}
+              headerUtility={
+                <SidebarUtilityStrip
+                  variant="expanded"
+                  userId={userId}
+                  isAuthLoading={isAuthLoading}
+                  openPricing={openPricing}
+                  menuOpen={chatHeaderMenuOpen}
+                  setMenuOpen={setChatHeaderMenuOpen}
+                  menuRef={chatHeaderMenuRef}
+                />
+              }
+            />
           )}
         </div>
 
@@ -2330,7 +2673,21 @@ export function V5ChatShell() {
               onClick={() => setMobileSidebarOpen(false)} />
             <div className="fixed inset-y-0 left-0 z-50 w-[280px] bg-[var(--bg-surface)] flex flex-col md:hidden shadow-2xl"
               style={{ borderRadius: "0 24px 24px 0" }}>
-              <SidebarContent {...sidebarProps} onClose={() => setMobileSidebarOpen(false)} />
+              <SidebarContent
+                {...sidebarProps}
+                onClose={() => setMobileSidebarOpen(false)}
+                headerUtility={
+                  <SidebarUtilityStrip
+                    variant="expanded"
+                    userId={userId}
+                    isAuthLoading={isAuthLoading}
+                    openPricing={openPricing}
+                    menuOpen={chatHeaderMenuOpen}
+                    setMenuOpen={setChatHeaderMenuOpen}
+                    menuRef={chatHeaderMenuRef}
+                  />
+                }
+              />
             </div>
           </>
         )}
@@ -2360,8 +2717,7 @@ export function V5ChatShell() {
                 {hasUserMessage ? activeConv?.title : `${BRAND.name} · 여행 동선`}
               </span>
             </div>
-            <div ref={chatHeaderMenuRef} className="flex items-center gap-2 relative">
-              <AppleThemeToggle />
+            <div className="flex items-center gap-2 relative">
               {!isLg && latestPlanForSplitPanel && (
                 <button
                   type="button"
@@ -2372,65 +2728,6 @@ export function V5ChatShell() {
                   <Map className="h-3.5 w-3.5 shrink-0" aria-hidden />
                   내 플랜
                 </button>
-              )}
-              {!isAuthLoading && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    openPricing(userId ? "overview" : "guest")
-                  }
-                  className={`inline-flex items-center shrink-0 whitespace-nowrap text-[10px] font-semibold px-2 py-0.5 rounded-full cursor-pointer transition-opacity hover:opacity-90 ${
-                    userId
-                      ? "bg-[var(--success-soft)] text-[var(--success)]"
-                      : "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] ring-1 ring-[var(--border-default)]"
-                  }`}
-                  title="요금제·이용 안내"
-                >
-                  {userId ? "동기화 중" : "게스트"}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => setChatHeaderMenuOpen((v) => !v)}
-                className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] transition-all"
-                aria-expanded={chatHeaderMenuOpen}
-                aria-haspopup="menu"
-                aria-label="채팅 메뉴"
-              >
-                <MoreHorizontal className="w-4 h-4" />
-              </button>
-              {chatHeaderMenuOpen && (
-                <div
-                  className="absolute right-0 top-full mt-1 z-50 min-w-[220px] rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] py-1 shadow-lg"
-                  role="menu"
-                >
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="w-full text-left px-3 py-2.5 text-[13px] text-[var(--text-strong)] hover:bg-[var(--brand-primary-soft)]"
-                    onClick={() => openPricing("overview")}
-                  >
-                    요금제·이용 한도
-                  </button>
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="w-full text-left px-3 py-2.5 text-[13px] text-[var(--text-strong)] hover:bg-[var(--brand-primary-soft)]"
-                    onClick={() => openPricing("api")}
-                  >
-                    외부 API·비용 안내
-                  </button>
-                  {!userId && (
-                    <Link
-                      href="/login?next=/chat"
-                      className="block px-3 py-2.5 text-[13px] font-medium text-[var(--brand-trust-blue)] hover:bg-[var(--brand-trust-blue-soft)]"
-                      role="menuitem"
-                      onClick={() => setChatHeaderMenuOpen(false)}
-                    >
-                      로그인
-                    </Link>
-                  )}
-                </div>
               )}
             </div>
           </div>
@@ -2517,25 +2814,52 @@ export function V5ChatShell() {
                 <button
                   type="button"
                   onClick={() => setComposerDockExpanded(true)}
-                  className="v5-composer-liquid-panel flex w-full items-center justify-between gap-3 rounded-2xl px-3.5 py-2.5 text-left touch-manipulation active:scale-[0.99] transition-transform"
+                  className="v5-composer-liquid-panel flex w-full flex-col gap-2.5 rounded-2xl px-3.5 py-3 text-left touch-manipulation active:scale-[0.99] transition-transform"
                   aria-expanded={false}
                 >
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)]">
-                      <ChevronUp className="h-5 w-5" aria-hidden />
+                  <span className="flex w-full min-w-0 items-start justify-between gap-3">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)]">
+                        <ChevronUp className="h-5 w-5" aria-hidden />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-[13px] font-semibold text-[var(--text-strong)] leading-tight">
+                          여행 조건 입력
+                        </span>
+                        <span className="block text-[11px] text-[var(--text-muted)] mt-0.5">
+                          {composerBusy
+                            ? "응답 대기 중에도 아래에서 고른 조건을 확인할 수 있어요"
+                            : "탭하면 칩·키보드 입력을 펼칩니다"}
+                        </span>
+                      </span>
                     </span>
-                    <span className="min-w-0">
-                      <span className="block text-[13px] font-semibold text-[var(--text-strong)] leading-tight">
-                        여행 조건 입력
-                      </span>
-                      <span className="block text-[11px] text-[var(--text-muted)] mt-0.5">
-                        탭하면 칩·키보드 입력을 펼칩니다
-                      </span>
+                    <span className="shrink-0 text-[11px] font-semibold text-[var(--brand-trust-blue)] pt-0.5">
+                      펼치기
                     </span>
                   </span>
-                  <span className="shrink-0 text-[11px] font-semibold text-[var(--brand-trust-blue)]">
-                    펼치기
-                  </span>
+                  <div className="flex w-full flex-wrap gap-1.5 pl-[2.75rem] pr-0.5 max-h-[5.25rem] overflow-y-auto overscroll-contain">
+                    {SLOT_META.map(({ key, short }) => {
+                      const raw = hybridDraft[key].trim();
+                      if (!raw) return null;
+                      const display = HYBRID_MULTI_KEYS.has(key)
+                        ? parseHybridMultiValues(raw).join(", ")
+                        : raw;
+                      const compact =
+                        display.length > 36 ? `${display.slice(0, 34)}…` : display;
+                      return (
+                        <span
+                          key={key}
+                          className="inline-flex max-w-full min-w-0 items-center rounded-[10px] bg-[color-mix(in_srgb,var(--brand-trust-blue)_12%,var(--bg-elevated))] px-2 py-1 text-[10px] font-semibold text-[var(--brand-trust-blue)] ring-1 ring-[var(--brand-trust-blue)]/18"
+                        >
+                          <span className="shrink-0 opacity-80">{short}</span>
+                          <span className="mx-1 opacity-35" aria-hidden>
+                            ·
+                          </span>
+                          <span className="min-w-0 truncate">{compact}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
                 </button>
               )}
 
