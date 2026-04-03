@@ -16,8 +16,10 @@ import {
   Send, Utensils, Coffee, Train, Camera, ChevronRight,
   Sparkles, MoreHorizontal, Trash2, PanelLeftClose, PanelLeft,
   Navigation, Hotel, Menu, X, Map, Compass, Check, ChevronDown, ChevronUp,
-  Sun, Moon, CircleUser,
+  Search, ClipboardList, LogOut,
 } from "lucide-react";
+import type { User } from "@supabase/supabase-js";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser-client";
 import { useAuthUser } from "@/hooks/use-auth-user";
 import {
   loadConversations, createConversation, updateConversationTitle,
@@ -31,7 +33,6 @@ import { BRAND } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { Link } from "@/i18n/navigation";
 import { AppleThemeToggle } from "@/components/theme/apple-theme-toggle";
-import { useTheme } from "@/components/theme/theme-provider";
 import { V5ChatPricingModal, type PricingModalFocus } from "./v5-chat-pricing-modal";
 import {
   HybridTripComposer,
@@ -1468,45 +1469,96 @@ function EmptyState({
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
-function WaylyChatUtilityMenu({
-  open,
-  onPick,
+function sidebarDisplayName(user: User | null | undefined, isAuthLoading: boolean): string {
+  if (isAuthLoading) return "확인 중…";
+  if (!user) return "게스트";
+  const meta = user.user_metadata as { full_name?: string; name?: string } | undefined;
+  const n = meta?.full_name?.trim() || meta?.name?.trim();
+  if (n) return n.length > 14 ? `${n.slice(0, 13)}…` : n;
+  if (user.email) {
+    const local = user.email.split("@")[0] ?? user.email;
+    return local.length > 14 ? `${local.slice(0, 13)}…` : local;
+  }
+  return "사용자";
+}
+
+function sidebarUserInitials(user: User | null | undefined, isAuthLoading: boolean): string {
+  if (isAuthLoading) return "…";
+  if (!user) return "G";
+  const meta = user.user_metadata as { full_name?: string; name?: string } | undefined;
+  const n = meta?.full_name?.trim() || meta?.name?.trim();
+  if (n) {
+    const parts = n.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0]![0] + parts[1]![0]).toUpperCase();
+    return n.slice(0, 2).toUpperCase();
+  }
+  if (user.email) return user.email.slice(0, 2).toUpperCase();
+  return "U";
+}
+
+/** ⋯ 메뉴: 테마 + 요금/API + 로그인/로그아웃 */
+function SidebarMoreMenuPanel({
   userId,
-  className,
+  openPricing,
   onClose,
 }: {
-  open: boolean;
-  onPick: (focus: PricingModalFocus) => void;
   userId: string | null;
-  className?: string;
+  openPricing: (focus: PricingModalFocus) => void;
   onClose: () => void;
 }) {
-  if (!open) return null;
+  const signOut = async () => {
+    const sb = createSupabaseBrowserClient();
+    await sb?.auth.signOut();
+    onClose();
+  };
+
   return (
     <div
-      className={`rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] py-1 shadow-lg min-w-[220px] ${className ?? ""}`}
+      className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] py-2 shadow-lg min-w-[220px]"
       role="menu"
     >
+      <div className="px-3 pb-2 border-b border-[var(--border-default)] mb-1">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2">
+          테마
+        </p>
+        <AppleThemeToggle className="w-full max-w-none" />
+      </div>
       <button
         type="button"
         role="menuitem"
-        className="w-full text-left px-3 py-2.5 text-[13px] text-[var(--text-strong)] hover:bg-[var(--brand-primary-soft)]"
-        onClick={() => onPick("overview")}
+        className="w-full text-left px-3 py-2.5 text-[13px] text-[var(--text-strong)] hover:bg-[var(--brand-primary-soft)] transition-all duration-150"
+        onClick={() => {
+          openPricing("overview");
+          onClose();
+        }}
       >
         요금제·이용 한도
       </button>
       <button
         type="button"
         role="menuitem"
-        className="w-full text-left px-3 py-2.5 text-[13px] text-[var(--text-strong)] hover:bg-[var(--brand-primary-soft)]"
-        onClick={() => onPick("api")}
+        className="w-full text-left px-3 py-2.5 text-[13px] text-[var(--text-strong)] hover:bg-[var(--brand-primary-soft)] transition-all duration-150"
+        onClick={() => {
+          openPricing("api");
+          onClose();
+        }}
       >
         외부 API·비용 안내
       </button>
-      {!userId && (
+      {userId ? (
+        <button
+          type="button"
+          role="menuitem"
+          className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-[13px] text-[var(--text-strong)] hover:bg-[var(--brand-primary-soft)] transition-all duration-150"
+          onClick={() => void signOut()}
+        >
+          <LogOut className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+          로그아웃
+        </button>
+      ) : (
         <Link
           href="/login?next=/chat"
-          className="block px-3 py-2.5 text-[13px] font-medium text-[var(--brand-trust-blue)] hover:bg-[var(--brand-trust-blue-soft)]"
+          className="flex items-center gap-2 px-3 py-2.5 text-[13px] font-medium text-[var(--brand-trust-blue)] hover:bg-[var(--brand-trust-blue-soft)] transition-all duration-150"
           role="menuitem"
           onClick={() => onClose()}
         >
@@ -1517,141 +1569,41 @@ function WaylyChatUtilityMenu({
   );
 }
 
-function SidebarUtilityStrip({
-  variant,
+/** 접힌 사이드바(72px): 더보기만 — 메뉴는 우측으로 */
+function SidebarCollapsedRail({
   userId,
-  isAuthLoading,
   openPricing,
   menuOpen,
   setMenuOpen,
   menuRef,
 }: {
-  variant: "expanded" | "rail";
   userId: string | null;
-  isAuthLoading: boolean;
   openPricing: (focus: PricingModalFocus) => void;
   menuOpen: boolean;
   setMenuOpen: Dispatch<SetStateAction<boolean>>;
   menuRef: React.RefObject<HTMLDivElement | null>;
 }) {
-  const { resolved, toggleTheme, mounted } = useTheme();
-  const dark = resolved === "dark";
-
-  const onMenuPick = useCallback(
-    (focus: PricingModalFocus) => {
-      openPricing(focus);
-      setMenuOpen(false);
-    },
-    [openPricing, setMenuOpen],
-  );
-
-  if (variant === "rail") {
-    return (
-      <div ref={menuRef} className="flex flex-col items-center gap-2 pt-2 w-full border-t border-[var(--border-default)]/80">
-        <button
-          type="button"
-          onClick={() => toggleTheme()}
-          className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--bg-surface-subtle)] text-[var(--text-strong)] hover:bg-[var(--brand-primary-soft)] transition-colors"
-          aria-label={dark ? "라이트 모드로" : "다크 모드로"}
-        >
-          {!mounted ? (
-            <Sun className="h-4 w-4 opacity-35" aria-hidden />
-          ) : dark ? (
-            <Sun className="h-4 w-4" aria-hidden />
-          ) : (
-            <Moon className="h-4 w-4" aria-hidden />
-          )}
-        </button>
-        {!isAuthLoading && (
-          <button
-            type="button"
-            onClick={() => openPricing(userId ? "overview" : "guest")}
-            className={`flex h-9 w-9 items-center justify-center rounded-xl transition-colors ${
-              userId
-                ? "bg-[var(--success-soft)] text-[var(--success)]"
-                : "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] ring-1 ring-[var(--border-default)]"
-            }`}
-            title={userId ? "동기화 중 · 요금 안내" : "게스트 · 요금 안내"}
-            aria-label={userId ? "계정·요금" : "게스트 모드"}
-          >
-            <CircleUser className="h-4 w-4" aria-hidden />
-          </button>
-        )}
-        <div className="relative flex justify-center w-full">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((v) => !v)}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)] transition-colors"
-            aria-expanded={menuOpen}
-            aria-haspopup="menu"
-            aria-label="더보기"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
-          {menuOpen ? (
-            <div className="absolute left-full top-0 ml-2 z-[60]">
-              <WaylyChatUtilityMenu
-                open
-                onPick={onMenuPick}
-                userId={userId}
-                onClose={() => setMenuOpen(false)}
-              />
-            </div>
-          ) : null}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div
-      ref={menuRef}
-      className="mx-3 mb-3 rounded-2xl border border-[var(--border-default)]/90 bg-[color-mix(in_srgb,var(--bg-surface-subtle)_88%,transparent)] px-3.5 py-3.5 space-y-3 shadow-[0_2px_20px_rgba(0,0,0,0.04)]"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--text-muted)]">
-          화면
-        </span>
-        <AppleThemeToggle className="shadow-sm" />
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {!isAuthLoading && (
-          <button
-            type="button"
-            onClick={() => openPricing(userId ? "overview" : "guest")}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-opacity hover:opacity-90 ${
-              userId
-                ? "bg-[var(--success-soft)] text-[var(--success)]"
-                : "bg-[var(--bg-elevated)] text-[var(--text-muted)] ring-1 ring-[var(--border-default)]"
-            }`}
-          >
-            <CircleUser className="h-3.5 w-3.5 opacity-80" aria-hidden />
-            {userId ? "동기화 중" : "게스트"}
-          </button>
-        )}
-        <div className="relative ml-auto">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((v) => !v)}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)] transition-colors ring-1 ring-[var(--border-default)]/80"
-            aria-expanded={menuOpen}
-            aria-haspopup="menu"
-            aria-label="더보기 메뉴"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
-          {menuOpen ? (
-            <div className="absolute right-0 top-full mt-1.5 z-[60]">
-              <WaylyChatUtilityMenu
-                open
-                onPick={onMenuPick}
-                userId={userId}
-                onClose={() => setMenuOpen(false)}
-              />
-            </div>
-          ) : null}
+    <div ref={menuRef} className="relative flex w-full flex-col items-center pt-2">
+      <button
+        type="button"
+        onClick={() => setMenuOpen((v) => !v)}
+        className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)] transition-all duration-150"
+        aria-expanded={menuOpen}
+        aria-haspopup="menu"
+        aria-label="더보기 메뉴"
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+      {menuOpen ? (
+        <div className="absolute left-full bottom-0 z-[60] ml-2">
+          <SidebarMoreMenuPanel
+            userId={userId}
+            openPricing={openPricing}
+            onClose={() => setMenuOpen(false)}
+          />
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }
@@ -1677,143 +1629,359 @@ function groupByDate(conversations: Conversation[]) {
   return groups.filter((g) => g.items.length > 0);
 }
 
-function SidebarContent({
-  conversations, savedPlans, activeConvId,
-  onSelectConv, onNewChat, onDeleteConv,
-  onSelectPlan, onOpenMap, onClose,
-  isLoadingHistory,
-  headerUtility,
+function SidebarUserBar({
+  menuRef,
+  user,
+  isAuthLoading,
+  openPricing,
+  menuOpen,
+  setMenuOpen,
+  onDrawerClose,
 }: {
-  conversations: Conversation[]; savedPlans: SavedPlan[];
+  menuRef: React.RefObject<HTMLDivElement | null>;
+  user: User | null | undefined;
+  isAuthLoading: boolean;
+  openPricing: (focus: PricingModalFocus) => void;
+  menuOpen: boolean;
+  setMenuOpen: Dispatch<SetStateAction<boolean>>;
+  onDrawerClose?: () => void;
+}) {
+  const label = sidebarDisplayName(user, isAuthLoading);
+  const initials = sidebarUserInitials(user, isAuthLoading);
+  const userId = user?.id ?? null;
+
+  return (
+    <div
+      ref={menuRef}
+      className="flex flex-shrink-0 items-center gap-1.5 border-t border-[var(--border-default)] px-3 py-3"
+    >
+      <Link
+        href={userId ? "/" : "/login?next=/chat"}
+        onClick={() => onDrawerClose?.()}
+        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl py-1 pl-0.5 pr-1 transition-all duration-150 hover:bg-[var(--bg-surface-subtle)]"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[11px] font-bold text-[var(--brand-trust-blue)] ring-1 ring-[var(--brand-trust-blue)]/18">
+          {initials}
+        </span>
+        <span className="min-w-0 flex-1 text-left">
+          <span className="block truncate text-[13px] font-semibold text-[var(--text-strong)]">
+            {label}
+          </span>
+          <span className="block truncate text-[11px] text-[var(--text-muted)]">
+            {userId ? "홈으로 이동" : "로그인하기"}
+          </span>
+        </span>
+      </Link>
+      <div className="relative shrink-0">
+        <button
+          type="button"
+          onClick={() => setMenuOpen((v) => !v)}
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--text-muted)] ring-1 ring-[var(--border-default)]/80 transition-all duration-150 hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)]"
+          aria-expanded={menuOpen}
+          aria-haspopup="menu"
+          aria-label="더보기"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </button>
+        {menuOpen ? (
+          <div className="absolute bottom-full right-0 z-[60] mb-1 w-[min(240px,calc(100vw-2rem))]">
+            <SidebarMoreMenuPanel
+              userId={userId}
+              openPricing={openPricing}
+              onClose={() => setMenuOpen(false)}
+            />
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function SidebarContent({
+  conversations,
+  savedPlans,
+  activeConvId,
+  onSelectConv,
+  onNewChat,
+  onDeleteConv,
+  onSelectPlan,
+  onOpenMap,
+  onClose,
+  isLoadingHistory,
+  user,
+  isAuthLoading,
+  openPricing,
+  sidebarMenuRef,
+  sidebarMenuOpen,
+  setSidebarMenuOpen,
+}: {
+  conversations: Conversation[];
+  savedPlans: SavedPlan[];
   activeConvId: string | null;
-  onSelectConv: (id: string) => void; onNewChat: () => void;
-  onDeleteConv: (id: string) => void; onSelectPlan: (sp: SavedPlan) => void;
-  onOpenMap: (p: TravelPlan) => void; onClose?: () => void;
+  onSelectConv: (id: string) => void;
+  onNewChat: () => void;
+  onDeleteConv: (id: string) => void;
+  onSelectPlan: (sp: SavedPlan) => void;
+  onOpenMap: (p: TravelPlan) => void;
+  onClose?: () => void;
   isLoadingHistory: boolean;
-  /** 테마·게스트·⋯ — 상단 헤더에서 이쪽으로 옮김 */
-  headerUtility?: React.ReactNode;
+  user: User | null | undefined;
+  isAuthLoading: boolean;
+  openPricing: (focus: PricingModalFocus) => void;
+  sidebarMenuRef: React.RefObject<HTMLDivElement | null>;
+  sidebarMenuOpen: boolean;
+  setSidebarMenuOpen: Dispatch<SetStateAction<boolean>>;
 }) {
   const [hoveredConv, setHoveredConv] = useState<string | null>(null);
   const [planExpanded, setPlanExpanded] = useState(true);
-  const grouped = groupByDate(conversations);
+  const [plansListExpanded, setPlansListExpanded] = useState(false);
+  const [convSearchOpen, setConvSearchOpen] = useState(false);
+  const [convSearchQuery, setConvSearchQuery] = useState("");
+
+  const filteredConversations = useMemo(() => {
+    const q = convSearchQuery.trim().toLowerCase();
+    if (!q) return conversations;
+    return conversations.filter((c) => c.title.toLowerCase().includes(q));
+  }, [conversations, convSearchQuery]);
+
+  const grouped = groupByDate(filteredConversations);
+  const showConvSearch = conversations.length >= 5;
+  const plansToShow =
+    savedPlans.length <= 3 || plansListExpanded ? savedPlans : savedPlans.slice(0, 3);
 
   return (
-    <div className="flex flex-col h-full w-full">
-      {/* Top */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-3 flex-shrink-0">
-        <div className="flex items-center gap-2">
+    <div className="flex h-full w-full min-h-0 flex-col">
+      {/* ① 상단 헤더 */}
+      <div className="flex flex-shrink-0 items-center justify-between px-4 pb-3 pt-4">
+        <div className="flex min-w-0 items-center gap-2">
           <div
-            className="w-7 h-7 rounded-xl flex items-center justify-center shadow-sm border border-white/[0.08]"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-white/[0.08] shadow-sm"
             style={{ backgroundColor: BRAND.logo.background }}
           >
             <Compass
-              className="w-4 h-4 shrink-0"
+              className="h-4 w-4 shrink-0"
               style={{ color: BRAND.logo.electricBlue }}
               strokeWidth={2.4}
               aria-hidden
             />
           </div>
-          <span className="text-[14px] font-bold text-[var(--text-strong)] tracking-tight">
+          <span className="truncate text-[14px] font-bold tracking-tight text-[var(--text-strong)]">
             {BRAND.name}
           </span>
         </div>
-        {onClose && (
-          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)] transition-all">
-            <X className="w-4 h-4" />
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={() => {
+              onNewChat();
+              onClose?.();
+            }}
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--text-muted)] transition-all duration-150 hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)]"
+            title="새 대화 시작"
+            aria-label="새 대화 시작"
+          >
+            <Plus className="h-5 w-5" aria-hidden />
           </button>
-        )}
+          {onClose ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-[var(--text-muted)] transition-all duration-150 hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)] md:hidden"
+              aria-label="사이드바 닫기"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          ) : null}
+        </div>
       </div>
 
-      {headerUtility}
-
-      {/* New Chat */}
-      <div className="px-3 pb-3 flex-shrink-0">
-        <button onClick={() => { onNewChat(); onClose?.(); }}
-          className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-medium text-[var(--text-secondary)] bg-[var(--bg-surface-subtle)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)] transition-all duration-150 group">
-          <Plus className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--text-strong)] transition-colors" />
-          새 대화 시작
-        </button>
-      </div>
-
-      {/* Conversation List */}
-      <div className="flex-1 overflow-y-auto px-2 space-y-4 pb-2 overscroll-contain">
-        {isLoadingHistory ? (
-          <div className="px-3 py-6 flex flex-col items-center gap-2">
-            <div className="w-5 h-5 rounded-full border-2 border-[var(--border-strong)] border-t-[var(--brand-trust-blue)] animate-spin" />
-            <span className="text-[11px] text-[var(--text-muted)]">대화 기록 불러오는 중…</span>
+      {/* ② 나의 플랜 */}
+      <div className="flex-shrink-0 border-b border-[var(--border-default)] px-3 pb-3">
+        <button
+          type="button"
+          onClick={() => setPlanExpanded((v) => !v)}
+          className="mb-1 flex w-full items-center justify-between rounded-xl px-1 py-1.5 transition-all duration-150 hover:bg-[var(--bg-surface-subtle)]"
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="text-[13px]" aria-hidden>
+              📋
+            </span>
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
+              나의 플랜
+            </span>
+            {savedPlans.length > 0 ? (
+              <span className="rounded-full bg-[var(--brand-trust-blue-soft)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--brand-trust-blue)]">
+                {savedPlans.length}
+              </span>
+            ) : null}
           </div>
-        ) : grouped.length === 0 ? (
-          <p className="text-[12px] text-[var(--text-muted)] px-3 py-4 text-center">대화 기록이 없어요</p>
-        ) : (
-          grouped.map((group) => (
-            <div key={group.label}>
-              <p className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-widest px-2 mb-1.5">{group.label}</p>
-              {group.items.map((conv) => (
-                <div key={conv.id} className="relative group"
-                  onMouseEnter={() => setHoveredConv(conv.id)}
-                  onMouseLeave={() => setHoveredConv(null)}>
-                  <button
-                    onClick={() => { onSelectConv(conv.id); onClose?.(); }}
-                    className={`w-full text-left px-3 py-2 rounded-xl text-[13px] transition-all duration-150 ${
-                      activeConvId === conv.id
-                        ? "bg-[var(--brand-primary-soft)] text-[var(--text-strong)] font-medium"
-                        : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--text-primary)]"
-                    }`}>
-                    <span className="block truncate pr-6">{conv.title}</span>
-                  </button>
-                  {hoveredConv === conv.id && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onDeleteConv(conv.id); }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[var(--error-soft)] transition-all">
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* My Plans */}
-      <div className="border-t border-[var(--border-default)] px-2 pt-3 pb-4 flex-shrink-0">
-        <button onClick={() => setPlanExpanded((v) => !v)}
-          className="w-full flex items-center justify-between px-2 py-1.5 mb-1">
-          <div className="flex items-center gap-2">
-            <Bookmark className="w-3.5 h-3.5 text-[var(--brand-trust-blue)]" />
-            <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-widest">나의 플랜</span>
-            {savedPlans.length > 0 && (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)]">{savedPlans.length}</span>
-            )}
-          </div>
-          <ChevronRight className={`w-3.5 h-3.5 text-[var(--text-muted)] transition-transform duration-200 ${planExpanded ? "rotate-90" : ""}`} />
+          <ChevronDown
+            className={`h-3.5 w-3.5 shrink-0 text-[var(--text-muted)] transition-transform duration-200 ${
+              planExpanded ? "rotate-180" : ""
+            }`}
+            aria-hidden
+          />
         </button>
-        {planExpanded && (
-          <div className="space-y-0.5">
+        {planExpanded ? (
+          <div className="space-y-1">
             {savedPlans.length === 0 ? (
-              <p className="text-[12px] text-[var(--text-muted)] px-3 py-2">저장된 플랜이 없어요.</p>
+              <div className="flex flex-col items-center gap-2 rounded-2xl bg-[var(--bg-surface-subtle)]/60 px-3 py-4 text-center">
+                <ClipboardList
+                  className="h-8 w-8 text-[var(--text-muted)]/45"
+                  strokeWidth={1.5}
+                  aria-hidden
+                />
+                <p className="text-[12px] leading-snug text-[var(--text-muted)]">
+                  아직 저장된 플랜이 없어요
+                </p>
+              </div>
             ) : (
-              savedPlans.map((sp) => (
-                <div key={sp.id} className="flex items-center gap-1">
+              <>
+                {plansToShow.map((sp) => (
+                  <div key={sp.id} className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSelectPlan(sp);
+                        onClose?.();
+                      }}
+                      className="flex min-w-0 flex-1 flex-col rounded-xl px-3 py-2 text-left text-[12px] text-[var(--text-secondary)] transition-all duration-150 hover:bg-[var(--brand-trust-blue-soft)] hover:text-[var(--brand-trust-blue)]"
+                    >
+                      <span className="truncate font-medium text-[13px] text-[var(--text-strong)]">
+                        {sp.title}
+                      </span>
+                      <span className="mt-0.5 text-[11px] text-[var(--text-muted)]">
+                        {new Date(sp.savedAt).toLocaleDateString("ko-KR", {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                      <span className="mt-1 inline-flex w-fit rounded-full bg-[var(--bg-elevated)] px-2 py-0.5 text-[10px] font-medium text-[var(--brand-trust-blue)] ring-1 ring-[var(--border-default)]">
+                        {sp.region}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onOpenMap(sp.plan)}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[var(--text-muted)] transition-all hover:bg-[var(--brand-trust-blue-soft)] hover:text-[var(--brand-trust-blue)]"
+                      title="지도에서 보기"
+                    >
+                      <Map className="h-3.5 w-3.5" aria-hidden />
+                    </button>
+                  </div>
+                ))}
+                {savedPlans.length > 3 ? (
                   <button
-                    onClick={() => { onSelectPlan(sp); onClose?.(); }}
-                    className="flex-1 text-left px-3 py-2 rounded-xl text-[12px] text-[var(--text-secondary)] hover:bg-[var(--brand-trust-blue-soft)] hover:text-[var(--brand-trust-blue)] transition-all duration-150">
-                    <span className="block font-medium truncate">{sp.title}</span>
-                    <span className="text-[10px] text-[var(--text-muted)]">
-                      {sp.region} · {new Date(sp.savedAt).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}
-                    </span>
+                    type="button"
+                    onClick={() => setPlansListExpanded((v) => !v)}
+                    className="w-full rounded-xl py-2 text-center text-[12px] font-semibold text-[var(--brand-trust-blue)] transition-all duration-150 hover:bg-[var(--brand-trust-blue-soft)]/50"
+                  >
+                    {plansListExpanded ? "접기" : "더보기"}
                   </button>
-                  <button onClick={() => onOpenMap(sp.plan)}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--brand-trust-blue)] hover:bg-[var(--brand-trust-blue-soft)] transition-all flex-shrink-0"
-                    title="지도에서 보기">
-                    <Map className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))
+                ) : null}
+              </>
             )}
           </div>
-        )}
+        ) : null}
       </div>
+
+      {/* ③ 대화 히스토리 */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-2 pt-2">
+        {showConvSearch ? (
+          <div className="mb-2 flex flex-shrink-0 items-center gap-1.5 px-1">
+            <button
+              type="button"
+              onClick={() => setConvSearchOpen((v) => !v)}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-all duration-150 ${
+                convSearchOpen
+                  ? "bg-[var(--brand-primary-soft)] text-[var(--brand-trust-blue)]"
+                  : "text-[var(--text-muted)] hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--text-strong)]"
+              }`}
+              aria-expanded={convSearchOpen}
+              aria-label="대화 검색"
+              title="대화 검색"
+            >
+              <Search className="h-4 w-4" aria-hidden />
+            </button>
+            {convSearchOpen ? (
+              <input
+                type="search"
+                value={convSearchQuery}
+                onChange={(e) => setConvSearchQuery(e.target.value)}
+                placeholder="대화 제목 검색"
+                className="min-w-0 flex-1 rounded-xl border border-[var(--border-default)] bg-[var(--bg-elevated)] px-2.5 py-1.5 text-[12px] text-[var(--text-strong)] placeholder:text-[var(--text-muted)] outline-none focus:ring-2 focus:ring-[var(--brand-trust-blue)]/25"
+                autoFocus
+              />
+            ) : null}
+          </div>
+        ) : null}
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pb-2">
+          {isLoadingHistory ? (
+            <div className="flex flex-col items-center gap-2 px-3 py-6">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--border-strong)] border-t-[var(--brand-trust-blue)]" />
+              <span className="text-[11px] text-[var(--text-muted)]">대화 기록 불러오는 중…</span>
+            </div>
+          ) : grouped.length === 0 ? (
+            <p className="px-3 py-4 text-center text-[12px] text-[var(--text-muted)]">
+              {convSearchQuery.trim() ? "검색 결과가 없어요" : "대화 기록이 없어요"}
+            </p>
+          ) : (
+            grouped.map((group) => (
+              <div key={group.label}>
+                <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
+                  {group.label}
+                </p>
+                {group.items.map((conv) => (
+                  <div
+                    key={conv.id}
+                    className="group relative"
+                    onMouseEnter={() => setHoveredConv(conv.id)}
+                    onMouseLeave={() => setHoveredConv(null)}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSelectConv(conv.id);
+                        onClose?.();
+                      }}
+                      className={`w-full rounded-xl px-3 py-2 text-left text-[13px] transition-all duration-150 ${
+                        activeConvId === conv.id
+                          ? "bg-[var(--brand-primary-soft)] font-medium text-[var(--text-strong)]"
+                          : "text-[var(--text-secondary)] hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--text-primary)]"
+                      }`}
+                    >
+                      <span className="block truncate pr-6">{conv.title}</span>
+                    </button>
+                    {hoveredConv === conv.id ? (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteConv(conv.id);
+                        }}
+                        className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--text-muted)] transition-all hover:bg-[var(--error-soft)] hover:text-[var(--error)]"
+                      >
+                        <Trash2 className="h-3 w-3" aria-hidden />
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* ④ 하단 유저 */}
+      <SidebarUserBar
+        menuRef={sidebarMenuRef}
+        user={user}
+        isAuthLoading={isAuthLoading}
+        openPricing={openPricing}
+        menuOpen={sidebarMenuOpen}
+        setMenuOpen={setSidebarMenuOpen}
+        onDrawerClose={onClose}
+      />
     </div>
   );
 }
@@ -2653,10 +2821,8 @@ export function V5ChatShell() {
               <button onClick={handleNewChat}
                 className="w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--text-strong)] transition-all"
                 title="새 대화"><Plus className="w-4 h-4" /></button>
-              <SidebarUtilityStrip
-                variant="rail"
+              <SidebarCollapsedRail
                 userId={userId}
-                isAuthLoading={isAuthLoading}
                 openPricing={openPricing}
                 menuOpen={chatHeaderMenuOpen}
                 setMenuOpen={setChatHeaderMenuOpen}
@@ -2667,17 +2833,12 @@ export function V5ChatShell() {
             <SidebarContent
               {...sidebarProps}
               onClose={undefined}
-              headerUtility={
-                <SidebarUtilityStrip
-                  variant="expanded"
-                  userId={userId}
-                  isAuthLoading={isAuthLoading}
-                  openPricing={openPricing}
-                  menuOpen={chatHeaderMenuOpen}
-                  setMenuOpen={setChatHeaderMenuOpen}
-                  menuRef={chatHeaderMenuRef}
-                />
-              }
+              user={user}
+              isAuthLoading={isAuthLoading}
+              openPricing={openPricing}
+              sidebarMenuRef={chatHeaderMenuRef}
+              sidebarMenuOpen={chatHeaderMenuOpen}
+              setSidebarMenuOpen={setChatHeaderMenuOpen}
             />
           )}
         </div>
@@ -2693,17 +2854,12 @@ export function V5ChatShell() {
               <SidebarContent
                 {...sidebarProps}
                 onClose={() => setMobileSidebarOpen(false)}
-                headerUtility={
-                  <SidebarUtilityStrip
-                    variant="expanded"
-                    userId={userId}
-                    isAuthLoading={isAuthLoading}
-                    openPricing={openPricing}
-                    menuOpen={chatHeaderMenuOpen}
-                    setMenuOpen={setChatHeaderMenuOpen}
-                    menuRef={chatHeaderMenuRef}
-                  />
-                }
+                user={user}
+                isAuthLoading={isAuthLoading}
+                openPricing={openPricing}
+                sidebarMenuRef={chatHeaderMenuRef}
+                sidebarMenuOpen={chatHeaderMenuOpen}
+                setSidebarMenuOpen={setChatHeaderMenuOpen}
               />
             </div>
           </>
