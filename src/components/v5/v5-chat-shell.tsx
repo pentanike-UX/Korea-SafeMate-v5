@@ -823,16 +823,29 @@ function TabletPlanPreviewPane({
           ref={(el) => hybridSheetHostCallback?.(el)}
           className="relative flex flex-1 flex-col min-h-0 min-w-0 overflow-hidden"
         >
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-5 py-8 text-center">
-          <Map className="h-8 w-8 text-[var(--text-muted)]/40" aria-hidden />
-          <p className="text-[13px] font-medium text-[var(--text-secondary)] leading-snug">
-            동선이 생성되면
-          </p>
-          <p className="text-[12px] text-[var(--text-muted)] leading-relaxed max-w-[220px]">
-            이 패널에 타임라인이 보이고, 지도로 바로 열 수 있어요.
-          </p>
-          <p className="text-[11px] text-[var(--text-muted)] mt-2 max-w-[260px]">
-            좁은 화면에서는 채팅 상단 <strong className="text-[var(--text-strong)]">내 플랜</strong>으로 전체 화면을 열 수 있어요.
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 px-5 py-8">
+          {/* Skeleton timeline cards */}
+          <div className="w-full max-w-[280px] space-y-3">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 rounded-xl bg-[var(--bg-surface-subtle)]/60 px-4 py-4 animate-pulse"
+                style={{ animationDelay: `${i * 200}ms` }}
+              >
+                <span className="h-6 w-6 shrink-0 rounded-full bg-[var(--border-default)]/60" />
+                <div className="flex-1 space-y-2">
+                  <span className="block h-3 w-3/4 rounded bg-[var(--border-default)]/50" />
+                  <span className="block h-2.5 w-1/2 rounded bg-[var(--border-default)]/30" />
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Map skeleton */}
+          <div className="w-full max-w-[280px] h-24 rounded-xl bg-[var(--bg-surface-subtle)]/60 animate-pulse flex items-center justify-center">
+            <Map className="h-6 w-6 text-[var(--text-muted)]/25" aria-hidden />
+          </div>
+          <p className="text-[13px] text-[var(--text-muted)] text-center mt-1">
+            동선을 생성하면 여기에 타임라인이 나타나요
           </p>
         </div>
         </div>
@@ -1028,6 +1041,7 @@ function MessageBubble({
   onViewMap,
   onConfirmRoute,
   routeGeneratingMessageId,
+  isGuest,
 }: {
   message: Message;
   savedPlanIds: Set<string>;
@@ -1035,6 +1049,7 @@ function MessageBubble({
   onViewMap: (p: TravelPlan) => void;
   onConfirmRoute?: (messageId: string, slots: PreferenceChip[]) => void;
   routeGeneratingMessageId: string | null;
+  isGuest?: boolean;
 }) {
   const isUser = message.role === "user";
   const chips = message.preferenceChips ?? [];
@@ -1087,6 +1102,17 @@ function MessageBubble({
               onSave={onSavePlan}
               onViewMap={onViewMap}
             />
+            {isGuest && (
+              <div className="mt-3 flex items-center gap-3 rounded-xl border border-[var(--warning)]/30 bg-[var(--warning)]/10 px-4 py-3">
+                <span className="text-[13px] text-[var(--text-secondary)] flex-1">이 동선을 저장하려면 로그인하세요</span>
+                <Link
+                  href="/login?next=/chat"
+                  className="shrink-0 rounded-lg bg-[var(--brand-primary)] px-3 py-1.5 text-[12px] font-semibold text-[var(--text-on-brand)] hover:bg-[var(--brand-primary-hover)] transition-colors"
+                >
+                  Google로 로그인
+                </Link>
+              </div>
+            )}
           </div>
         )}
         <span className="text-[10px] text-[var(--text-muted)] mt-1 px-1">
@@ -1407,7 +1433,7 @@ function EmptyState({
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 
 function sidebarDisplayName(user: User | null | undefined, isAuthLoading: boolean): string {
-  if (isAuthLoading) return "확인 중…";
+  if (isAuthLoading) return "";
   if (!user) return "게스트";
   const meta = user.user_metadata as { full_name?: string; name?: string } | undefined;
   const n = meta?.full_name?.trim() || meta?.name?.trim();
@@ -1420,7 +1446,7 @@ function sidebarDisplayName(user: User | null | undefined, isAuthLoading: boolea
 }
 
 function sidebarUserInitials(user: User | null | undefined, isAuthLoading: boolean): string {
-  if (isAuthLoading) return "…";
+  if (isAuthLoading) return "";
   if (!user) return "G";
   const meta = user.user_metadata as { full_name?: string; name?: string } | undefined;
   const n = meta?.full_name?.trim() || meta?.name?.trim();
@@ -1592,6 +1618,15 @@ function SidebarUserBar({
       ref={menuRef}
       className="flex flex-shrink-0 items-center gap-1.5 border-t border-[var(--border-default)] px-3 py-3"
     >
+      {isAuthLoading ? (
+        <div className="flex min-w-0 flex-1 items-center gap-2.5 py-1 pl-0.5 pr-1 animate-pulse">
+          <span className="flex h-9 w-9 shrink-0 rounded-full bg-[var(--bg-surface-subtle)]" />
+          <span className="min-w-0 flex-1 space-y-1.5">
+            <span className="block h-3 w-20 rounded bg-[var(--bg-surface-subtle)]" />
+            <span className="block h-2.5 w-14 rounded bg-[var(--bg-surface-subtle)]" />
+          </span>
+        </div>
+      ) : (
       <Link
         href={userId ? "/" : "/login?next=/chat"}
         onClick={() => onDrawerClose?.()}
@@ -1609,6 +1644,7 @@ function SidebarUserBar({
           </span>
         </span>
       </Link>
+      )}
       <div className="relative shrink-0">
         <button
           type="button"
@@ -1762,15 +1798,27 @@ function SidebarContent({
         {planExpanded ? (
           <div className="space-y-1">
             {savedPlans.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 rounded-2xl bg-[var(--bg-surface-subtle)]/60 px-3 py-4 text-center">
-                <ClipboardList
-                  className="h-8 w-8 text-[var(--text-muted)]/45"
-                  strokeWidth={1.5}
-                  aria-hidden
-                />
-                <p className="text-[12px] leading-snug text-[var(--text-muted)]">
-                  아직 저장된 플랜이 없어요
+              <div className="flex flex-col items-center gap-2.5 rounded-2xl bg-[var(--bg-surface-subtle)]/60 px-4 py-5 text-center">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--brand-primary-soft)]">
+                  <Navigation
+                    className="h-5 w-5 text-[var(--brand-trust-blue)]"
+                    strokeWidth={1.8}
+                    aria-hidden
+                  />
+                </div>
+                <p className="text-[13px] font-semibold text-[var(--text-strong)]">
+                  아직 만든 동선이 없어요
                 </p>
+                <p className="text-[11px] leading-snug text-[var(--text-muted)]">
+                  아래에서 여행지를 선택하면 AI가 동선을 짜드려요
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onClose?.()}
+                  className="mt-1 rounded-full bg-[var(--brand-primary)] px-4 py-2 text-[12px] font-semibold text-[var(--text-on-brand)] hover:bg-[var(--brand-primary-hover)] transition-colors touch-manipulation"
+                >
+                  동선 짜기 시작 →
+                </button>
               </div>
             ) : (
               <>
@@ -2889,6 +2937,7 @@ export function V5ChatShell() {
                       onViewMap={setMapModalPlan}
                       onConfirmRoute={handleConfirmRoute}
                       routeGeneratingMessageId={routeGeneratingMessageId}
+                      isGuest={!userId}
                     />
                   ))}
                   {showTravelAnalysisLoading && (

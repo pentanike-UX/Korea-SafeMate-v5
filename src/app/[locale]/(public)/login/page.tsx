@@ -66,10 +66,13 @@ export default async function LoginPage({ searchParams }: Props) {
 
             <GoogleSignInButton returnPath={nextParam} className="min-h-14 w-full text-base font-semibold" />
 
-            <div className="pt-1">
+            <div className="pt-1 space-y-2">
               <TextActionLink href="/chat" className="text-muted-foreground hover:text-foreground justify-center text-sm font-medium">
                 {t("browseWithoutLogin")}
               </TextActionLink>
+              <p className="text-center text-xs text-[var(--warning,#ffa502)]">
+                ⚠️ {t("guestDataWarning")}
+              </p>
             </div>
           </CardContent>
           <CardFooter className="border-border/60 text-muted-foreground flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-t px-5 py-4 text-center text-xs sm:px-6">
