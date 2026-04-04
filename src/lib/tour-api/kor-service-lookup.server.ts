@@ -17,6 +17,8 @@ import {
   latLngFromTourSearchItem,
   pickBestTourSearchItem,
   tourMatchLooksAligned,
+  tourMatchConfidence,
+  type TourMatchConfidence,
 } from "./tour-spot-pick.server";
 
 const KOR_SERVICE_BASE = "https://apis.data.go.kr/B551011/KorService2";
@@ -40,6 +42,8 @@ export type TourSpotLookupOk = {
   matchedLng: number | null;
   /** matchName 대비 검색 행 제목 일치가 충분한지 */
   alignsWithPlanName: boolean;
+  /** 매칭 신뢰도 3단계: high(전체 노출) / partial(이미지만) / low(숨김) */
+  matchConfidence: TourMatchConfidence;
 };
 
 /** lookup 시 스팟명·LLM 좌표로 검색 결과 재순위 */
@@ -186,6 +190,7 @@ type KeywordFirstOk = {
   matchedLat: number | null;
   matchedLng: number | null;
   alignsWithPlanName: boolean;
+  matchConfidence: TourMatchConfidence;
 };
 type KeywordFirstFail = { ok: false; code: TourSpotLookupFail["code"]; message: string };
 
@@ -292,6 +297,8 @@ export async function tourSearchKeywordFirst(
 
     if (!contentId || !contentTypeId) continue;
 
+    const confidence = hint.length > 0 ? tourMatchConfidence(hint, searchRowTitle) : "high" as TourMatchConfidence;
+
     return {
       ok: true,
       contentId,
@@ -301,7 +308,8 @@ export async function tourSearchKeywordFirst(
       searchRowTitle,
       matchedLat: ll?.lat ?? null,
       matchedLng: ll?.lng ?? null,
-      alignsWithPlanName: hint.length > 0 ? tourMatchLooksAligned(hint, searchRowTitle) : true,
+      alignsWithPlanName: confidence === "high",
+      matchConfidence: confidence,
     };
   }
 
@@ -409,6 +417,7 @@ export async function lookupTourSpotByKeyword(
       matchedLat: search.matchedLat,
       matchedLng: search.matchedLng,
       alignsWithPlanName: search.alignsWithPlanName,
+      matchConfidence: search.matchConfidence,
     };
   }
 
@@ -423,5 +432,6 @@ export async function lookupTourSpotByKeyword(
     matchedLat: search.matchedLat,
     matchedLng: search.matchedLng,
     alignsWithPlanName: search.alignsWithPlanName,
+    matchConfidence: search.matchConfidence,
   };
 }

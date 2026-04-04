@@ -2,6 +2,54 @@
  * TourAPI searchKeyword2 결과 목록에서 플랜 스팟명·참조 좌표와 가장 잘 맞는 항목 선택
  */
 
+/**
+ * 관광지 동의어 사전: LLM이 생성하는 일상 표현 ↔ TourAPI 공식 명칭 매핑.
+ * 양방향 정규화에 사용하여 매칭률을 높입니다.
+ */
+const SYNONYM_PAIRS: [string, string][] = [
+  ["해변", "해수욕장"],
+  ["바다", "해수욕장"],
+  ["바닷가", "해수욕장"],
+  ["시장", "전통시장"],
+  ["재래시장", "전통시장"],
+  ["야시장", "야간시장"],
+  ["절", "사찰"],
+  ["성", "성곽"],
+  ["산성", "성곽"],
+  ["왕궁", "궁"],
+  ["궁궐", "궁"],
+  ["숲", "자연휴양림"],
+  ["폭포", "폭포"],
+  ["온천", "온천"],
+  ["해돋이", "일출"],
+  ["전망대", "전망"],
+  ["케이블카", "곤돌라"],
+  ["카페거리", "카페"],
+  ["먹자골목", "먹거리"],
+  ["맛집거리", "먹거리"],
+  ["벽화마을", "벽화"],
+  ["한옥마을", "한옥"],
+  ["올레길", "올레"],
+  ["둘레길", "둘레"],
+  ["해안도로", "해안"],
+  ["수목원", "수목원"],
+  ["식물원", "식물원"],
+  ["미술관", "미술관"],
+  ["박물관", "박물관"],
+  ["기념관", "기념관"],
+];
+
+/** 동의어 정규화: "해운대 해변" → "해운대 해수욕장" 등 */
+function applySynonyms(s: string): string {
+  let result = s;
+  for (const [from, to] of SYNONYM_PAIRS) {
+    if (result.includes(from) && !result.includes(to)) {
+      result = result.replace(from, to);
+    }
+  }
+  return result;
+}
+
 function normalizeMatchKey(s: string): string {
   return s
     .toLowerCase()
@@ -17,6 +65,14 @@ export function scoreTourTitleMatch(matchName: string, apiTitle: string): number
   if (!a || !b) return 0;
   if (a === b) return 1000;
   if (b.includes(a) || a.includes(b)) return 850;
+
+  // 동의어 정규화 후 재비교
+  const aSyn = normalizeMatchKey(applySynonyms(matchName));
+  const bSyn = normalizeMatchKey(applySynonyms(apiTitle));
+  if (aSyn === bSyn) return 980;
+  if (bSyn.includes(aSyn) || aSyn.includes(bSyn)) return 830;
+
+  // 최장 공통 부분문자열
   let best = 0;
   for (let i = 0; i < a.length; i++) {
     for (let j = 0; j < b.length; j++) {
@@ -123,4 +179,19 @@ export function pickBestTourSearchItem(
 /** 제목 일치가 충분히 높으면 UI에서 별도 안내 생략·Tour 미디어 노출 허용 */
 export function tourMatchLooksAligned(matchName: string, pickedTitle: string): boolean {
   return scoreTourTitleMatch(matchName, pickedTitle) >= 520;
+}
+
+export type TourMatchConfidence = "high" | "partial" | "low";
+
+/**
+ * 매칭 점수를 3단계 신뢰도로 분류:
+ * - high (≥520): 이미지·소개·좌표 모두 노출
+ * - partial (350~519): 이미지만 노출, 좌표는 보류 (부분 일치)
+ * - low (<350): 전부 숨김 (엉뚱한 POI)
+ */
+export function tourMatchConfidence(matchName: string, pickedTitle: string): TourMatchConfidence {
+  const score = scoreTourTitleMatch(matchName, pickedTitle);
+  if (score >= 520) return "high";
+  if (score >= 350) return "partial";
+  return "low";
 }

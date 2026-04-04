@@ -14,15 +14,16 @@ export type TourLclsFilter = {
 
 /**
  * 키워드 검색에 넣을 분류 필터.
- * - food / cafe / hotel: 명확한 대·중분류로 오탐(다른 타입 1건) 감소.
- * - attraction / transport: 관광정보가 여러 대분류(자연·역사·레저 등)에 걸쳐 필터를 걸면 누락이 커져 필터 없음.
+ * - food / cafe: 대분류 FD만 적용. cafe에 FD05 중분류를 걸면 체험카페·관광지 내 카페 등이
+ *   누락되어 매칭 실패율이 높아지므로 대분류만 사용하고 완화 재시도 횟수를 줄임.
+ * - hotel: AC 대분류.
+ * - attraction / transport: 관광정보가 여러 대분류에 걸쳐 필터 없음.
  */
 export function tourLclsForSpotKind(kind: TourSpotKind): TourLclsFilter | null {
   switch (kind) {
     case "food":
-      return { lclsSystm1: "FD" };
     case "cafe":
-      return { lclsSystm1: "FD", lclsSystm2: "FD05" };
+      return { lclsSystm1: "FD" };
     case "hotel":
       return { lclsSystm1: "AC" };
     case "attraction":

@@ -35,6 +35,28 @@ export function inferTransitModeFromSpotText(transitToNext?: string): PlanTransi
   return "surface";
 }
 
+export type SurfaceProfile = "foot" | "driving";
+
+/**
+ * surface 구간에서 도보/차량 판별.
+ * LLM의 transitToNext 텍스트("택시 10분", "도보 5분" 등)를 파싱하여
+ * OSRM/네이버에 보낼 profile(foot vs driving)을 결정합니다.
+ */
+export function inferSurfaceProfileFromText(transitToNext?: string): SurfaceProfile | null {
+  const t = (transitToNext ?? "").trim().toLowerCase();
+  if (!t) return null;
+
+  if (/도보|걸어|걸어서|산책|걸으|walking|on\s*foot/.test(t)) return "foot";
+
+  if (
+    /차로|차량|자동차|렌터카|렌트카|자차|택시|버스|셔틀|시외버스|고속버스|시내버스|마을버스|지하철|전철|KTX|SRT|기차|열차|driving|by\s*car|taxi|bus/.test(t)
+  ) {
+    return "driving";
+  }
+
+  return null;
+}
+
 /** 대권 거리(km) 기반 국내선 비행 블록(분)→초 */
 function airBlockSecondsFromKm(km: number): number {
   const airMin = Math.round(28 + km * 0.42);
