@@ -12,11 +12,12 @@ import {
 import type { DirectionsProfile } from "@/lib/routing/directions-types";
 import { getServerSupabaseForUser } from "@/lib/supabase/server-user";
 import { recordWaylyUsageFireAndForget } from "@/lib/wayly/record-usage.server";
-import type { PlanTransitMode } from "@/lib/v5/plan-transit-estimate.server";
+import type { PlanTransitMode, SurfaceProfile } from "@/lib/v5/plan-transit-estimate.server";
 import {
   estimateFerryLegSeconds,
   estimateFlightLegSeconds,
   inferTransitModeFromSpotText,
+  inferSurfaceProfileFromText,
 } from "@/lib/v5/plan-transit-estimate.server";
 
 const MAX_COORDS = 25;
@@ -179,14 +180,20 @@ async function resolveSurfaceLeg(
       distanceMeters: data.distanceMeters ?? null,
     };
   }
+  // OSRM/네이버 모두 실패 시: haversine 직선거리 × 도로 보정 계수 + 속도 기반 추정 시간
+  const straightDist = haversineMeters(a, b);
+  const roadDist = straightDist * 1.3; // 직선→도로 보정 (한국 평균 ~1.3배)
+  const speedMps = primary === "foot" ? 1.3 : 10; // 도보 4.7km/h, 차 36km/h (시내 평균)
+  const estDuration = Math.round(roadDist / speedMps);
+
   return {
     path: [
       [a.lng, a.lat],
       [b.lng, b.lat],
     ],
     straight: true,
-    durationSeconds: data?.durationSeconds ?? null,
-    distanceMeters: data?.distanceMeters ?? haversineMeters(a, b),
+    durationSeconds: data?.durationSeconds ?? estDuration,
+    distanceMeters: data?.distanceMeters ?? Math.round(roadDist),
   };
 }
 
@@ -245,7 +252,11 @@ async function buildChainedRoute(
       continue;
     }
 
-    const leg = await resolveSurfaceLeg(a, b, primary, hooks);
+    // transitToNext 텍스트에서 구간별 foot/driving 힌트를 추출하여 primary를 오버라이드
+    const textHint: SurfaceProfile | null = inferSurfaceProfileFromText(a.transitToNext);
+    const legProfile: DirectionsProfile = textHint ?? primary;
+
+    const leg = await resolveSurfaceLeg(a, b, legProfile, hooks);
     pieces.push(leg.path);
     if (leg.straight) anyStraight = true;
     legs.push({

@@ -44,7 +44,18 @@ const PLAN_SYSTEM = `당신은 한국 **로컬 동선** 설계 AI입니다. 사�
 - spots[].transitToNext: 스팟 사이 이동(도보/버스/지하철/택시/차 등)과 대략 소요 시간. 마지막 스팟 등 없으면 \`""\`.
 - spots[].note: 팁·주의. 없으면 \`""\`.
 - spots[].transitMode: 다음 스팟까지 **항공**이면 \`flight\`, **페리**면 \`ferry\`, 그 외(도보·도로)는 \`surface\` (필수 enum, 생략 불가).
-- 각 스팟의 lat, lng는 **반드시** WGS84 실제 좌표(소수). 한국 내 장소는 위도 약 33~38, 경도 약 124~132. (스키마상 null 허용이나 실제로는 좌표를 채울 것.)
+
+**스팟 이름 — 공식 명칭 사용(매우 중요)**:
+- 한국관광공사·네이버지도에 등록된 **정식 명칭**으로 적으세요. 일상 표현이나 애칭은 피합니다.
+  - 좋은 예: "해운대해수욕장" (O) / 나쁜 예: "해운대 해변" (X)
+  - 좋은 예: "광장시장" (O) / 나쁜 예: "광장 전통시장" (X)
+  - 좋은 예: "불국사" (O) / 나쁜 예: "경주 불국사 절" (X)
+- 음식점·카페는 가급적 지역 대표 먹거리 거리명 또는 유명 상호명을 사용하세요.
+
+**좌표 규칙**:
+- lat, lng는 WGS84 좌표. 한국 내: 위도 33~38, 경도 124~132.
+- **확실한 관광지**(불국사, 해운대해수욕장 등 유명 장소)만 좌표를 채우세요.
+- **정확한 좌표를 모르는 경우**(개별 식당, 소규모 카페, 골목 등)에는 \`null\`로 두세요. 서버가 Tour API로 정확한 좌표를 보정합니다.
 - weatherNote, totalTime, alternativeNote: 없으면 \`""\` 빈 문자열로 두세요 (필드 생략 불가).`;
 
 function formatHistory(messages: ChatMessage[]): string {
@@ -54,15 +65,24 @@ function formatHistory(messages: ChatMessage[]): string {
 }
 
 /**
- * V5 structured 전용: 429/503/404 등일 때만 다음 모델로 진행.
- * gemini-2.5-flash-preview-04-17 → 2.0-flash → 2.0-flash-lite → 1.5-flash → 1.5-flash-8b → Groq.
+ * V5 structured 전용 모델 체인.
+ *
+ * **gather** (키워드 추출·칩 생성): 가벼운 작업이므로 flash-lite 시작 → 무료 할당량 절약.
+ * **plan** (동선 생성): 한국어 관광 도메인 지식과 structured output 품질이 필요 → 상위 모델 우선.
+ *
+ * 1.5-flash / 1.5-flash-8b는 structured output 준수율이 낮고 한국 로컬 지식이 부족하여 제거.
+ * 429/503/404 시에만 다음 모델로 진행, 그 외 오류는 Groq로 직행.
  */
-const V5_GEMINI_MODEL_CHAIN = [
+const V5_GEMINI_GATHER_CHAIN = [
+  "gemini-2.0-flash-lite",
+  "gemini-2.0-flash",
+  "gemini-2.5-flash-preview-04-17",
+] as const;
+
+const V5_GEMINI_PLAN_CHAIN = [
   "gemini-2.5-flash-preview-04-17",
   "gemini-2.0-flash",
   "gemini-2.0-flash-lite",
-  "gemini-1.5-flash",
-  "gemini-1.5-flash-8b",
 ] as const;
 
 /**
@@ -79,6 +99,7 @@ type V5LlmProvider = "gemini" | "groq";
 
 /**
  * Gemini 체인(429/503/404 시에만 다음 모델) → 실패/비재시도 오류 후 Groq.
+ * `intent`에 따라 gather(가벼운 체인) vs plan(고품질 체인)을 선택합니다.
  * Google 키 없고 Groq만 있으면 Groq 단독.
  */
 async function generateObjectWithLlmFallback<S extends z.ZodType>(args: {
@@ -86,15 +107,19 @@ async function generateObjectWithLlmFallback<S extends z.ZodType>(args: {
   system: string;
   prompt: string;
   temperature: number;
+  intent?: "gather" | "plan";
 }): Promise<{ object: z.infer<S>; provider: V5LlmProvider }> {
   const hasGoogle = Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim());
   const hasGroq = Boolean(process.env.GROQ_API_KEY?.trim());
 
+  const chain =
+    args.intent === "gather" ? V5_GEMINI_GATHER_CHAIN : V5_GEMINI_PLAN_CHAIN;
+
   let lastErr: unknown = new Error("V5 LLM: no attempt");
 
   if (hasGoogle) {
-    for (let i = 0; i < V5_GEMINI_MODEL_CHAIN.length; i++) {
-      const modelId = V5_GEMINI_MODEL_CHAIN[i]!;
+    for (let i = 0; i < chain.length; i++) {
+      const modelId = chain[i]!;
       try {
         const r = await generateObject({
           model: google(modelId),
@@ -109,10 +134,10 @@ async function generateObjectWithLlmFallback<S extends z.ZodType>(args: {
         lastErr = geminiErr;
         const advance =
           shouldAdvanceV5GeminiModelChain(geminiErr) &&
-          i < V5_GEMINI_MODEL_CHAIN.length - 1;
+          i < chain.length - 1;
         if (advance) {
           console.warn(
-            `[v5/chat] Gemini ${modelId} capacity/unavailable/model (429/503/404 등), trying ${V5_GEMINI_MODEL_CHAIN[i + 1]}`,
+            `[v5/chat] Gemini ${modelId} capacity/unavailable/model (429/503/404 등), trying ${chain[i + 1]}`,
             geminiErr,
           );
           continue;
@@ -205,6 +230,20 @@ function classifyV5ChatFailure(err: unknown): { code: string; userMessage: strin
   };
 }
 
+/**
+ * 문자열 길이 → 토큰 수 추정.
+ * 영어는 ~4자/토큰이지만 한글은 ~1.5~2자/토큰. 한글 비율에 따라 보정.
+ */
+function estimateTokens(charLen: number, text?: string): number {
+  if (charLen <= 0) return 0;
+  const sample = text?.slice(0, 500) ?? "";
+  const koreanChars = (sample.match(/[\uAC00-\uD7AF\u3130-\u318F\u1100-\u11FF]/g) ?? []).length;
+  const koreanRatio = sample.length > 0 ? koreanChars / sample.length : 0.5;
+  // 한글 비율 0→4자/토큰, 한글 비율 1→1.8자/토큰, 선형 보간
+  const charsPerToken = 4 - koreanRatio * 2.2;
+  return Math.ceil(charLen / charsPerToken);
+}
+
 function jsonOk(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify({ ok: true, ...body }), {
     status,
@@ -263,6 +302,7 @@ export async function POST(req: Request) {
         system: PLAN_SYSTEM,
         prompt: `아래는 지금까지의 대화 맥락입니다.\n\n${history || "(이전 맥락 없음)"}\n\n---\n사용자가 다음 여행 조건을 확정했습니다. **같은 도시·권역 안에서만** 스팟을 이은 로컬 동선을 plan으로 구조화하세요. 다른 도시로 이동하거나 집·역으로 복귀하는 구간은 넣지 마세요.\n\n**지역 주의**: 확정 칩의 "지역"이 넓게만 적혀 있어도, 대화 속 사용자 문장에 "파주·가평·수원" 등 더 구체적인 시·군이 있으면 **반드시 그 시·군**에 속한 스팟만 배치하세요. 광역 단위만 보고 대표 도시로 바꾸지 마세요.\n\n${slotText}`,
         temperature: 0.6,
+        intent: "plan",
       });
 
       const sbPlan = await getServerSupabaseForUser();
@@ -270,10 +310,11 @@ export async function POST(req: Request) {
       if (uidPlan && sbPlan) {
         const promptLen =
           (history?.length ?? 0) + slotText.length + PLAN_SYSTEM.length + 400;
+        const outputStr = JSON.stringify(object);
         recordWaylyUsageFireAndForget(sbPlan, {
           geminiGenerations: provider === "gemini" ? 1 : 0,
-          geminiEstInputTokens: Math.ceil(promptLen / 4),
-          geminiEstOutputTokens: Math.ceil(JSON.stringify(object).length / 4),
+          geminiEstInputTokens: estimateTokens(promptLen, history),
+          geminiEstOutputTokens: estimateTokens(outputStr.length, outputStr),
         });
       }
 
@@ -295,6 +336,7 @@ export async function POST(req: Request) {
       system: GATHER_SYSTEM,
       prompt: `대화 맥락:\n\n${history || "(첫 메시지)"}\n\n---\n마지막 사용자 발화:\n${lastUser}\n\n위를 반영해 assistantMessage, chips, readyToGenerateRoute를 생성하세요.`,
       temperature: 0.5,
+      intent: "gather",
     });
 
     const sbGather = await getServerSupabaseForUser();
@@ -302,10 +344,11 @@ export async function POST(req: Request) {
     if (uidGather && sbGather) {
       const promptLen =
         (history?.length ?? 0) + lastUser.length + GATHER_SYSTEM.length + 400;
+      const gatherOutputStr = JSON.stringify(object);
       recordWaylyUsageFireAndForget(sbGather, {
         geminiGenerations: provider === "gemini" ? 1 : 0,
-        geminiEstInputTokens: Math.ceil(promptLen / 4),
-        geminiEstOutputTokens: Math.ceil(JSON.stringify(object).length / 4),
+        geminiEstInputTokens: estimateTokens(promptLen, history),
+        geminiEstOutputTokens: estimateTokens(gatherOutputStr.length, gatherOutputStr),
       });
     }
 

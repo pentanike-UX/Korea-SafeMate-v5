@@ -72,13 +72,21 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  /** 플랜 스팟명과 검색 제목이 맞지 않으면 이미지·소개·좌표를 내리지 않음(엉뚱한 POI 노출 방지) */
-  const stripMisaligned =
-    matchName.length > 0 && !result.alignsWithPlanName;
-  const imageUrl = stripMisaligned ? null : result.imageUrl;
-  const overview = stripMisaligned ? null : result.overview;
-  const matchedLat = stripMisaligned ? null : result.matchedLat;
-  const matchedLng = stripMisaligned ? null : result.matchedLng;
+  /**
+   * 매칭 신뢰도에 따른 단계적 노출:
+   * - high (≥520): 이미지·소개·좌표 모두 노출
+   * - partial (350~519): 이미지만 노출 (소개·좌표 보류 — 부분 일치)
+   * - low (<350): 전부 숨김 (엉뚱한 POI 노출 방지)
+   */
+  const confidence = result.matchConfidence ?? (result.alignsWithPlanName ? "high" : "low");
+  const isHigh = confidence === "high";
+  const isPartial = confidence === "partial";
+  const isLow = confidence === "low";
+
+  const imageUrl = isLow ? null : result.imageUrl;
+  const overview = isHigh ? result.overview : null;
+  const matchedLat = isHigh ? result.matchedLat : null;
+  const matchedLng = isHigh ? result.matchedLng : null;
   const displayImageUrl = imageUrl ?? TOUR_SPOT_PLACEHOLDER_IMAGE;
 
   return NextResponse.json({
@@ -86,13 +94,13 @@ export async function GET(req: NextRequest) {
     query: result.query,
     contentId: result.contentId,
     contentTypeId: result.contentTypeId,
-    title: stripMisaligned ? "" : result.title,
+    title: isLow ? "" : result.title,
     imageUrl,
     displayImageUrl,
     overview,
     matchedLat,
     matchedLng,
-    /** 보강을 숨긴 경우 UI는 타입 아이콘만 쓰도록 일치로 표시 */
-    alignsWithPlanName: stripMisaligned ? true : result.alignsWithPlanName,
+    alignsWithPlanName: isHigh,
+    matchConfidence: confidence,
   });
 }

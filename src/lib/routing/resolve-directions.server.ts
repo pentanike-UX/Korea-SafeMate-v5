@@ -25,7 +25,7 @@ async function fetchNaverDriving(
       "x-ncp-apigw-api-key-id": keys.id,
       "x-ncp-apigw-api-key": keys.secret,
     },
-    next: { revalidate: 0 },
+    next: { revalidate: 3600 },
   });
 
   if (!res.ok) {
@@ -84,7 +84,7 @@ async function fetchOsrm(
   const coordStr = coordinates.map((c) => `${c.lng},${c.lat}`).join(";");
   const url = `${base}/route/v1/${osrmProfile}/${coordStr}?overview=full&geometries=geojson`;
 
-  const res = await fetch(url, { next: { revalidate: 0 } });
+  const res = await fetch(url, { next: { revalidate: 3600 } });
   if (!res.ok) {
     logDirections("osrm_http", { status: res.status });
     return null;
