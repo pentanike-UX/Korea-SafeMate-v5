@@ -416,12 +416,12 @@
     "googleConfigMissing": "Supabase 환경 변수(NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY)를 설정해 주세요.",
     "googleSignInFailed": "Google 로그인을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.",
     "oauthFailed": "로그인에 실패했습니다. 다시 시도해 주세요.",
-    "browseWithoutLogin": "로그인 없이 채팅으로",
-    "backToChat": "채팅 홈",
+    "browseWithoutLogin": "로그인 없이 시작하기",
+    "backToChat": "채팅으로 돌아가기",
     "browsePostsWithoutLogin": "포스트만 보기",
     "legalAbout": "서비스 소개",
     "legalTermsSoon": "약관·개인정보 처리방침은 곧 안내 예정입니다.",
-    "cardIntro": "한국 현장 중심의 안전·동행 정보를 한곳에서.",
+    "cardIntro": "AI가 순서대로 짜주는 한국 여행 동선을 한곳에서.",
     "footerTerms": "이용약관",
     "footerPrivacy": "개인정보처리방침",
     "footerAdmin": "관리자화면",
@@ -429,7 +429,8 @@
     "devMockGuardianTitle": "가디언즈 임시 로그인하기",
     "devMockGuardianHint": "각 줄 전체를 누르면 해당 시드 가디언으로 로그인되고, 마이페이지의 가디언(운영) 영역이 열립니다. 배포 전 제거 예정입니다.",
     "devMockGuardianLoginButton": "로그인",
-    "devMockGuardianProfileLinkTitle": "가디언 공개 페이지로 이동"
+    "devMockGuardianProfileLinkTitle": "가디언 공개 페이지로 이동",
+    "guestDataWarning": "로그인 없이 생성한 플랜은 저장되지 않아요."
   },
   "GuardiansPage": {
     "metaTitle": "Guardian",

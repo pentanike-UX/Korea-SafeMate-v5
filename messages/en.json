@@ -421,7 +421,7 @@
     "browsePostsWithoutLogin": "View posts only",
     "legalAbout": "About",
     "legalTermsSoon": "Terms & privacy policy coming soon.",
-    "cardIntro": "Safety and companion intel for Korea—curated in one place.",
+    "cardIntro": "AI-powered travel routes for Korea—planned in order, in one place.",
     "footerTerms": "Terms",
     "footerPrivacy": "Privacy",
     "footerAdmin": "Admin",
@@ -429,7 +429,8 @@
     "devMockGuardianTitle": "Quick login (seed guardians)",
     "devMockGuardianHint": "Tap a row to sign in as that seed guardian and open My page with the Guardian workspace active. Remove before production.",
     "devMockGuardianLoginButton": "Log in",
-    "devMockGuardianProfileLinkTitle": "Open guardian public page"
+    "devMockGuardianProfileLinkTitle": "Open guardian public page",
+    "guestDataWarning": "Plans created without signing in won't be saved."
   },
   "GuardiansPage": {
     "metaTitle": "Guardians",

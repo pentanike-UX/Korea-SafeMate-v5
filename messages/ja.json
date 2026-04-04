@@ -429,7 +429,8 @@
     "devMockGuardianTitle": "ガーディアン仮ログイン",
     "devMockGuardianHint": "行全体を押すとそのシードガーディアンでログインし、マイページのガーディアン（運用）ビューが開きます。本番前に削除予定です。",
     "devMockGuardianLoginButton": "ログイン",
-    "devMockGuardianProfileLinkTitle": "ガーディアン公開ページへ"
+    "devMockGuardianProfileLinkTitle": "ガーディアン公開ページへ",
+    "guestDataWarning": "ログインせずに作成したプランは保存されません。"
   },
   "GuardiansPage": {
     "metaTitle": "Guardian",

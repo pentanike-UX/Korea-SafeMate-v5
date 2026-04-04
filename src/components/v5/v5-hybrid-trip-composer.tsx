@@ -243,6 +243,9 @@ export function useV5TabletSplitLayout(): boolean {
   return match;
 }
 
+/** 필수 칩 키 (region, schedule) */
+const REQUIRED_KEYS = new Set<HybridTripKey>(["region", "schedule"]);
+
 export function HybridTripComposer({
   draft,
   onDraftChange,
@@ -268,6 +271,7 @@ export function HybridTripComposer({
   const [customLine, setCustomLine] = useState("");
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
+  const [disabledToast, setDisabledToast] = useState(false);
   /** 분위기·음식: 시트 안에서만 토글, 「적용」 시 draft 반영 */
   const [multiSheetSelection, setMultiSheetSelection] = useState<string[]>([]);
 
@@ -566,6 +570,7 @@ export function HybridTripComposer({
           const filled = Boolean(v);
           const multi = HYBRID_MULTI_KEYS.has(key);
           const multiCount = multi ? parseHybridMultiValues(v).length : 0;
+          const isRequired = REQUIRED_KEYS.has(key);
           return (
             <button
               key={key}
@@ -574,13 +579,18 @@ export function HybridTripComposer({
               className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 min-h-[44px] max-w-full transition-colors touch-manipulation ${
                 filled
                   ? "border-[var(--brand-trust-blue)]/40 bg-[var(--brand-trust-blue-soft)] text-[var(--text-strong)]"
-                  : "border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/80 text-[var(--text-muted)]"
+                  : isRequired
+                    ? "border-dashed border-[var(--error)]/50 bg-[var(--bg-surface-subtle)]/80 text-[var(--text-muted)]"
+                    : "border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/80 text-[var(--text-muted)]"
               }`}
             >
               <Icon className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
               <span className="min-w-0 text-left">
                 <span className="block text-[11px] font-semibold uppercase tracking-wide opacity-70">
                   {short}
+                  {isRequired && !filled ? (
+                    <span className="ml-1 text-[var(--error)] normal-case" aria-label="필수">*</span>
+                  ) : null}
                   {multi ? (
                     <span className="ml-1 font-normal normal-case text-[var(--brand-trust-blue)]">
                       (복수)
@@ -605,20 +615,35 @@ export function HybridTripComposer({
       </div>
 
       {showSendButton && (
-        <button
-          type="button"
-          onClick={onSubmit}
-          disabled={!canSend}
-          className={`flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-[14px] font-semibold transition-all ${
-            canSend
-              ? "bg-[var(--brand-primary)] text-[var(--text-on-brand)] hover:bg-[var(--brand-primary-hover)] active:scale-[0.99]"
-              : "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] cursor-not-allowed"
-          }`}
-        >
-          <Send className="h-4 w-4" />
-          선택 조건 보내기
-          <span className="text-[11px] font-normal opacity-80">(지역·일정 필수)</span>
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              if (canSend) {
+                onSubmit();
+              } else {
+                setDisabledToast(true);
+                setTimeout(() => setDisabledToast(false), 2500);
+              }
+            }}
+            className={`flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-[14px] font-semibold transition-all ${
+              canSend
+                ? "bg-[var(--brand-primary)] text-[var(--text-on-brand)] hover:bg-[var(--brand-primary-hover)] active:scale-[0.99]"
+                : "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)]"
+            }`}
+          >
+            <Send className="h-4 w-4" />
+            선택 조건 보내기
+          </button>
+          {disabledToast && (
+            <div
+              className="absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-[var(--error)] px-5 py-2.5 text-[13px] font-medium text-white shadow-lg animate-in fade-in slide-in-from-bottom-2 z-50"
+              role="alert"
+            >
+              📍 여행지와 일정을 먼저 선택해주세요
+            </div>
+          )}
+        </div>
       )}
 
       {openKey === "region" && !lgUp && (

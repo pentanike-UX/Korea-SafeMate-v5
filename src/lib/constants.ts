@@ -2,9 +2,9 @@ import type { ServiceTypeCode } from "@/types/domain";
 
 export const BRAND = {
   name: "Wayly",
-  tagline: "Your route, timed and grounded—not another place dump.",
+  tagline: "AI가 순서대로 짜주는 한국 여행 동선",
   description:
-    "Wayly is an AI travel planner for Korea: ordered routes, real-road paths, timing hints, and clear next steps between spots.",
+    "Wayly는 한국 여행을 스팟 순서·이동·시간 맥락으로 짜 주는 AI 플래너입니다.",
   /** 로고 마크: 블랙 배경 + 일렉트릭 블루 심볼 */
   logo: {
     background: "#09090b",
