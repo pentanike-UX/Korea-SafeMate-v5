@@ -37,7 +37,6 @@ import { V5ChatPricingModal, type PricingModalFocus } from "./v5-chat-pricing-mo
 import {
   HybridTripComposer,
   HYBRID_MULTI_KEYS,
-  HYBRID_SLOT_OPTIONS,
   HYBRID_TRIP_EMPTY,
   SLOT_META,
   buildHybridPrompt,
@@ -1123,32 +1122,6 @@ function MessageBubble({
   );
 }
 
-/** 빈 화면 — 로컬 동선 템플릿(괄호만 고치면 됨) */
-const TRIP_START_TEMPLATES = [
-  {
-    key: "local_day",
-    title: "당일·짧은 코스",
-    subtitle: "시내·동네 안에서만",
-    prompt:
-      "이 지역 안에서만 당일 동선으로 짜 줘. 지역: (예: 전주 한옥마을 일대 / 부산 해운대) / 일정: (예: 당일 또는 오전만) / 인원: ( ) / 이동: (예: 도보·버스) / 취향: (예: 맛집·한옥·사진). 다른 도시 이동·귀경 구간은 넣지 마.",
-  },
-  {
-    key: "local_multi",
-    title: "며칠·깊은 탐색",
-    subtitle: "같은 권역에서만 며칠치",
-    prompt:
-      "아래 조건으로 이 지역만 깊게 동선 짜 줘. 지역: (예: 제주 서귀포+중문) / 일정: (예: 2박 3일) / 동선 중심: (예: 바다·올레·시장) / 탐색 스타일: (여유 있게 또는 동선 촘촘히) / 인원·교통·분위기·음식: ( ). 외부 도시 왕복은 포함하지 마.",
-  },
-] as const;
-
-const RICH_START_EXAMPLES = [
-  "전주 한옥마을 중심 당일, 혼자, 도보·국밥·카페, 천천히 두세 곳만.",
-  "부산 해운대·광안리 일대 1박 2일, 커플, 도보·버스, 바다·야경·맛집, 동선 촘촘히.",
-  "제주 서귀포 3박 4일, 가족, 렌터카, 오름·해변·시장, 여유 있게 이어가 줘.",
-  "서울 종로·익선동 안에서만 하루, 친구 2명, 한옥·골목·브런치.",
-  "강릉 시내·안목해변 2박 3일, 이미 현지에 있다고 가정하고 현지만 짜 줘.",
-  "경주 황리단길·대릉원 일대 당일, 도보 위주, 유적·감성 카페.",
-] as const;
 
 function WaylyMark({
   boxClass,
@@ -1174,182 +1147,13 @@ function WaylyMark({
   );
 }
 
-/** 빈 화면용 — `PreferenceChipsCard`와 맞춘 칩 미리보기 */
-const EMPTY_HYBRID_CARD_KEYS: HybridTripKey[] = [
-  "region",
-  "zone",
-  "depth",
-  "schedule",
-  "people",
-  "transport",
-  "vibe",
-  "food",
-];
-
-const EMPTY_SLOT_HINT: Record<HybridTripKey, string> = {
-  region: "여행지",
-  zone: "구역·코스",
-  depth: "탐색",
-  schedule: "일정",
-  people: "인원",
-  transport: "이동",
-  vibe: "분위기",
-  food: "음식",
-};
-
-function EmptyStateHybridCard({
-  draft,
-  onDraftChange,
-  onSubmit,
-  disabled,
-}: {
-  draft: Record<HybridTripKey, string>;
-  onDraftChange: (next: Record<HybridTripKey, string>) => void;
-  onSubmit: () => void;
-  disabled: boolean;
-}) {
-  const [openKey, setOpenKey] = useState<HybridTripKey | null>(null);
-
-  const canSubmit =
-    draft.region.trim().length > 0 && draft.schedule.trim().length > 0 && !disabled;
-
-  return (
-    <div className="w-full max-w-[480px] rounded-[20px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-4 shadow-[0_4px_24px_rgba(20,20,20,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.32)] select-text mb-6">
-      <div className="flex items-center gap-2 mb-2">
-        <Sparkles className="w-3.5 h-3.5 text-[var(--brand-trust-blue)] shrink-0" aria-hidden />
-        <span className="text-[11px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">
-          정리한 여행 조건
-        </span>
-      </div>
-      <p className="text-[12px] text-[var(--text-secondary)] mb-3 leading-relaxed">
-        <strong className="font-semibold text-[var(--text-strong)]">지역 안 로컬 동선</strong>을 위해 칩을 골라 주세요. 하단 하이브리드 입력과{" "}
-        <strong className="font-semibold text-[var(--text-strong)]">같은 조건</strong>이 맞춰집니다.
-      </p>
-
-      <div className="v5-prompt-chips-strip overflow-x-auto -mx-1 px-1 pb-1 mb-2 touch-pan-x">
-        <div className="flex flex-wrap gap-2 w-full">
-          {EMPTY_HYBRID_CARD_KEYS.map((key) => {
-            const v = draft[key].trim();
-            const hint = EMPTY_SLOT_HINT[key];
-            if (v) {
-              return (
-                <span
-                  key={key}
-                  className="v5-prompt-chip-item inline-flex shrink-0 items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full text-[12px] font-medium bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] border border-[color-mix(in_srgb,var(--brand-trust-blue)_24%,var(--border-default))] max-w-full"
-                >
-                  <span className="text-[10px] opacity-80 shrink-0">{hint}</span>
-                  <span className="text-[var(--text-strong)] truncate min-w-0 max-w-[10rem] sm:max-w-[14rem]">
-                    {v}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onDraftChange({ ...draft, [key]: "" });
-                      setOpenKey((k) => (k === key ? null : k));
-                    }}
-                    className="ml-0.5 w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] hover:text-[var(--error)] transition-colors shrink-0 touch-manipulation"
-                    aria-label={`${hint} 선택 취소`}
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              );
-            }
-            return (
-              <div
-                key={key}
-                className="v5-prompt-chip-item inline-flex shrink-0 items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full text-[12px] font-medium bg-[var(--brand-trust-blue-soft)] text-[var(--brand-trust-blue)] border border-[color-mix(in_srgb,var(--brand-trust-blue)_24%,var(--border-default))]"
-              >
-                <button
-                  type="button"
-                  onClick={() => setOpenKey((k) => (k === key ? null : key))}
-                  className="flex items-center gap-1 touch-manipulation"
-                >
-                  <span>
-                    {hint} 미정
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setOpenKey((k) => (k === key ? null : k));
-                  }}
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--brand-primary-soft)] transition-colors touch-manipulation"
-                  aria-label={openKey === key ? `${hint} 후보 닫기` : `${hint} 고르기`}
-                  title={openKey === key ? "닫기" : "후보 보기"}
-                >
-                  <X className="w-3 h-3 opacity-70" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {openKey && (
-        <div className="mb-4 rounded-xl border border-[var(--border-default)] bg-[var(--bg-page)] p-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2">
-            {EMPTY_SLOT_HINT[openKey]} 선택
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {HYBRID_SLOT_OPTIONS[openKey].map((opt) => (
-              <button
-                key={opt}
-                type="button"
-                onClick={() => {
-                  onDraftChange({ ...draft, [openKey]: opt });
-                  setOpenKey(null);
-                }}
-                className="rounded-full border border-[var(--border-default)] bg-[var(--bg-elevated)] px-3 py-1.5 text-[11px] font-medium text-[var(--text-strong)] hover:bg-[var(--brand-trust-blue-soft)] hover:border-[var(--brand-trust-blue)]/25 transition-colors touch-manipulation"
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <button
-        type="button"
-        onClick={onSubmit}
-        disabled={!canSubmit}
-        className={`w-full py-3.5 rounded-2xl text-[14px] font-semibold transition-all duration-200 touch-manipulation ${
-          canSubmit
-            ? "bg-[var(--brand-primary)] text-[var(--text-on-brand)] hover:bg-[var(--brand-primary-hover)] active:scale-[0.99]"
-            : "bg-[var(--bg-surface-subtle)] text-[var(--text-muted)] cursor-not-allowed"
-        }`}
-      >
-        이 정보로 동선 짜기
-      </button>
-      {(!draft.region.trim() || !draft.schedule.trim()) && (
-        <p className="mt-2 text-center text-[11px] text-[var(--text-muted)]">
-          여행지(지역)·일정을 채우면 보낼 수 있어요. 구역·탐색 스타일은 선택이에요.
-        </p>
-      )}
-    </div>
-  );
-}
-
 function EmptyState({
-  onApplyPrompt,
   onOpenPricing,
   onScrollToComposer,
-  hybridDraft,
-  onHybridDraftChange,
-  onSubmitHybridFromCard,
-  composerBusy,
 }: {
-  /** 입력창에 문장을 넣고 포커스 — 괄호 부분만 고친 뒤 전송 */
-  onApplyPrompt: (text: string) => void;
   onOpenPricing: () => void;
   /** 화면 하단 하이브리드 칩 영역으로 스크롤 */
   onScrollToComposer: () => void;
-  hybridDraft: Record<HybridTripKey, string>;
-  onHybridDraftChange: (next: Record<HybridTripKey, string>) => void;
-  /** 카드의 「이 정보로 동선 짜기」— 독 펼침 + 전송 */
-  onSubmitHybridFromCard: () => void;
-  composerBusy: boolean;
 }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-5 pb-28 md:pb-32 select-none overflow-y-auto">
@@ -1361,63 +1165,25 @@ function EmptyState({
       <h1 className="text-[22px] font-bold text-[var(--text-strong)] text-center mb-2 tracking-tight">
         어느 지역을 깊게 둘러볼까요?
       </h1>
-      <p className="text-[14px] text-[var(--text-secondary)] text-center max-w-md leading-relaxed mb-4">
-        <strong className="font-semibold text-[var(--text-strong)]">도시·동네 안 로컬 동선</strong>에 맞춰 두었어요. 카드에서 고르거나 하단{" "}
-        <strong className="font-semibold text-[var(--text-strong)]">8가지 칩</strong>으로 이어서 조합할 수 있어요.
+      <p className="text-[14px] text-[var(--text-secondary)] text-center max-w-md leading-relaxed mb-6">
+        아래 입력 영역에서{" "}
+        <strong className="font-semibold text-[var(--text-strong)]">여행지</strong>와{" "}
+        <strong className="font-semibold text-[var(--text-strong)]">일정</strong>을 먼저 골라주세요.
+        나머지는 선택이에요.
       </p>
-
-      <EmptyStateHybridCard
-        draft={hybridDraft}
-        onDraftChange={onHybridDraftChange}
-        onSubmit={onSubmitHybridFromCard}
-        disabled={composerBusy}
-      />
 
       <button
         type="button"
         onClick={onScrollToComposer}
-        className="mb-6 text-[13px] font-semibold text-[var(--brand-trust-blue)] underline-offset-4 hover:underline touch-manipulation"
+        className="flex items-center gap-2 rounded-full bg-[var(--brand-primary)] px-6 py-3 text-[14px] font-semibold text-[var(--text-on-brand)] shadow-md hover:bg-[var(--brand-primary-hover)] active:scale-[0.98] transition-all touch-manipulation mb-6"
       >
-        하단 하이브리드 입력 영역으로 이동 ↓
+        <MapPin className="h-4 w-4" />
+        여행 조건 입력하기
       </button>
-      <p className="text-[13px] text-[var(--text-muted)] text-center max-w-md leading-relaxed mb-6">
-        긴 문장이 편하면 <strong className="text-[var(--text-strong)]">자유 입력</strong>(데스크톱) 또는{" "}
-        <strong className="text-[var(--text-strong)]">키보드로 직접 입력</strong>(모바일)을 켠 뒤, 예시 문장의{" "}
-        <strong className="text-[var(--text-strong)]">괄호 안</strong>만 고쳐내도 됩니다.
-      </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg mb-6">
-        {TRIP_START_TEMPLATES.map((opt) => (
-          <button
-            key={opt.key}
-            type="button"
-            onClick={() => onApplyPrompt(opt.prompt)}
-            className="text-left rounded-[20px] border border-[var(--border-default)] bg-[var(--bg-elevated)] px-4 py-4 shadow-[0_2px_16px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-[var(--brand-trust-blue)]/35 hover:shadow-[0_8px_28px_rgba(47,79,143,0.08)] active:scale-[0.99]"
-          >
-            <span className="block text-[15px] font-semibold text-[var(--text-strong)] tracking-tight">{opt.title}</span>
-            <span className="block text-[12px] text-[var(--text-muted)] mt-1 leading-snug">{opt.subtitle}</span>
-            <span className="block text-[11px] font-medium text-[var(--brand-trust-blue)] mt-2.5">
-              탭하면 자유 입력란에 문장이 들어가요 (직접 입력 모드로 전환)
-            </span>
-          </button>
-        ))}
-      </div>
-
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2 w-full max-w-lg">
-        한 줄 예시 (자유 입력에서 탭 → 수정 후 전송)
+      <p className="text-[12px] text-[var(--text-muted)] text-center max-w-sm leading-relaxed mb-4">
+        간편 선택(칩) 또는 자유 입력으로 조건을 알려주시면 AI가 동선을 짜드려요.
       </p>
-      <div className="flex flex-col gap-2 w-full max-w-lg mb-8">
-        {RICH_START_EXAMPLES.map((line) => (
-          <button
-            key={line}
-            type="button"
-            onClick={() => onApplyPrompt(line)}
-            className="text-left rounded-2xl border border-[var(--border-default)]/80 bg-[var(--bg-surface-subtle)]/60 px-3.5 py-3 text-[13px] leading-snug text-[var(--text-secondary)] transition-all duration-150 hover:bg-[var(--brand-trust-blue-soft)] hover:border-[var(--brand-trust-blue)]/25 hover:text-[var(--text-strong)] active:scale-[0.99]"
-          >
-            {line}
-          </button>
-        ))}
-      </div>
 
       <button
         type="button"
@@ -2008,6 +1774,7 @@ export function V5ChatShell() {
   const [composerDockExpanded, setComposerDockExpanded] = useState(true);
   const [mobilePlanFullscreenOpen, setMobilePlanFullscreenOpen] = useState(false);
   const [composerDesktopMode, setComposerDesktopMode] = useState<"picker" | "free">("picker");
+  const [freeInputValidationToast, setFreeInputValidationToast] = useState<string | null>(null);
 
   const promptChecklist = useMemo(() => evaluateTravelPromptChecklist(inputValue), [inputValue]);
   const showFreeComposerGuide = useMemo(
@@ -2301,6 +2068,22 @@ export function V5ChatShell() {
     async (text?: string) => {
       const content = (text ?? inputValue).trim();
       if (!content || isTyping || routeGeneratingMessageId || !activeConvId) return;
+
+      // 자유 입력 첫 메시지: 지역·일정 최소 검증 (칩에서 온 경우엔 이미 검증됨)
+      const isFromFreeInput = text === undefined;
+      const priorHasUser = (conversations.find((c) => c.id === activeConvId)?.messages ?? []).some((m) => m.role === "user");
+      if (isFromFreeInput && !priorHasUser) {
+        const check = evaluateTravelPromptChecklist(content);
+        if (!check.region || !check.schedule) {
+          const missing: string[] = [];
+          if (!check.region) missing.push("여행지(지역)");
+          if (!check.schedule) missing.push("일정(기간)");
+          setFreeInputValidationToast(`${missing.join("·")}을 포함해 주세요`);
+          setTimeout(() => setFreeInputValidationToast(null), 3000);
+          return;
+        }
+      }
+
       setComposerDockExpanded(false);
       setInputValue("");
 
@@ -2902,15 +2685,6 @@ export function V5ChatShell() {
                 </div>
               ) : !hasUserMessage ? (
                 <EmptyState
-                  onApplyPrompt={(text) => {
-                    setInputValue(text);
-                    if (isLg) setDesktopComposerMode("free");
-                    else setMobileFreeInput(true);
-                    queueMicrotask(() => {
-                      textareaRef.current?.focus();
-                      textareaRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-                    });
-                  }}
                   onOpenPricing={() => openPricing("overview")}
                   onScrollToComposer={() => {
                     setComposerDockExpanded(true);
@@ -2919,12 +2693,6 @@ export function V5ChatShell() {
                       behavior: "smooth",
                     });
                   }}
-                  hybridDraft={hybridDraft}
-                  onHybridDraftChange={setHybridDraft}
-                  onSubmitHybridFromCard={() => {
-                    submitHybrid();
-                  }}
-                  composerBusy={composerBusy}
                 />
               ) : (
                 <div className="mx-auto max-w-[720px] space-y-5 px-4 py-7 md:px-5 md:py-8">
@@ -3340,6 +3108,16 @@ export function V5ChatShell() {
         focus={pricingModalFocus}
         isGuest={!userId}
       />
+
+      {/* 자유 입력 validation 토스트 */}
+      {freeInputValidationToast && (
+        <div
+          className="fixed bottom-24 left-1/2 z-[100] -translate-x-1/2 whitespace-nowrap rounded-full bg-[var(--error)] px-5 py-2.5 text-[13px] font-medium text-white shadow-lg"
+          role="alert"
+        >
+          📍 {freeInputValidationToast}
+        </div>
+      )}
     </>
   );
 }
