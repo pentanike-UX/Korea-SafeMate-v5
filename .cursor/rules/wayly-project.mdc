@@ -1,0 +1,32 @@
+---
+description: Wayly / Korea-SafeMate-v5 프로젝트 작업 규칙
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Wayly 프로젝트 규칙
+
+## 우선순위
+
+- **모바일 우선**: 터치 영역, 키보드/뷰포트, 스크롤 영역 분리.
+- **상태 완비**: 빈 상태(CTA), 로딩(스켈레톤/문구), 에러(토스트·재시도), 비활성 명확히.
+- **UX 일관**: 기존 토큰·간격·카피 톤(`messages/ko.json`)에 맞출 것.
+
+## 구조 변경
+
+- 라우팅·API·스키마·DB를 바꾸기 전 `docs/03_information-architecture.md`, `docs/07_api-env.md`, `docs/06_data-schema.md`를 확인.
+- 작업 후 관련 문서 업데이트 여부를 스스로 점검.
+
+## 복잡도
+
+- 요청 범위 밖 리팩터·추상화 금지. diff는 작게.
+
+## 기록
+
+- 의미 있는 제품/기술 결정은 `docs/09_decision-log.md` 또는 `scripts/new-adr.sh`로 남김.
+- 릴리스 단위는 `docs/11_release-log.md` + `scripts/log-release.sh`.
+
+## Next.js
+
+- Next 16 규약은 `AGENTS.md` 및 `node_modules/next/dist/docs/` 준수.

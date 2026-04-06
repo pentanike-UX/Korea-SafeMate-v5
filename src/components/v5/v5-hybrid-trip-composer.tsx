@@ -269,8 +269,6 @@ export function HybridTripComposer({
   const mdUp = useMdUp();
   const [openKey, setOpenKey] = useState<HybridTripKey | null>(null);
   const [customLine, setCustomLine] = useState("");
-  const [rangeStart, setRangeStart] = useState("");
-  const [rangeEnd, setRangeEnd] = useState("");
   const [disabledToast, setDisabledToast] = useState(false);
   /** 분위기·음식: 시트 안에서만 토글, 「적용」 시 draft 반영 */
   const [multiSheetSelection, setMultiSheetSelection] = useState<string[]>([]);
@@ -314,10 +312,6 @@ export function HybridTripComposer({
         setMultiSheetSelection(parseHybridMultiValues(draft[key] ?? ""));
       } else {
         setMultiSheetSelection([]);
-      }
-      if (key === "schedule") {
-        setRangeStart("");
-        setRangeEnd("");
       }
     },
     [draft],
@@ -393,44 +387,6 @@ export function HybridTripComposer({
       </div>
 
       <div className="v5-hybrid-wheel flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3 space-y-1.5">
-        {openKey === "schedule" && (
-          <div className="mb-3 rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface-subtle)]/50 px-3 py-3 space-y-2">
-            <p className="text-[11px] font-semibold text-[var(--text-muted)]">캘린더로 기간 넣기(선택)</p>
-            <div className="flex flex-wrap gap-2 items-center">
-              <label className="text-[12px] text-[var(--text-secondary)] shrink-0">시작</label>
-              <input
-                type="date"
-                value={rangeStart}
-                onChange={(e) => setRangeStart(e.target.value)}
-                className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-2 py-1.5 text-base text-[var(--text-strong)]"
-              />
-              <label className="text-[12px] text-[var(--text-secondary)] shrink-0">종료</label>
-              <input
-                type="date"
-                value={rangeEnd}
-                onChange={(e) => setRangeEnd(e.target.value)}
-                className="rounded-lg border border-[var(--border-default)] bg-[var(--bg-elevated)] px-2 py-1.5 text-base text-[var(--text-strong)]"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  if (rangeStart && rangeEnd) {
-                    applyValue(`${rangeStart} ~ ${rangeEnd}`);
-                  } else if (rangeStart) {
-                    applyValue(`${rangeStart}부터`);
-                  }
-                }}
-                disabled={!rangeStart}
-                className="rounded-lg bg-[var(--brand-trust-blue-soft)] px-3 py-2 text-[12px] font-semibold text-[var(--brand-trust-blue)] disabled:opacity-40"
-              >
-                날짜 반영
-              </button>
-            </div>
-            <p className="text-[10px] text-[var(--text-muted)]">
-              아래 프리셋(당일·N박)을 써도 됩니다.
-            </p>
-          </div>
-        )}
         {sheetOptions.map((opt) => {
           const isMulti = openKey && HYBRID_MULTI_KEYS.has(openKey);
           const selected =
